@@ -1,21 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
-const { getZones, updateZoneRankings, createZone } = require('../controllers/zoneController');
+const pool = require('../config/db');
 
 // @route   GET api/zones
 // @desc    Get all zones
 // @access  Public
-router.get('/', getZones);
-
-// @route   POST api/zones
-// @desc    Create a new zone (Admin only)
-// @access  Private
-router.post('/', auth, createZone);
-
-// @route   POST api/zones/update-rankings/:zoneId
-// @desc    Update king/queen rankings for a zone
-// @access  Private
-router.post('/update-rankings/:zoneId', auth, updateZoneRankings);
+router.get('/', async (req, res) => {
+  try {
+    const zones = await pool.query('SELECT * FROM zones');
+    res.json(zones.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
 
 module.exports = router;

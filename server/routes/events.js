@@ -1,21 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
-const { createEvent, getEvents, joinEvent } = require('../controllers/eventController');
-
-// @route   POST api/events
-// @desc    Create a new event (Admin only)
-// @access  Private
-router.post('/', auth, createEvent);
+const pool = require('../config/db');
 
 // @route   GET api/events
-// @desc    Get active events
+// @desc    Get all events
 // @access  Public
-router.get('/', getEvents);
-
-// @route   POST api/events/join/:eventId
-// @desc    Join an event
-// @access  Private
-router.post('/join/:eventId', auth, joinEvent);
+router.get('/', async (req, res) => {
+  try {
+    const events = await pool.query('SELECT * FROM events');
+    res.json(events.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
 
 module.exports = router;

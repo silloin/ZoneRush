@@ -1,16 +1,40 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { createRun, getUserRuns } = require('../controllers/runController');
+const pool = require('../config/db');
 
 // @route   POST api/runs
-// @desc    Record a new run
+// @desc    Create a run
 // @access  Private
-router.post('/', auth, createRun);
+router.post('/', auth, async (req, res) => {
+  const { distance, duration, avgPace, route } = req.body;
+
+  try {
+    const newRun = await pool.query(
+      'INSERT INTO runs (userId, distance, duration, avgPace, route) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [req.user.id, distance, duration, avgPace, JSON.stringify(route)]
+    );
+
+    res.json(newRun.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
 
 // @route   GET api/runs
-// @desc    Get current user's runs
+// @desc    Get all runs for a user
 // @access  Private
-router.get('/', auth, getUserRuns);
+router.get('/', auth, async (req, res) => {
+  try {
+    const runs = await pool.query('SELECT * FROM runs WHERE userId = $1 ORDER BY createdAt DESC', [
+      req.user.id,
+    ]);
+    res.json(runs.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
 
 module.exports = router;

@@ -1,8 +1,8 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const mongoose = require('mongoose');
 const cors = require('cors');
+const pool = require('./config/db'); // Import the PostgreSQL connection pool
 require('dotenv').config({ path: '../.env' }); // Adjust path to root .env
 
 // Create Express app
@@ -19,12 +19,14 @@ const io = socketIo(server, {
   },
 });
 
-// Connect to MongoDB
-const dbURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/runterra';
-mongoose
-  .connect(dbURI)
-  .then(() => console.log('MongoDB connected...'))
-  .catch((err) => console.log(err));
+// Test the database connection
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('Database connection error', err.stack);
+  } else {
+    console.log('Database connected on', res.rows[0].now);
+  }
+});
 
 // Init Middleware
 // app.use(express.json({ extended: false })); // Already added express.json() above

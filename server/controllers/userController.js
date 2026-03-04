@@ -1,18 +1,23 @@
-const User = require('../models/User');
+const pool = require('../config/db');
 
 // @route   GET api/users/leaderboard
 // @desc    Get global or city leaderboard
 // @access  Public
 exports.getLeaderboard = async (req, res) => {
   const { city } = req.query;
-  const filter = city ? { city: new RegExp(city, 'i') } : {};
+  let query = 'SELECT username, totalTiles, totalDistance, city FROM users';
+  const params = [];
+
+  if (city) {
+    query += ' WHERE city ILIKE $1';
+    params.push(`%${city}%`);
+  }
+
+  query += ' ORDER BY totalTiles DESC LIMIT 20';
 
   try {
-    const users = await User.find(filter)
-      .select('username totalTiles totalDistance city')
-      .sort({ totalTiles: -1 })
-      .limit(20);
-    res.json(users);
+    const users = await pool.query(query, params);
+    res.json(users.rows);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -24,13 +29,15 @@ exports.getLeaderboard = async (req, res) => {
 // @access  Private/Admin
 exports.monthlyPrizeDraw = async (req, res) => {
   try {
-    const topUsers = await User.find()
-      .sort({ totalTiles: -1 })
-      .limit(10); // Draw from top 10 tile holders
+    const topUsers = await pool.query(
+      'SELECT username FROM users ORDER BY totalTiles DESC LIMIT 10'
+    );
 
-    if (topUsers.length === 0) return res.status(404).json({ msg: 'No eligible users found' });
+    if (topUsers.rows.length === 0) {
+      return res.status(404).json({ msg: 'No eligible users found' });
+    }
 
-    const winner = topUsers[Math.floor(Math.random() * topUsers.length)];
+    const winner = topUsers.rows[Math.floor(Math.random() * topUsers.rows.length)];
 
     res.json({
       winner: winner.username,

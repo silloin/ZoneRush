@@ -1,21 +1,40 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { generatePlan, getCurrentPlan, completeWorkout } = require('../controllers/trainingPlanController');
+const pool = require('../config/db');
 
-// @route   POST api/training-plans/generate
-// @desc    Generate a training plan for the user
+// @route   POST api/training-plans
+// @desc    Create a training plan
 // @access  Private
-router.post('/generate', auth, generatePlan);
+router.post('/', auth, async (req, res) => {
+  const { planType, workouts } = req.body;
 
-// @route   GET api/training-plans/current
-// @desc    Get current user's training plan
-// @access  Private
-router.get('/current', auth, getCurrentPlan);
+  try {
+    const newPlan = await pool.query(
+      'INSERT INTO training_plans (userId, planType, workouts) VALUES ($1, $2, $3) RETURNING *',
+      [req.user.id, planType, JSON.stringify(workouts)]
+    );
 
-// @route   PUT api/training-plans/workout/:workoutId
-// @desc    Mark a workout as completed
+    res.json(newPlan.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET api/training-plans
+// @desc    Get the user's training plan
 // @access  Private
-router.put('/workout/:workoutId', auth, completeWorkout);
+router.get('/', auth, async (req, res) => {
+  try {
+    const plan = await pool.query('SELECT * FROM training_plans WHERE userId = $1', [
+      req.user.id,
+    ]);
+    res.json(plan.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
 
 module.exports = router;

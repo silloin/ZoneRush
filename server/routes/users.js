@@ -1,16 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
-const { getLeaderboard, monthlyPrizeDraw } = require('../controllers/userController');
+const userController = require('../controllers/userController');
 
 // @route   GET api/users/leaderboard
-// @desc    Get global/city leaderboard
+// @desc    Get global or city leaderboard
 // @access  Public
-router.get('/leaderboard', getLeaderboard);
+router.get('/leaderboard', userController.getLeaderboard);
 
 // @route   POST api/users/prize-draw
-// @desc    Monthly prize draw (Admin/Private)
-// @access  Private
-router.post('/prize-draw', auth, monthlyPrizeDraw);
+// @desc    Random monthly prize draw from top users
+// @access  Private/Admin
+router.post('/prize-draw', userController.monthlyPrizeDraw);
 
 module.exports = router;
