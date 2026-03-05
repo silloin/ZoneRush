@@ -45,6 +45,7 @@ const publicPath = path.resolve(__dirname, 'public');
 console.log('--- DEPLOYMENT DIAGNOSTICS ---');
 console.log('__dirname:', __dirname);
 console.log('Current working directory:', process.cwd());
+console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('Attempting to serve static files from:', publicPath);
 
 if (!fs.existsSync(publicPath)) {
@@ -53,6 +54,10 @@ if (!fs.existsSync(publicPath)) {
   const parentDir = path.join(__dirname, '..');
   if (fs.existsSync(parentDir)) {
     console.log('Parent directory contents:', fs.readdirSync(parentDir));
+  }
+  const serverDir = __dirname;
+  if (fs.existsSync(serverDir)) {
+    console.log('Server directory contents:', fs.readdirSync(serverDir));
   }
 } else {
   console.log('Public folder found. Contents:', fs.readdirSync(publicPath));

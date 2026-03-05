@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "install-all": "npm install && npm install --prefix server && npm install --prefix client",
-    "build": "npm run build --prefix server",
+    "build": "echo 'Installing dependencies...' && npm install --prefix client && npm install --prefix server && echo 'Building client...' && npm run build --prefix client && echo 'Build complete - frontend is in server/public'",
     "start": "cd server && npm start",
     "dev": "node app.js"
   },

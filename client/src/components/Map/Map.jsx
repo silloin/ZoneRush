@@ -22,11 +22,22 @@ const Map = () => {
   const [currentRoute, setCurrentRoute] = useState([]);
   const [locationError, setLocationError] = useState(null);
 
-  const { isLoaded } = useJsApiLoader({
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  
+  const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    googleMapsApiKey: apiKey || undefined,
     libraries: LIBRARIES
   });
+
+  if (loadError) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-900 text-red-500 flex-col">
+        <p className="text-xl font-bold mb-2">Map Error</p>
+        <p className="text-sm">Failed to load Google Maps. Please add VITE_GOOGLE_MAPS_API_KEY to your environment variables.</p>
+      </div>
+    );
+  }
 
   useEffect(() => {
     socket.current = io(import.meta.env.VITE_API_URL.replace('/api', ''));
