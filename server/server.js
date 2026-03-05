@@ -42,10 +42,22 @@ app.use((req, res, next) => {
 // Define Routes
 // Serve static files from the React frontend (built and copied to server/public)
 const publicPath = path.resolve(__dirname, 'public');
-console.log('Serving static files from:', publicPath);
+console.log('--- DEPLOYMENT DIAGNOSTICS ---');
+console.log('__dirname:', __dirname);
+console.log('Current working directory:', process.cwd());
+console.log('Attempting to serve static files from:', publicPath);
+
 if (!fs.existsSync(publicPath)) {
   console.error('CRITICAL: Static public folder is missing at:', publicPath);
+  // List files in the parent directory to help debug
+  const parentDir = path.join(__dirname, '..');
+  if (fs.existsSync(parentDir)) {
+    console.log('Parent directory contents:', fs.readdirSync(parentDir));
+  }
+} else {
+  console.log('Public folder found. Contents:', fs.readdirSync(publicPath));
 }
+console.log('------------------------------');
 
 app.use(express.static(publicPath));
 

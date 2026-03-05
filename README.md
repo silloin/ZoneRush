@@ -805,9 +805,9 @@ This project is configured for monolithic deployment on **Render** (where the ba
 
 Render will automatically:
 - Enter the `server` directory.
-- Build the React frontend in the `client` directory.
-- Copy the built files into `server/public`.
-- Start the Express server to serve both the API and the frontend.
+- Build the React frontend in the `client` directory using `npm install --prefix ../client`.
+- Copy the built files into `server/public` using absolute paths.
+- Start the Express server to serve both the API and the frontend from `server/public`.
 
 ---
 
