@@ -789,31 +789,25 @@ npm install
 
 ---
 
-## Production Deployment
+## Deployment
 
-### Environment Variables
-```env
-NODE_ENV=production
-DB_HOST=production-db-server
-DB_USER=prod_user
-DB_PASSWORD=strong_password
-JWT_SECRET=very_long_random_secret
-CORS_ORIGIN=https://yourdomain.com
-```
+### Deploying to Render
 
-### Database Backup
-```bash
-pg_dump -U runterra_user -d runterra > backup.sql
-psql -U runterra_user -d runterra < backup.sql
-```
+This project is configured for monolithic deployment on **Render** (where the backend serves the built frontend files).
 
-### Process Management (PM2)
-```bash
-npm install -g pm2
-pm2 start server.js --name "runterra"
-pm2 startup
-pm2 save
-```
+1. **Blueprint**: Connect your GitHub repository to Render as a **Blueprint** service using the included `render.yaml`.
+2. **Environment Variables**:
+   - For the **Monolithic Service**:
+     - `DATABASE_URL`: Your internal PostgreSQL connection string.
+     - `JWT_SECRET`: Your private key for authentication.
+     - `VITE_API_URL`: Should be set to `/api` (this is configured in `render.yaml`).
+     - `VITE_GOOGLE_MAPS_API_KEY`: Your Google Maps API key.
+
+Render will automatically:
+- Enter the `server` directory.
+- Build the React frontend in the `client` directory.
+- Copy the built files into `server/public`.
+- Start the Express server to serve both the API and the frontend.
 
 ---
 

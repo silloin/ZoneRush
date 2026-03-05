@@ -39,8 +39,8 @@ app.use((req, res, next) => {
 });
 
 // Define Routes
-// Serve static files from the React frontend
-app.use(express.static(path.join(__dirname, '../client/dist')));
+// Serve static files from the React frontend (built and copied to server/public)
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api', (req, res) => {
   res.send('API is running 🚀');
@@ -57,7 +57,7 @@ app.use('/api/gpx', require('./routes/gpx'));
 
 // For any other request, serve the index.html from the frontend
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+  res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
 // Socket.io integration
