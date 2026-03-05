@@ -2,7 +2,24 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const auth = require('../middleware/auth');
 const pool = require('../config/db');
+
+// @route   GET api/auth
+// @desc    Get user by token
+// @access  Private
+router.get('/', auth, async (req, res) => {
+  try {
+    const user = await pool.query(
+      'SELECT id, username, email, city, totaldistance, totaltiles, weeklymileage, role FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    res.json(user.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
 
 // @route   POST api/auth/register
 // @desc    Register user

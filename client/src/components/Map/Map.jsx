@@ -8,6 +8,8 @@ import RunTracker from '../RunTracker';
 import IntervalTimer from '../IntervalTimer';
 import './Map.css';
 
+const LIBRARIES = ['places'];
+
 const Map = () => {
   const { user } = useContext(AuthContext);
   const map = useRef(null);
@@ -23,7 +25,7 @@ const Map = () => {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: ['places']
+    libraries: LIBRARIES
   });
 
   useEffect(() => {
@@ -112,8 +114,8 @@ const Map = () => {
         }}
       >
         {tiles.map((tile, idx) => {
-          const coords = decodeGeohash(tile.geoHash);
-          const isMine = tile.owner?._id === user?._id;
+          const coords = decodeGeohash(tile.geohash);
+          const isMine = tile.ownerid === user?.id;
           const paths = [
             { lat: coords.lat - 0.0005, lng: coords.lng - 0.0005 },
             { lat: coords.lat - 0.0005, lng: coords.lng + 0.0005 },
