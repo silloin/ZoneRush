@@ -1,0 +1,13 @@
+services:
+  # Monolithic Service (Frontend + Backend)
+  - type: web
+    name: runterra
+    env: node
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000

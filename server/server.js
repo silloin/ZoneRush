@@ -2,8 +2,9 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const path = require('path');
 const pool = require('./config/db'); // Import the PostgreSQL connection pool
-require('dotenv').config({ path: '../.env' }); // Adjust path to root .env
+require('dotenv').config(); // Load from .env in the server directory
 
 // Create Express app
 const app = express();
@@ -38,7 +39,10 @@ app.use((req, res, next) => {
 });
 
 // Define Routes
-app.get('/', (req, res) => {
+// Serve static files from the React frontend
+app.use(express.static(path.join(__dirname, '../client/dist')));
+
+app.get('/api', (req, res) => {
   res.send('API is running 🚀');
 });
 
@@ -50,6 +54,11 @@ app.use('/api/zones', require('./routes/zones'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/training-plans', require('./routes/trainingPlans'));
 app.use('/api/gpx', require('./routes/gpx'));
+
+// For any other request, serve the index.html from the frontend
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+});
 
 // Socket.io integration
 require('./sockets')(io);
