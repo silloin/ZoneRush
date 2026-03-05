@@ -3,6 +3,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const pool = require('./config/db'); // Import the PostgreSQL connection pool
 require('dotenv').config(); // Load from .env in the server directory
 
@@ -40,7 +41,13 @@ app.use((req, res, next) => {
 
 // Define Routes
 // Serve static files from the React frontend (built and copied to server/public)
-app.use(express.static(path.join(__dirname, 'public')));
+const publicPath = path.resolve(__dirname, 'public');
+console.log('Serving static files from:', publicPath);
+if (!fs.existsSync(publicPath)) {
+  console.error('CRITICAL: Static public folder is missing at:', publicPath);
+}
+
+app.use(express.static(publicPath));
 
 app.get('/api', (req, res) => {
   res.send('API is running 🚀');
@@ -57,7 +64,18 @@ app.use('/api/gpx', require('./routes/gpx'));
 
 // For any other request, serve the index.html from the frontend
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'));
+  const indexPath = path.resolve(publicPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    console.error('CRITICAL: index.html is missing at:', indexPath);
+    res.status(404).json({
+      msg: 'Frontend not found!',
+      error: `File missing at ${indexPath}`,
+      currentDir: __dirname,
+      dirContents: fs.existsSync(publicPath) ? fs.readdirSync(publicPath) : 'public folder missing'
+    });
+  }
 });
 
 // Socket.io integration
