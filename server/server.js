@@ -38,6 +38,10 @@ app.use((req, res, next) => {
 });
 
 // Define Routes
+app.get('/', (req, res) => {
+  res.send('API is running 🚀');
+});
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/runs', require('./routes/runs'));
