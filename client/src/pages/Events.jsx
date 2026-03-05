@@ -45,12 +45,12 @@ const Events = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {events.length > 0 ? (
             events.map((event) => (
-              <div key={event._id} className="bg-gray-800 rounded-xl overflow-hidden shadow-2xl border border-gray-700 hover:border-blue-500 transition">
+              <div key={event.id} className="bg-gray-800 rounded-xl overflow-hidden shadow-2xl border border-gray-700 hover:border-blue-500 transition">
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <h2 className="text-2xl font-bold">{event.name}</h2>
                     <span className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
-                      {event.goalType}
+                      {event.goaltype}
                     </span>
                   </div>
                   
@@ -59,25 +59,25 @@ const Events = () => {
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="flex items-center text-gray-300">
                       <Users className="mr-2 text-blue-400" size={18} />
-                      <span>{event.participants.length} Participants</span>
+                      <span>{(event.participants || []).length} Participants</span>
                     </div>
                     <div className="flex items-center text-gray-300">
                       <Trophy className="mr-2 text-yellow-500" size={18} />
-                      <span>Goal: {event.goalValue}</span>
+                      <span>Goal: {event.goalvalue}</span>
                     </div>
                     <div className="flex items-center text-gray-300">
                       <Clock className="mr-2 text-green-400" size={18} />
-                      <span>Ends: {new Date(event.endDate).toLocaleDateString()}</span>
+                      <span>Ends: {new Date(event.enddate).toLocaleDateString()}</span>
                     </div>
                   </div>
 
-                  {event.participants.includes(user?._id) ? (
+                  {(event.participants || []).includes(user?.id) ? (
                     <div className="w-full bg-green-600/20 text-green-500 p-3 rounded-lg text-center font-bold flex items-center justify-center">
                       <Trophy className="mr-2" size={20} /> Already Participating
                     </div>
                   ) : (
                     <button
-                      onClick={() => joinEvent(event._id)}
+                      onClick={() => joinEvent(event.id)}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg font-bold flex items-center justify-center transition"
                     >
                       Join Challenge <ChevronRight className="ml-2" size={20} />

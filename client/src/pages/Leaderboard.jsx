@@ -42,7 +42,7 @@ const Leaderboard = () => {
             </thead>
             <tbody className="divide-y divide-gray-700">
               {leaders.map((leader, index) => (
-                <tr key={leader._id} className="hover:bg-gray-750 transition">
+                <tr key={leader.id} className="hover:bg-gray-750 transition">
                   <td className="px-6 py-5">
                     {index === 0 && <Crown className="text-yellow-400" />}
                     {index === 1 && <Medal className="text-gray-300" />}
@@ -52,10 +52,10 @@ const Leaderboard = () => {
                   <td className="px-6 py-5 font-bold text-lg">{leader.username}</td>
                   <td className="px-6 py-5">
                     <span className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full font-bold">
-                      {leader.totalTiles} Tiles
+                      {leader.totaltiles} Tiles
                     </span>
                   </td>
-                  <td className="px-6 py-5 text-gray-400">{leader.totalDistance.toFixed(2)} km</td>
+                  <td className="px-6 py-5 text-gray-400">{Number(leader.totaldistance).toFixed(2)} km</td>
                 </tr>
               ))}
             </tbody>

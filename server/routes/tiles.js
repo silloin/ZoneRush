@@ -23,21 +23,21 @@ router.post('/capture', auth, async (req, res) => {
     });
 
     for (const [hash, coords] of uniqueGeohashes) {
-      let tileResult = await pool.query('SELECT * FROM tiles WHERE geohash = $1', [hash]);
+      let tileResult = await pool.query('SELECT * FROM tiles WHERE "geoHash" = $1', [hash]);
       let tile = tileResult.rows[0];
 
       if (!tile) {
         const newTileResult = await pool.query(
-          'INSERT INTO tiles (geohash, location, ownerid) VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326), $4) RETURNING *',
+          'INSERT INTO tiles ("geoHash", location, "ownerId") VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326), $4) RETURNING *',
           [hash, coords.lng, coords.lat, userId]
         );
         tile = newTileResult.rows[0];
       } else {
-        if (tile.ownerid !== userId) {
+        if (tile.ownerId !== userId) {
           const history = tile.history ? tile.history : [];
-          history.push({ owner: tile.ownerid, timestamp: tile.capturedat });
+          history.push({ owner: tile.ownerId, timestamp: tile.capturedAt });
           const updatedTileResult = await pool.query(
-            'UPDATE tiles SET ownerid = $1, capturedat = NOW(), history = $2 WHERE geohash = $3 RETURNING *',
+            'UPDATE tiles SET "ownerId" = $1, "capturedAt" = NOW(), history = $2 WHERE "geoHash" = $3 RETURNING *',
             [userId, JSON.stringify(history), hash]
           );
           tile = updatedTileResult.rows[0];

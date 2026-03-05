@@ -11,7 +11,7 @@ const pool = require('../config/db');
 router.get('/', auth, async (req, res) => {
   try {
     const user = await pool.query(
-      'SELECT id, username, email, city, totaldistance, totaltiles, weeklymileage, role FROM users WHERE id = $1',
+      'SELECT id, username, email, city, "totalDistance", "totalTiles", "weeklyMileage", role FROM users WHERE id = $1',
       [req.user.id]
     );
     res.json(user.rows[0]);

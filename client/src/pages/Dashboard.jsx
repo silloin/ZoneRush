@@ -59,9 +59,9 @@ const Dashboard = () => {
   if (loading) return <div className="p-8 text-white">Loading stats...</div>;
 
   const chartData = runs.slice(0, 7).reverse().map((run) => ({
-    date: new Date(run.createdAt).toLocaleDateString(),
+    date: new Date(run.createdat).toLocaleDateString(),
     distance: run.distance,
-    pace: parseFloat(run.avgPace),
+    pace: parseFloat(run.avgpace),
   }));
 
   return (
@@ -109,7 +109,7 @@ const Dashboard = () => {
             <span className="text-gray-400">Average Pace</span>
           </div>
           <p className="text-3xl font-bold">
-            {(runs.reduce((acc, run) => acc + parseFloat(run.avgPace), 0) / (runs.length || 1)).toFixed(2)} min/km
+            {(runs.reduce((acc, run) => acc + parseFloat(run.avgpace || 0), 0) / (runs.length || 1)).toFixed(2)} min/km
           </p>
         </div>
       </div>
@@ -159,11 +159,11 @@ const Dashboard = () => {
             </thead>
             <tbody>
               {runs.slice(0, 5).map((run) => (
-                <tr key={run._id} className="border-b border-gray-700 hover:bg-gray-700/50">
-                  <td className="py-3">{new Date(run.createdAt).toLocaleDateString()}</td>
+                <tr key={run.id} className="border-b border-gray-700 hover:bg-gray-700/50">
+                  <td className="py-3">{new Date(run.createdat).toLocaleDateString()}</td>
                   <td className="py-3 font-medium">{run.distance}</td>
                   <td className="py-3">{Math.floor(run.duration / 60)}m {run.duration % 60}s</td>
-                  <td className="py-3">{run.avgPace}</td>
+                  <td className="py-3">{run.avgpace}</td>
                 </tr>
               ))}
             </tbody>
