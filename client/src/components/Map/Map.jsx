@@ -78,10 +78,11 @@ const Map = () => {
   const fetchTiles = async () => {
     try {
       const res = await axios.get('/api/tiles');
-      setTiles(res.data);
+      setTiles(Array.isArray(res.data) ? res.data : []);
       renderTiles(res.data);
     } catch (err) {
       console.error(err);
+      setTiles([]);
     }
   };
 
@@ -125,7 +126,7 @@ const Map = () => {
           clickableIcons: false
         }}
       >
-        {tiles.map((tile, idx) => {
+        {Array.isArray(tiles) && tiles.map((tile, idx) => {
           const coords = decodeGeohash(tile.geohash);
           const isMine = tile.ownerId === user?.id;
           const paths = [
