@@ -5,7 +5,7 @@ const pool = require('../config/db');
 // @access  Public
 exports.getLeaderboard = async (req, res) => {
   const { city } = req.query;
-  let query = 'SELECT username, "totalTiles", "totalDistance", city FROM users';
+  let query = 'SELECT username, totaltiles as "totalTiles", totaldistance as "totalDistance", city FROM users';
   const params = [];
 
   if (city) {
@@ -13,7 +13,7 @@ exports.getLeaderboard = async (req, res) => {
     params.push(`%${city}%`);
   }
 
-  query += ' ORDER BY "totalTiles" DESC LIMIT 20';
+  query += ' ORDER BY totaltiles DESC LIMIT 20';
 
   try {
     const users = await pool.query(query, params);
@@ -30,7 +30,7 @@ exports.getLeaderboard = async (req, res) => {
 exports.monthlyPrizeDraw = async (req, res) => {
   try {
     const topUsers = await pool.query(
-      'SELECT username FROM users ORDER BY "totalTiles" DESC LIMIT 10'
+      'SELECT username FROM users ORDER BY totaltiles DESC LIMIT 10'
     );
 
     if (topUsers.rows.length === 0) {

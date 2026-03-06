@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import ngeohash from 'ngeohash';
 import { Play, Square, Timer, Map as MapIcon, Activity } from 'lucide-react';
 
 const RunTracker = ({ onRunComplete, onRouteUpdate }) => {
@@ -161,7 +162,7 @@ const RunTracker = ({ onRunComplete, onRouteUpdate }) => {
         <div className="flex flex-col items-center p-4 bg-gray-700 rounded">
           <MapIcon className="mb-2 text-purple-400" />
           <span className="text-sm text-gray-400">Tiles Captured</span>
-          <span className="text-2xl font-bold">{new Set(route.map(p => p.lat.toFixed(4) + p.lng.toFixed(4))).size}</span>
+          <span className="text-2xl font-bold">{new Set(route.map(p => ngeohash.encode(p.lat, p.lng, 7))).size}</span>
         </div>
       </div>
 

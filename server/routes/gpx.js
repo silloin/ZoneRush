@@ -82,7 +82,7 @@ router.post('/upload', auth, upload.single('gpxFile'), async (req, res) => {
 
     // Store run in database
     const newRun = await pool.query(
-      'INSERT INTO runs ("userId", distance, duration, "avgPace", route) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      'INSERT INTO runs (userid, distance, duration, avgpace, route) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [req.user.id, distance, duration, avgPace, JSON.stringify(route)]
     );
 
@@ -101,7 +101,7 @@ router.post('/upload', auth, upload.single('gpxFile'), async (req, res) => {
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const runs = await pool.query('SELECT id, userId, distance, duration, avgPace, createdAt FROM runs');
+    const runs = await pool.query('SELECT id, userid, distance, duration, avgpace FROM runs');
     res.json(runs.rows);
   } catch (err) {
     console.error(err.message);

@@ -11,7 +11,7 @@ router.post('/', auth, async (req, res) => {
 
   try {
     const newPlan = await pool.query(
-      'INSERT INTO training_plans ("userId", "planType", workouts) VALUES ($1, $2, $3) RETURNING *',
+      'INSERT INTO training_plans (userid, plantype, workouts) VALUES ($1, $2, $3) RETURNING *',
       [req.user.id, planType, JSON.stringify(workouts)]
     );
 
@@ -27,7 +27,7 @@ router.post('/', auth, async (req, res) => {
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const plan = await pool.query('SELECT * FROM training_plans WHERE "userId" = $1', [
+    const plan = await pool.query('SELECT * FROM training_plans WHERE userid = $1', [
       req.user.id,
     ]);
     res.json(plan.rows[0] || null);
@@ -42,7 +42,7 @@ router.get('/', auth, async (req, res) => {
 // @access  Private
 router.get('/current', auth, async (req, res) => {
   try {
-    const plan = await pool.query('SELECT * FROM training_plans WHERE "userId" = $1 ORDER BY "startDate" DESC LIMIT 1', [
+    const plan = await pool.query('SELECT * FROM training_plans WHERE userid = $1 ORDER BY startdate DESC LIMIT 1', [
       req.user.id,
     ]);
     res.json(plan.rows[0] || null);
@@ -82,7 +82,7 @@ router.put('/workout/:workoutId', auth, async (req, res) => {
     const { workoutId } = req.params;
     
     // Get current plan
-    const planResult = await pool.query('SELECT * FROM training_plans WHERE "userId" = $1', [
+    const planResult = await pool.query('SELECT * FROM training_plans WHERE userid = $1', [
       req.user.id,
     ]);
     
@@ -99,7 +99,7 @@ router.put('/workout/:workoutId', auth, async (req, res) => {
     );
 
     const updatedPlan = await pool.query(
-      'UPDATE training_plans SET workouts = $1 WHERE "userId" = $2 RETURNING *',
+      'UPDATE training_plans SET workouts = $1 WHERE userid = $2 RETURNING *',
       [JSON.stringify(updatedWorkouts), req.user.id]
     );
 

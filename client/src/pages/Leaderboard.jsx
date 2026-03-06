@@ -52,10 +52,10 @@ const Leaderboard = () => {
                   <td className="px-6 py-5 font-bold text-lg">{leader.username}</td>
                   <td className="px-6 py-5">
                     <span className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full font-bold">
-                      {leader.totaltiles} Tiles
+                      {leader.totalTiles || leader.totaltiles} Tiles
                     </span>
                   </td>
-                  <td className="px-6 py-5 text-gray-400">{Number(leader.totaldistance).toFixed(2)} km</td>
+                  <td className="px-6 py-5 text-gray-400">{Number(leader.totalDistance || leader.totaldistance).toFixed(2)} km</td>
                 </tr>
               ))}
             </tbody>

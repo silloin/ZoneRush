@@ -11,7 +11,7 @@ router.post('/', auth, async (req, res) => {
 
   try {
     const newRun = await pool.query(
-      'INSERT INTO runs ("userId", distance, duration, "avgPace", route) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      'INSERT INTO runs (userid, distance, duration, avgpace, route) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [req.user.id, distance, duration, avgPace, JSON.stringify(route)]
     );
 
@@ -27,7 +27,7 @@ router.post('/', auth, async (req, res) => {
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const runs = await pool.query('SELECT * FROM runs WHERE "userId" = $1 ORDER BY "createdAt" DESC', [
+    const runs = await pool.query('SELECT id, userid, distance, duration, avgpace, route FROM runs WHERE userid = $1 ORDER BY id DESC', [
       req.user.id,
     ]);
     res.json(runs.rows);

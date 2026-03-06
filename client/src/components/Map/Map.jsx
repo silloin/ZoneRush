@@ -86,7 +86,8 @@ const Map = () => {
   };
 
   const renderTiles = (tilesData) => {
-    // Tiles will be rendered as Polygon components in JSX
+    // Tiles are rendered as Polygon components in JSX below
+    // This function can be used for additional tile processing if needed
   };
 
   // Simple placeholder for geohash decoding
@@ -126,7 +127,7 @@ const Map = () => {
       >
         {tiles.map((tile, idx) => {
           const coords = decodeGeohash(tile.geohash);
-          const isMine = tile.ownerid === user?.id;
+          const isMine = tile.ownerId === user?.id;
           const paths = [
             { lat: coords.lat - 0.0005, lng: coords.lng - 0.0005 },
             { lat: coords.lat - 0.0005, lng: coords.lng + 0.0005 },

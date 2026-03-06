@@ -11,7 +11,7 @@ const pool = require('../config/db');
 router.get('/', auth, async (req, res) => {
   try {
     const user = await pool.query(
-      'SELECT id, username, email, city, "totalDistance", "totalTiles", "weeklyMileage", role FROM users WHERE id = $1',
+      'SELECT id, username, email, city, totaldistance as "totalDistance", totaltiles as "totalTiles", weeklymileage as "weeklyMileage", role FROM users WHERE id = $1',
       [req.user.id]
     );
     res.json(user.rows[0]);
@@ -26,6 +26,20 @@ router.get('/', auth, async (req, res) => {
 // @access  Public
 router.post('/register', async (req, res) => {
   const { username, email, password } = req.body;
+
+  // Validate input
+  if (!username || !email || !password) {
+    return res.status(400).json({ msg: 'Please provide all fields' });
+  }
+  if (username.length < 3) {
+    return res.status(400).json({ msg: 'Username must be at least 3 characters' });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ msg: 'Invalid email format' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ msg: 'Password must be at least 6 characters' });
+  }
 
   try {
     // Check if user exists

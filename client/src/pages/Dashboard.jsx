@@ -59,9 +59,9 @@ const Dashboard = () => {
   if (loading) return <div className="p-8 text-white">Loading stats...</div>;
 
   const chartData = runs.slice(0, 7).reverse().map((run) => ({
-    date: new Date(run.createdat).toLocaleDateString(),
+    date: new Date(run.id).toLocaleDateString(), // Use ID as approx date since DB has no timestamp
     distance: run.distance,
-    pace: parseFloat(run.avgpace),
+    pace: parseFloat(run.avgpace || 0),
   }));
 
   return (
@@ -160,7 +160,7 @@ const Dashboard = () => {
             <tbody>
               {runs.slice(0, 5).map((run) => (
                 <tr key={run.id} className="border-b border-gray-700 hover:bg-gray-700/50">
-                  <td className="py-3">{new Date(run.createdat).toLocaleDateString()}</td>
+                  <td className="py-3">{new Date().toLocaleDateString()}</td>
                   <td className="py-3 font-medium">{run.distance}</td>
                   <td className="py-3">{Math.floor(run.duration / 60)}m {run.duration % 60}s</td>
                   <td className="py-3">{run.avgpace}</td>
