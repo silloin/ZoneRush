@@ -4,7 +4,7 @@ services:
     name: runterra
     env: node
     rootDir: server
-    buildCommand: npm install && cd ../client && npm install && npm run build && cd ../server && mkdir -p public && cp -r ../client/dist/* public/
+    buildCommand: npm install && cd ../client && npm install && npm run build && cd ../server
     startCommand: npm start
     envVars:
       - key: NODE_ENV
