@@ -10,8 +10,10 @@ cmds = [
 [phases.build]
 cmds = [
   "npm run build --prefix client",
+  "ls -la client/dist || echo 'dist folder not found'",
   "mkdir -p server/public",
-  "cp -r client/dist/* server/public/"
+  "cp -rv client/dist/* server/public/ || echo 'copy failed'",
+  "ls -la server/public || echo 'public folder empty'"
 ]
 
 [start]
