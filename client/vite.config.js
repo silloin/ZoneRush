@@ -5,36 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: 'dist',
-    emptyOutDir: true,
-  },
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/socket.io': {
-        target: 'http://localhost:5000',
-        ws: true,
-      },
-    },
-  },
-})
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/socket.io': {
-        target: 'http://localhost:5000',
-        ws: true,
-      },
-    },
-  },
+    outDir: '../server/public',
+    emptyOutDir: true
+  }
 })
