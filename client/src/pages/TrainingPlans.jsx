@@ -98,7 +98,7 @@ const TrainingPlans = () => {
             
             <div className="p-6">
               <div className="space-y-4">
-                {plan && Array.isArray(plan.workouts) && plan.workouts.length > 0 ? (
+                {Array.isArray(plan.workouts) && plan.workouts.length > 0 ? (
                   plan.workouts.map((workout, idx) => (
                     <div
                       key={workout._id || workout.id || idx}
