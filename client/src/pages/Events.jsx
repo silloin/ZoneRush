@@ -15,17 +15,21 @@ const Events = () => {
   const fetchEvents = async () => {
     try {
       const res = await axios.get('/api/events');
-      setEvents(res.data);
-      setLoading(false);
+      setEvents(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch events:', err);
+      setEvents([]);
+    } finally {
       setLoading(false);
     }
   };
 
   const joinEvent = async (eventId) => {
     try {
-      await axios.post(`/api/events/join/${eventId}`);
+      const token = localStorage.getItem('token');
+      await axios.post(`/api/events/join/${eventId}`, {}, {
+        headers: { 'x-auth-token': token }
+      });
       fetchEvents();
       alert('Joined event successfully!');
     } catch (err) {

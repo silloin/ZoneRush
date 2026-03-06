@@ -28,10 +28,16 @@ const Dashboard = () => {
   const fetchRuns = async () => {
     try {
       const res = await axios.get('/api/runs');
-      setRuns(res.data);
-      setLoading(false);
+      if (Array.isArray(res.data)) {
+        setRuns(res.data);
+      } else {
+        console.error('API response is not an array:', res.data);
+        setRuns([]);
+      }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch runs:', err.response?.status, err.response?.data || err.message);
+      setRuns([]);
+    } finally {
       setLoading(false);
     }
   };
@@ -41,16 +47,17 @@ const Dashboard = () => {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('gpx', file);
+    formData.append('gpxFile', file);
 
     setUploading(true);
     try {
       await axios.post('/api/gpx/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       alert('GPX file uploaded and processed!');
       fetchRuns();
     } catch (err) {
+      console.error('Upload error:', err);
       alert('Failed to upload GPX file');
     }
     setUploading(false);
@@ -58,11 +65,19 @@ const Dashboard = () => {
 
   if (loading) return <div className="p-8 text-white">Loading stats...</div>;
 
-  const chartData = runs.slice(0, 7).reverse().map((run) => ({
-    date: new Date(run.id).toLocaleDateString(), // Use ID as approx date since DB has no timestamp
-    distance: run.distance,
+  const chartData = runs.slice(0, 7).reverse().map((run, idx) => ({
+    date: `Run ${idx + 1}`,
+    distance: parseFloat(run.distance || 0),
     pace: parseFloat(run.avgpace || 0),
   }));
+
+  const avgPace = runs.length > 0 
+    ? (runs.reduce((acc, run) => acc + parseFloat(run.avgpace || 0), 0) / runs.length).toFixed(2)
+    : '0.00';
+
+  const totalDistance = runs.length > 0
+    ? runs.reduce((acc, run) => acc + parseFloat(run.distance || 0), 0).toFixed(2)
+    : '0.00';
 
   return (
     <div className="p-8 bg-gray-900 min-h-screen text-white">
@@ -87,30 +102,28 @@ const Dashboard = () => {
             <Trophy className="text-yellow-500 mr-2" />
             <span className="text-gray-400">Total Distance</span>
           </div>
-          <p className="text-3xl font-bold">{user.totalDistance.toFixed(2)} km</p>
+          <p className="text-3xl font-bold">{totalDistance} km</p>
         </div>
         <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
           <div className="flex items-center mb-2">
             <MapIcon className="text-green-500 mr-2" />
             <span className="text-gray-400">Tiles Owned</span>
           </div>
-          <p className="text-3xl font-bold">{user.totalTiles}</p>
+          <p className="text-3xl font-bold">{user?.totalTiles || 0}</p>
         </div>
         <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
           <div className="flex items-center mb-2">
             <Activity className="text-blue-500 mr-2" />
-            <span className="text-gray-400">Weekly Mileage</span>
+            <span className="text-gray-400">Total Runs</span>
           </div>
-          <p className="text-3xl font-bold">{user.weeklyMileage.toFixed(2)} km</p>
+          <p className="text-3xl font-bold">{runs.length}</p>
         </div>
         <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
           <div className="flex items-center mb-2">
             <TrendingUp className="text-purple-500 mr-2" />
             <span className="text-gray-400">Average Pace</span>
           </div>
-          <p className="text-3xl font-bold">
-            {(runs.reduce((acc, run) => acc + parseFloat(run.avgpace || 0), 0) / (runs.length || 1)).toFixed(2)} min/km
-          </p>
+          <p className="text-3xl font-bold">{avgPace} min/km</p>
         </div>
       </div>
 
@@ -118,29 +131,37 @@ const Dashboard = () => {
         <div className="bg-gray-800 p-6 rounded-lg">
           <h2 className="text-xl font-semibold mb-4">Distance (Last 7 Runs)</h2>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="date" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" />
-                <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none' }} />
-                <Bar dataKey="distance" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="date" stroke="#9CA3AF" />
+                  <YAxis stroke="#9CA3AF" />
+                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none' }} />
+                  <Bar dataKey="distance" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-400">No runs yet</div>
+            )}
           </div>
         </div>
         <div className="bg-gray-800 p-6 rounded-lg">
           <h2 className="text-xl font-semibold mb-4">Pace Trend (Last 7 Runs)</h2>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="date" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" />
-                <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none' }} />
-                <Line type="monotone" dataKey="pace" stroke="#F59E0B" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="date" stroke="#9CA3AF" />
+                  <YAxis stroke="#9CA3AF" />
+                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none' }} />
+                  <Line type="monotone" dataKey="pace" stroke="#F59E0B" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-400">No runs yet</div>
+            )}
           </div>
         </div>
       </div>
@@ -151,21 +172,27 @@ const Dashboard = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-gray-700 text-gray-400">
-                <th className="py-2">Date</th>
+                <th className="py-2">Run #</th>
                 <th className="py-2">Distance (km)</th>
                 <th className="py-2">Duration</th>
                 <th className="py-2">Avg Pace (min/km)</th>
               </tr>
             </thead>
             <tbody>
-              {runs.slice(0, 5).map((run) => (
-                <tr key={run.id} className="border-b border-gray-700 hover:bg-gray-700/50">
-                  <td className="py-3">{new Date().toLocaleDateString()}</td>
-                  <td className="py-3 font-medium">{run.distance}</td>
-                  <td className="py-3">{Math.floor(run.duration / 60)}m {run.duration % 60}s</td>
-                  <td className="py-3">{run.avgpace}</td>
+              {runs.length > 0 ? (
+                runs.slice(0, 5).map((run, idx) => (
+                  <tr key={run.id} className="border-b border-gray-700 hover:bg-gray-700/50">
+                    <td className="py-3">#{idx + 1}</td>
+                    <td className="py-3 font-medium">{parseFloat(run.distance || 0).toFixed(2)}</td>
+                    <td className="py-3">{Math.floor(run.duration / 60)}m {run.duration % 60}s</td>
+                    <td className="py-3">{parseFloat(run.avgpace || 0).toFixed(2)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" className="py-3 text-center text-gray-400">No runs yet. Start running to see your stats!</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

@@ -6,9 +6,9 @@ const Profile = () => {
   const { user } = useContext(AuthContext);
 
   const badges = [
-    { name: 'Pioneer', icon: Zap, description: 'First 50 tiles captured', achieved: user?.totalTiles >= 50 },
+    { name: 'Pioneer', icon: Zap, description: 'First 50 tiles captured', achieved: (user?.totalTiles || 0) >= 50 },
     { name: 'City King', icon: Shield, description: 'Become a King of a zone', achieved: false },
-    { name: 'Marathoner', icon: Target, description: 'Total distance > 42.2km', achieved: user?.totalDistance >= 42.2 },
+    { name: 'Marathoner', icon: Target, description: 'Total distance > 42.2km', achieved: (user?.totalDistance || 0) >= 42.2 },
     { name: 'Explorer', icon: Award, description: 'Capture tiles in 3 different cities', achieved: false },
   ];
 

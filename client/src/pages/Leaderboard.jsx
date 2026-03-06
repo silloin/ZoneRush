@@ -10,10 +10,11 @@ const Leaderboard = () => {
     const fetchLeaders = async () => {
       try {
         const res = await axios.get('/api/users/leaderboard');
-        setLeaders(res.data);
-        setLoading(false);
+        setLeaders(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
-        console.error(err);
+        console.error('Failed to fetch leaderboard:', err);
+        setLeaders([]);
+      } finally {
         setLoading(false);
       }
     };
@@ -41,23 +42,29 @@ const Leaderboard = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
-              {leaders.map((leader, index) => (
-                <tr key={leader.id} className="hover:bg-gray-750 transition">
-                  <td className="px-6 py-5">
-                    {index === 0 && <Crown className="text-yellow-400" />}
-                    {index === 1 && <Medal className="text-gray-300" />}
-                    {index === 2 && <Medal className="text-orange-400" />}
-                    {index > 2 && <span className="font-bold text-gray-500">{index + 1}</span>}
-                  </td>
-                  <td className="px-6 py-5 font-bold text-lg">{leader.username}</td>
-                  <td className="px-6 py-5">
-                    <span className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full font-bold">
-                      {leader.totalTiles || leader.totaltiles} Tiles
-                    </span>
-                  </td>
-                  <td className="px-6 py-5 text-gray-400">{Number(leader.totalDistance || leader.totaldistance).toFixed(2)} km</td>
+              {Array.isArray(leaders) && leaders.length > 0 ? (
+                leaders.map((leader, index) => (
+                  <tr key={leader.id} className="hover:bg-gray-750 transition">
+                    <td className="px-6 py-5">
+                      {index === 0 && <Crown className="text-yellow-400" />}
+                      {index === 1 && <Medal className="text-gray-300" />}
+                      {index === 2 && <Medal className="text-orange-400" />}
+                      {index > 2 && <span className="font-bold text-gray-500">{index + 1}</span>}
+                    </td>
+                    <td className="px-6 py-5 font-bold text-lg">{leader.username}</td>
+                    <td className="px-6 py-5">
+                      <span className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full font-bold">
+                        {leader.totalTiles || leader.totaltiles} Tiles
+                      </span>
+                    </td>
+                    <td className="px-6 py-5 text-gray-400">{Number(leader.totalDistance || leader.totaldistance).toFixed(2)} km</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" className="px-6 py-5 text-center text-gray-400">No leaderboard data available</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
