@@ -21,12 +21,13 @@ export const AuthProvider = ({ children }) => {
   const loadUser = async () => {
     try {
       const res = await axios.get('/api/auth');
-      setUser(res.data);
-      setLoading(false);
+      setUser(res.data || {});
     } catch (err) {
+      console.error('Failed to load user:', err);
       localStorage.removeItem('token');
       setToken(null);
-      setUser(null);
+      setUser({});
+    } finally {
       setLoading(false);
     }
   };
