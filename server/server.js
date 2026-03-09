@@ -27,8 +27,35 @@ pool.query('SELECT NOW()', (err, res) => {
     console.error('Database connection error', err.stack);
   } else {
     console.log('Database connected on', res.rows[0].now);
+    initializeDatabase();
   }
 });
+
+// Function to read and execute SQL file
+const executeSqlFile = async (filePath) => {
+  try {
+    const sql = fs.readFileSync(path.resolve(__dirname, filePath), 'utf8');
+    await pool.query(sql);
+    console.log(`Successfully executed ${path.basename(filePath)}`);
+  } catch (err) {
+    console.error(`Error executing ${path.basename(filePath)}:`, err.stack);
+    throw err; // Propagate error to stop initialization if something critical fails
+  }
+};
+
+// Initialize database schema
+const initializeDatabase = async () => {
+  console.log('Initializing database schema...');
+  try {
+    // It's crucial to run these in the correct order
+    await executeSqlFile('./sql/setup_database.sql');
+    await executeSqlFile('./sql/postgis_setup.sql');
+    await executeSqlFile('./sql/social_gamification.sql');
+    console.log('Database schema initialization complete.');
+  } catch (err) {
+    console.error('Failed to initialize database schema. Server is starting, but some features might not work.');
+  }
+};
 
 // Init Middleware
 // app.use(express.json({ extended: false })); // Already added express.json() above
