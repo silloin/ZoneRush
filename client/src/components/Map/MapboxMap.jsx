@@ -1,4 +1,41 @@
-import React, { useRef, useEffect, useState, useContext } from 'react';
+ C:\Users\hp\Desktop\Realtime-Location-Tracker-main - local - Copy> git add .; git commit -m "fix: Add fallback Mapbox access token"; git push
+warning: in the working copy of 'client/src/components/Map/MapboxMap.jsx', LF will be replaced by CRLF the next time Git touches it
+[main 28dcd77] fix: Add fallback Mapbox access token
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+Enumerating objects: 13, done.
+Counting objects: 100% (13/13), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (7/7), done.
+Writing objects: 100% (7/7), 653 bytes | 653.00 KiB/s, done.
+Total 7 (delta 6), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (6/6), completed with 6 local objects.
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+remote:
+remote: - GITHUB PUSH PROTECTION
+remote:   —————————————————————————————————————————
+remote:     Resolve the following violations before pushing again
+remote:
+remote:     - Push cannot contain secrets
+remote:
+remote:
+remote:      (?) Learn how to resolve a blocked push
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push
+remote:
+remote:
+remote:       —— Mapbox Secret Access Token ————————————————————————
+remote:        locations:
+remote:          - commit: 28dcd77d243ff0647a69b8fe5a3a75d81b71d3fd
+remote:            path: client/src/components/Map/MapboxMap.jsx:14
+remote:
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/silloin/ZoneRush/security/secret-scanning/unblock-secret/3AiHlbWyz1pUAN20foiQgJmhWW4
+remote:
+remote:
+remote:
+To https://github.com/silloin/ZoneRush.git
+ ! [remote rejected] main -> main (push declined due to repository rule violations)       
+error: failed to push some refs to 'https://github.com/silloin/ZoneRush.git'
+PS C:\Users\hp\Desktop\Realtime-Location-Tracker-main - local - Copy> import React, { useRef, useEffect, useState, useContext } from 'react';
 import mapboxgl from 'mapbox-gl';
 import MapboxDirections from '@mapbox/mapbox-gl-directions/dist/mapbox-gl-directions';
 import '@mapbox/mapbox-gl-directions/dist/mapbox-gl-directions.css';
