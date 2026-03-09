@@ -66,9 +66,15 @@ router.post('/register', async (req, res) => {
       },
     };
 
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('CRITICAL: JWT_SECRET is not set in environment variables');
+      return res.status(500).json({ msg: 'Server configuration error. Please contact administrator.' });
+    }
+
     jwt.sign(
       payload,
-      process.env.JWT_SECRET,
+      jwtSecret,
       { expiresIn: 360000 },
       (err, token) => {
         if (err) throw err;
@@ -112,9 +118,15 @@ router.post('/login', async (req, res) => {
       },
     };
 
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('CRITICAL: JWT_SECRET is not set in environment variables');
+      return res.status(500).json({ msg: 'Server configuration error. Please contact administrator.' });
+    }
+
     jwt.sign(
       payload,
-      process.env.JWT_SECRET,
+      jwtSecret,
       { expiresIn: 360000 },
       (err, token) => {
         if (err) {
