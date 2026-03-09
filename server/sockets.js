@@ -129,6 +129,57 @@ module.exports = function (io) {
       console.log(`${username} unlocked achievement: ${achievementName}`);
     });
 
+    // Handle territory capture (War mechanic)
+    socket.on('territory-captured', (data) => {
+      const { userId, username, territoryId, area, points, battles } = data;
+
+      io.emit('territory-updated', {
+        userId,
+        username,
+        territoryId,
+        area,
+        points,
+        battles,
+        timestamp: new Date(),
+      });
+
+      console.log(`${username} captured territory: ${territoryId} (${area} km², ${points} points)`);
+    });
+
+    // Handle territory stolen (War mechanic)
+    socket.on('territory-stolen', (data) => {
+      const { attackerId, attackerName, defenderId, defenderName, territoryId, pointsStolen } = data;
+
+      io.emit('territory-stolen-broadcast', {
+        attackerId,
+        attackerName,
+        defenderId,
+        defenderName,
+        territoryId,
+        pointsStolen,
+        timestamp: new Date(),
+      });
+
+      console.log(`${attackerName} stole territory from ${defenderName}: ${pointsStolen} points`);
+    });
+
+    // Handle battle initiated
+    socket.on('battle-initiated', (data) => {
+      const { attackerId, attackerName, defenderId, defenderName, territoryId } = data;
+
+      // Notify both players
+      io.emit('battle-notification', {
+        attackerId,
+        attackerName,
+        defenderId,
+        defenderName,
+        territoryId,
+        timestamp: new Date(),
+      });
+
+      console.log(`Battle: ${attackerName} vs ${defenderName} for territory ${territoryId}`);
+    });
+
     // Handle leaderboard requests
     socket.on('request-leaderboard', (data) => {
       const { type } = data; // 'global', 'city', 'friends'

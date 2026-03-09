@@ -14,7 +14,7 @@ const Events = () => {
 
   const fetchEvents = async () => {
     try {
-      const res = await axios.get('/api/events');
+      const res = await axios.get('/events');
       setEvents(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch events:', err);
@@ -27,7 +27,7 @@ const Events = () => {
   const joinEvent = async (eventId) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`/api/events/join/${eventId}`, {}, {
+      await axios.post(`/events/join/${eventId}`, {}, {
         headers: { 'x-auth-token': token }
       });
       fetchEvents();

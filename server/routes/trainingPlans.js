@@ -63,7 +63,7 @@ router.post('/generate', auth, async (req, res) => {
     const workouts = generateWorkouts(planType);
     
     const newPlan = await pool.query(
-      'INSERT INTO training_plans ("userId", "planType", workouts) VALUES ($1, $2, $3) RETURNING *',
+      'INSERT INTO training_plans (userid, plantype, workouts) VALUES ($1, $2, $3) RETURNING *',
       [req.user.id, planType, JSON.stringify(workouts)]
     );
 

@@ -9,7 +9,10 @@ import Leaderboard from './pages/Leaderboard';
 import TrainingPlans from './pages/TrainingPlans';
 import Events from './pages/Events';
 import Profile from './pages/Profile';
+import RunHistory from './pages/RunHistory';
 import Sidebar from './components/Sidebar';
+import SocialFeed from './components/SocialFeed';
+import Achievements from './components/Achievements';
 import './App.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -26,9 +29,9 @@ const ProtectedRoute = ({ children }) => {
 
 const Layout = ({ children }) => {
   return (
-    <div className="flex w-full h-screen overflow-hidden bg-gray-900">
+    <div className="flex flex-col md:flex-row w-full h-screen overflow-hidden bg-gray-900">
       <Sidebar />
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 relative overflow-auto">
         {children}
       </div>
     </div>
@@ -98,6 +101,36 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Profile />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/social"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SocialFeed />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/achievements"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Achievements />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/runs"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RunHistory />
                 </Layout>
               </ProtectedRoute>
             }

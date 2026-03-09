@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Timer, Play, Pause, RotateCcw, Bell } from 'lucide-react';
 
-const IntervalTimer = () => {
+const IntervalTimer = ({ onClose }) => {
   const [fastTime, setFastTime] = useState(60); // 1 min fast
   const [slowTime, setSlowTime] = useState(120); // 2 min slow
   const [cycles, setCycles] = useState(5); // 5 cycles
@@ -60,11 +60,16 @@ const IntervalTimer = () => {
         <h2 className="text-xl font-bold flex items-center">
           <Timer className="mr-2 text-blue-400" /> Interval Workout
         </h2>
-        <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-          isFast ? 'bg-red-600' : 'bg-blue-600'
-        }`}>
-          {isFast ? 'FAST' : 'SLOW'}
-        </div>
+        <button onClick={onClose} className="text-gray-400 hover:text-white transition">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase absolute top-6 right-12 ${
+        isFast ? 'bg-red-600' : 'bg-blue-600'
+      }`}>
+        {isFast ? 'FAST' : 'SLOW'}
       </div>
 
       <div className="flex flex-col items-center mb-8">

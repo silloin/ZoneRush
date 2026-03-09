@@ -4,31 +4,36 @@ CREATE TABLE users (
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(100) NOT NULL,
     city VARCHAR(100),
-    totalDistance NUMERIC DEFAULT 0,
-    totalTiles INTEGER DEFAULT 0,
-    weeklyMileage NUMERIC DEFAULT 0,
+    totaldistance NUMERIC DEFAULT 0,
+    totaltiles INTEGER DEFAULT 0,
+    weeklymileage NUMERIC DEFAULT 0,
     role VARCHAR(10) DEFAULT 'user',
-    trainingPlanId INTEGER,
-    achievements TEXT[]
+    trainingplanid INTEGER,
+    achievements TEXT[],
+    xp INTEGER DEFAULT 0,
+    level INTEGER DEFAULT 1,
+    streak INTEGER DEFAULT 0,
+    lastrundate DATE
 );
 
 CREATE TABLE runs (
     id SERIAL PRIMARY KEY,
-    userId INTEGER REFERENCES users(id),
+    userid INTEGER REFERENCES users(id),
     distance NUMERIC,
     duration INTEGER,
-    avgPace NUMERIC,
-    route JSONB
+    avgpace NUMERIC,
+    route JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE tiles (
     id SERIAL PRIMARY KEY,
-    geoHash VARCHAR(20) UNIQUE NOT NULL,
+    geohash VARCHAR(20) UNIQUE NOT NULL,
     location GEOGRAPHY(Point, 4326),
-    ownerId INTEGER REFERENCES users(id),
-    capturedAt TIMESTAMPTZ DEFAULT NOW(),
+    ownerid INTEGER REFERENCES users(id),
+    capturedat TIMESTAMPTZ DEFAULT NOW(),
     value INTEGER DEFAULT 1,
-    zoneId INTEGER,
+    zoneid INTEGER,
     history JSONB
 );
 
@@ -36,9 +41,9 @@ CREATE TABLE zones (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     city VARCHAR(100) NOT NULL,
-    totalTiles INTEGER DEFAULT 0,
-    kingId INTEGER REFERENCES users(id),
-    queenId INTEGER REFERENCES users(id)
+    totaltiles INTEGER DEFAULT 0,
+    kingid INTEGER REFERENCES users(id),
+    queenid INTEGER REFERENCES users(id)
 );
 
 CREATE TABLE events (
@@ -48,13 +53,14 @@ CREATE TABLE events (
     startDate TIMESTAMPTZ NOT NULL,
     endDate TIMESTAMPTZ NOT NULL,
     goalType VARCHAR(50) NOT NULL,
-    goalValue NUMERIC NOT NULL
+    goalValue NUMERIC NOT NULL,
+    participants JSONB DEFAULT '[]'
 );
 
 CREATE TABLE training_plans (
     id SERIAL PRIMARY KEY,
-    userId INTEGER REFERENCES users(id),
-    planType VARCHAR(50) NOT NULL,
+    userid INTEGER REFERENCES users(id),
+    plantype VARCHAR(50) NOT NULL,
     workouts JSONB,
-    startDate TIMESTAMPTZ DEFAULT NOW()
+    startdate TIMESTAMPTZ DEFAULT NOW()
 );

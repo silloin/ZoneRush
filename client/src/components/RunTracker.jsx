@@ -3,20 +3,42 @@ import axios from 'axios';
 import ngeohash from 'ngeohash';
 import { Play, Square, Timer, Map as MapIcon, Activity } from 'lucide-react';
 
-const RunTracker = ({ onRunComplete, onRouteUpdate }) => {
-  const [isTracking, setIsTracking] = useState(false);
-  const [startTime, setStartTime] = useState(null);
-  const [duration, setDuration] = useState(0);
-  const [distance, setDistance] = useState(0);
-  const [route, setRoute] = useState([]);
-  const [pace, setPace] = useState(0);
+const RunTracker = ({ 
+  onRunComplete, 
+  onRouteUpdate, 
+  isTracking, 
+  setIsTracking, 
+  runStats, 
+  setRunStats,
+  currentRoute: externalRoute 
+}) => {
+  const [startTime, setStartTime] = useState(runStats.startTime);
+  const [duration, setDuration] = useState(runStats.duration);
+  const [distance, setDistance] = useState(runStats.distance);
+  const [route, setRoute] = useState(externalRoute || []);
+  const [pace, setPace] = useState(runStats.pace);
   const watchId = useRef(null);
   const timerId = useRef(null);
+  
+  // Sync with external route updates
+  useEffect(() => {
+    if (externalRoute && externalRoute.length > 0) {
+      setRoute(externalRoute);
+    }
+  }, [externalRoute]);
+
+  // Update parent state when local stats change
+  useEffect(() => {
+    if (setRunStats) {
+      setRunStats({ duration, distance, pace, startTime });
+    }
+  }, [duration, distance, pace, startTime, setRunStats]);
 
   useEffect(() => {
     if (isTracking) {
       timerId.current = setInterval(() => {
-        setDuration(Math.floor((Date.now() - startTime) / 1000));
+        const newDuration = Math.floor((Date.now() - startTime) / 1000);
+        setDuration(newDuration);
       }, 1000);
 
       watchId.current = navigator.geolocation.watchPosition(
@@ -35,7 +57,10 @@ const RunTracker = ({ onRunComplete, onRouteUpdate }) => {
             if (lastPoint) {
               const d = calculateDistance(lastPoint.lat, lastPoint.lng, latitude, longitude);
               if (d < 2) return prevRoute; // Only add if moved more than 2 meters
-              setDistance((prevDist) => prevDist + d);
+              setDistance((prevDist) => {
+                const newDist = prevDist + d;
+                return newDist;
+              });
             }
             
             const updatedRoute = [...prevRoute, newPoint];
@@ -52,12 +77,16 @@ const RunTracker = ({ onRunComplete, onRouteUpdate }) => {
       );
     } else {
       clearInterval(timerId.current);
-      navigator.geolocation.clearWatch(watchId.current);
+      if (watchId.current) {
+        navigator.geolocation.clearWatch(watchId.current);
+      }
     }
 
     return () => {
       clearInterval(timerId.current);
-      navigator.geolocation.clearWatch(watchId.current);
+      if (watchId.current) {
+        navigator.geolocation.clearWatch(watchId.current);
+      }
     };
   }, [isTracking, startTime]);
 
@@ -87,12 +116,18 @@ const RunTracker = ({ onRunComplete, onRouteUpdate }) => {
   };
 
   const startTracking = () => {
+    const now = Date.now();
     setIsTracking(true);
-    setStartTime(Date.now());
+    setStartTime(now);
     setDistance(0);
     setDuration(0);
     setRoute([]);
     setPace(0);
+    
+    // Update parent state immediately
+    if (setRunStats) {
+      setRunStats({ duration: 0, distance: 0, pace: 0, startTime: now });
+    }
 
     // Get initial position immediately
     if (navigator.geolocation) {
@@ -121,16 +156,17 @@ const RunTracker = ({ onRunComplete, onRouteUpdate }) => {
 
     try {
       // Save run
-      const runRes = await axios.post('/api/runs', runData);
+      const runRes = await axios.post('/runs', runData);
       
       // Capture tiles
-      const tileRes = await axios.post('/api/tiles/capture', { route });
+      const tileRes = await axios.post('/tiles/capture', { route });
       
       alert(`Run saved! You captured ${tileRes.data.length} tiles.`);
       if (onRunComplete) onRunComplete();
     } catch (err) {
-      console.error(err);
-      alert('Error saving run');
+      console.error('Error saving run:', err);
+      console.error('Error details:', err.response?.data);
+      alert(`Error saving run: ${err.response?.data?.msg || err.message}`);
     }
   };
 

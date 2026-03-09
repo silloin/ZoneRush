@@ -42,18 +42,6 @@ router.post('/register', async (req, res) => {
   }
 
   try {
-    if (!username || !email || !password) {
-      return res.status(400).json({ msg: 'Please provide all fields' });
-    }
-    if (username.length < 3) {
-      return res.status(400).json({ msg: 'Username must be at least 3 characters' });
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ msg: 'Invalid email format' });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ msg: 'Password must be at least 6 characters' });
-    }
 
     // Check if user exists
     let user = await pool.query('SELECT * FROM users WHERE email = $1', [email]);

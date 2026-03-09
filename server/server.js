@@ -61,6 +61,9 @@ app.use('/api/zones', require('./routes/zones'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/training-plans', require('./routes/trainingPlans'));
 app.use('/api/gpx', require('./routes/gpx'));
+app.use('/api/social', require('./routes/social'));
+app.use('/api/achievements', require('./routes/achievements'));
+app.use('/api/territories', require('./routes/territories'));
 
 // For any other request, serve the index.html from the frontend
 app.get('*', (req, res) => {

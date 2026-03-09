@@ -13,7 +13,7 @@ const TrainingPlans = () => {
   const fetchCurrentPlan = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('/api/training-plans/current', {
+      const res = await axios.get('/training-plans/current', {
         headers: { 'x-auth-token': token }
       });
       setPlan(res.data || null);
@@ -29,7 +29,7 @@ const TrainingPlans = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.post('/api/training-plans/generate', { planType: type }, {
+      const res = await axios.post('/training-plans/generate', { planType: type }, {
         headers: { 'x-auth-token': token }
       });
       setPlan(res.data || null);
@@ -44,7 +44,7 @@ const TrainingPlans = () => {
   const completeWorkout = async (workoutId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.put(`/api/training-plans/workout/${workoutId}`, {}, {
+      const res = await axios.put(`/training-plans/workout/${workoutId}`, {}, {
         headers: { 'x-auth-token': token }
       });
       setPlan(res.data || null);

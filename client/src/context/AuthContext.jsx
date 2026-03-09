@@ -1,6 +1,8 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -14,32 +16,33 @@ export const AuthProvider = ({ children }) => {
       loadUser();
     } else {
       delete axios.defaults.headers.common['x-auth-token'];
+      setUser(null);
       setLoading(false);
     }
   }, [token]);
 
   const loadUser = async () => {
     try {
-      const res = await axios.get('/api/auth');
-      setUser(res.data || {});
+      const res = await axios.get('/auth');
+      setUser(res.data || null);
     } catch (err) {
       console.error('Failed to load user:', err);
       localStorage.removeItem('token');
       setToken(null);
-      setUser({});
+      setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
   const login = async (email, password) => {
-    const res = await axios.post('/api/auth/login', { email, password });
+    const res = await axios.post('/auth/login', { email, password });
     localStorage.setItem('token', res.data.token);
     setToken(res.data.token);
   };
 
   const register = async (username, email, password) => {
-    const res = await axios.post('/api/auth/register', { username, email, password });
+    const res = await axios.post('/auth/register', { username, email, password });
     localStorage.setItem('token', res.data.token);
     setToken(res.data.token);
   };

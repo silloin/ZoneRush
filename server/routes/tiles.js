@@ -27,10 +27,20 @@ router.post('/capture', auth, async (req, res) => {
       let tile = tileResult.rows[0];
 
       if (!tile) {
-        const newTileResult = await pool.query(
-          'INSERT INTO tiles (geohash, location, ownerid) VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326), $4) RETURNING id, geohash, ownerid as "ownerId", capturedat as "capturedAt", history',
-          [hash, coords.lng, coords.lat, userId]
-        );
+        let newTileResult;
+        try {
+          // Try with PostGIS location
+          newTileResult = await pool.query(
+            'INSERT INTO tiles (geohash, location, ownerid) VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326), $4) RETURNING id, geohash, ownerid as "ownerId", capturedat as "capturedAt", history',
+            [hash, coords.lng, coords.lat, userId]
+          );
+        } catch (postgisErr) {
+          // Fallback without PostGIS
+          newTileResult = await pool.query(
+            'INSERT INTO tiles (geohash, ownerid) VALUES ($1, $2) RETURNING id, geohash, ownerid as "ownerId", capturedat as "capturedAt", history',
+            [hash, userId]
+          );
+        }
         tile = newTileResult.rows[0];
       } else {
         if (tile.ownerId !== userId) {
