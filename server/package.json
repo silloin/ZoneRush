@@ -14,7 +14,6 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.3",
-    "location-tracker": "file:..",
     "multer": "^2.1.0",
     "ngeohash": "^0.6.3",
     "pg": "^8.19.0",
