@@ -30,6 +30,7 @@ const MapboxMap = () => {
   const [center, setCenter] = useState([0, 0]);
   const directionsControl = useRef(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showDirections, setShowDirections] = useState(false);
   
   // Run tracking state - lifted up to persist when panel is hidden
   const [isTracking, setIsTracking] = useState(false);
@@ -81,65 +82,6 @@ const MapboxMap = () => {
     socket.current = io(apiUrl.replace('/api', ''));
     socket.current.on('tiles-captured', () => fetchTiles());
 
-    directionsControl.current = new MapboxDirections({
-      accessToken: mapboxgl.accessToken,
-      unit: 'metric',
-      profile: 'mapbox/walking',
-      controls: {
-        inputs: true,
-        instructions: true
-      },
-      flyTo: false,
-      interactive: true,
-      alternatives: true
-    });
-    
-    // Override the _move method to prevent layer query errors
-    const originalMove = directionsControl.current._move;
-    directionsControl.current._move = function(e) {
-      try {
-        if (this._map && this._map.isStyleLoaded()) {
-          const layers = this._map.getStyle().layers;
-          const hasDirectionsLayers = layers.some(layer => 
-            layer.id.includes('directions-route-line-alt') || 
-            layer.id.includes('directions-origin-point')
-          );
-          if (hasDirectionsLayers) {
-            originalMove.call(this, e);
-          }
-        }
-      } catch (error) {
-        // Silently ignore layer query errors
-      }
-    };
-    
-    // Override the _onSingleClick method to prevent layer query errors
-    const originalOnSingleClick = directionsControl.current._onSingleClick;
-    directionsControl.current._onSingleClick = function(e) {
-      try {
-        if (this._map && this._map.isStyleLoaded()) {
-          const layers = this._map.getStyle().layers;
-          const hasDirectionsLayers = layers.some(layer => 
-            layer.id.includes('directions-origin-point')
-          );
-          if (hasDirectionsLayers) {
-            originalOnSingleClick.call(this, e);
-          }
-        }
-      } catch (error) {
-        // Silently ignore layer query errors
-      }
-    };
-    
-    map.current.addControl(directionsControl.current, 'top-left');
-
-    // Auto-set origin to live location
-    if (center[0] !== 0) {
-      setTimeout(() => {
-        directionsControl.current.setOrigin(center);
-      }, 500);
-    }
-
     userMarker.current = new mapboxgl.Marker({ color: '#4285F4' })
       .setLngLat(center)
       .addTo(map.current);
@@ -173,6 +115,86 @@ const MapboxMap = () => {
       );
     }
   };
+
+  // Add/Remove Directions Control based on state
+  useEffect(() => {
+    if (!map.current) return;
+
+    if (showDirections) {
+      if (!directionsControl.current) {
+        const directions = new MapboxDirections({
+          accessToken: mapboxgl.accessToken,
+          unit: 'metric',
+          profile: 'mapbox/walking',
+          controls: {
+            inputs: true,
+            instructions: true
+          },
+          flyTo: false,
+          interactive: true,
+          alternatives: true
+        });
+
+        // Override the _move method to prevent layer query errors
+        const originalMove = directions._move;
+        directions._move = function(e) {
+          try {
+            if (this._map && this._map.isStyleLoaded()) {
+              const layers = this._map.getStyle().layers;
+              const hasDirectionsLayers = layers.some(layer => 
+                layer.id.includes('directions-route-line-alt') || 
+                layer.id.includes('directions-origin-point')
+              );
+              if (hasDirectionsLayers) {
+                originalMove.call(this, e);
+              }
+            }
+          } catch (error) {
+            // Silently ignore layer query errors
+          }
+        };
+        
+        // Override the _onSingleClick method to prevent layer query errors
+        const originalOnSingleClick = directions._onSingleClick;
+        directions._onSingleClick = function(e) {
+          try {
+            if (this._map && this._map.isStyleLoaded()) {
+              const layers = this._map.getStyle().layers;
+              const hasDirectionsLayers = layers.some(layer => 
+                layer.id.includes('directions-origin-point')
+              );
+              if (hasDirectionsLayers) {
+                originalOnSingleClick.call(this, e);
+              }
+            }
+          } catch (error) {
+            // Silently ignore layer query errors
+          }
+        };
+
+        map.current.addControl(directions, 'top-left');
+        directionsControl.current = directions;
+
+        // Auto-set origin to live location
+        if (center[0] !== 0) {
+          setTimeout(() => {
+            if (directionsControl.current) {
+              directionsControl.current.setOrigin(center);
+            }
+          }, 500);
+        }
+      }
+    } else {
+      if (directionsControl.current) {
+        try {
+          map.current.removeControl(directionsControl.current);
+        } catch (e) {
+          // Silently catch potential error if control is already gone
+        }
+        directionsControl.current = null;
+      }
+    }
+  }, [showDirections, center]);
 
   const fetchTiles = async () => {
     try {
@@ -327,6 +349,21 @@ const MapboxMap = () => {
       
       <div ref={mapContainer} className="w-full h-full" />
 
+      {/* --- Directions Search Icon --- */}
+      {!showDirections && (
+         <div className="absolute top-4 left-4 z-20">
+          <button
+            onClick={() => setShowDirections(true)}
+            className="bg-white text-black p-2 rounded-lg shadow-lg hover:bg-gray-200 transition"
+            aria-label="Show directions"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* --- Mobile Menu Button --- */}
       <div className="absolute top-4 right-4 z-20 md:hidden">
         <button
@@ -353,7 +390,7 @@ const MapboxMap = () => {
             Use My Location
           </button>
           <button
-            onClick={() => { setShowTracker(!showTracker); setIsMenuOpen(false); }}
+            onClick={() => { setShowTracker(prev => !prev); setIsMenuOpen(false); }}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition"
           >
             {showTracker ? 'Hide Panel' : isTracking ? 'Show Panel' : isRunActive ? 'Show Panel' : 'Start New Run'}
