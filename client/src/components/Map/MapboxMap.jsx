@@ -29,6 +29,7 @@ const MapboxMap = () => {
   const [locationError, setLocationError] = useState(null);
   const [center, setCenter] = useState([0, 0]);
   const directionsControl = useRef(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   // Run tracking state - lifted up to persist when panel is hidden
   const [isTracking, setIsTracking] = useState(false);
@@ -326,7 +327,81 @@ const MapboxMap = () => {
       
       <div ref={mapContainer} className="w-full h-full" />
 
-      <div className="absolute top-4 right-4 z-10 flex flex-col space-y-2">
+      {/* --- Mobile Menu Button --- */}
+      <div className="absolute top-4 right-4 z-20 md:hidden">
+        <button
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="bg-gray-800 bg-opacity-75 text-white p-2 rounded-lg shadow-lg"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" /></svg>
+        </button>
+      </div>
+
+      {/* --- Button Panels --- */}
+      {/* Mobile (collapsible) */}
+      {isMenuOpen && (
+        <div className="absolute top-16 right-4 z-10 flex flex-col space-y-2 md:hidden bg-gray-800 bg-opacity-90 p-4 rounded-lg">
+          <button
+            onClick={() => {
+              if (directionsControl.current && center[0] !== 0) {
+                directionsControl.current.setOrigin(center);
+              }
+              setIsMenuOpen(false); // Close menu on action
+            }}
+            className="bg-cyan-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-cyan-700 transition"
+          >
+            Use My Location
+          </button>
+          <button
+            onClick={() => { setShowTracker(!showTracker); setIsMenuOpen(false); }}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition"
+          >
+            {showTracker ? 'Hide Panel' : isTracking ? 'Show Panel' : isRunActive ? 'Show Panel' : 'Start New Run'}
+          </button>
+          <button
+            onClick={() => { setShowIntervals(!showIntervals); setIsMenuOpen(false); }}
+            className="bg-gray-800 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-gray-700 transition"
+          >
+            {showIntervals ? 'Hide Interval' : 'Interval Mode'}
+          </button>
+          <button
+            onClick={() => {
+              if (map.current) map.current.setStyle('mapbox://styles/mapbox/satellite-streets-v12');
+              setIsMenuOpen(false);
+            }}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-green-700 transition"
+          >
+            Satellite
+          </button>
+          <button
+            onClick={() => {
+              if (map.current) map.current.setStyle('mapbox://styles/mapbox/streets-v12');
+              setIsMenuOpen(false);
+            }}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-purple-700 transition"
+          >
+            Streets
+          </button>
+          <button
+            onClick={() => {
+              if (directionsControl.current) directionsControl.current.removeRoutes();
+              setIsMenuOpen(false);
+            }}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-red-700 transition"
+          >
+            Clear Route
+          </button>
+          <button
+            onClick={() => { fetchTerritories(); setIsMenuOpen(false); }}
+            className="bg-yellow-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-yellow-700 transition"
+          >
+            Refresh Territories
+          </button>
+        </div>
+      )}
+
+      {/* Desktop (always visible) */}
+      <div className="absolute top-4 right-4 z-10 hidden md:flex flex-col space-y-2">
         <button
           onClick={() => {
             if (directionsControl.current && center[0] !== 0) {
