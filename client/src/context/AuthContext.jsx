@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+console.log('🌐 API Base URL:', axios.defaults.baseURL);
 
 export const AuthContext = createContext();
 
@@ -36,15 +37,29 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
-    const res = await axios.post('/auth/login', { email, password });
-    localStorage.setItem('token', res.data.token);
-    setToken(res.data.token);
+    console.log('🔐 Attempting login with:', { email, baseURL: axios.defaults.baseURL });
+    try {
+      const res = await axios.post('/auth/login', { email, password });
+      console.log('✅ Login successful:', res.data);
+      localStorage.setItem('token', res.data.token);
+      setToken(res.data.token);
+    } catch (error) {
+      console.error('❌ Login failed:', error.response?.data || error.message);
+      throw error;
+    }
   };
 
   const register = async (username, email, password) => {
-    const res = await axios.post('/auth/register', { username, email, password });
-    localStorage.setItem('token', res.data.token);
-    setToken(res.data.token);
+    console.log('📝 Attempting registration with:', { username, email, baseURL: axios.defaults.baseURL });
+    try {
+      const res = await axios.post('/auth/register', { username, email, password });
+      console.log('✅ Registration successful:', res.data);
+      localStorage.setItem('token', res.data.token);
+      setToken(res.data.token);
+    } catch (error) {
+      console.error('❌ Registration failed:', error.response?.data || error.message);
+      throw error;
+    }
   };
 
   const logout = () => {
