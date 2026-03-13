@@ -7,15 +7,15 @@ async function testAuth() {
     console.log('🔍 Checking users in database...\n');
     
     // Get all users
-    const users = await pool.query('SELECT id, username, email FROM users ORDER BY id DESC LIMIT 5');
+    const users = await pool.query('SELECT id, username, email FROM users ORDER BY id DESC');
     
     if (users.rows.length === 0) {
       console.log('❌ No users found in database!');
       console.log('💡 You need to register a new user first.\n');
     } else {
-      console.log('✅ Found users:');
+      console.log(`✅ Found ${users.rows.length} user(s):`);
       users.rows.forEach((user, index) => {
-        console.log(`${index + 1}. ${user.username} (${user.email})`);
+        console.log(`${index + 1}. ${user.username} (${user.email}) - ID: ${user.id}`);
       });
       console.log('');
     }

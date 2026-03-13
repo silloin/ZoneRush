@@ -33,6 +33,19 @@ router.post('/join/:eventId', auth, async (req, res) => {
     const eventData = event.rows[0];
     let participants = eventData.participants || [];
     
+    // Check if participants is a string (PostgreSQL JSONB might return as object/array or string depending on driver config)
+    if (typeof participants === 'string') {
+      try {
+        participants = JSON.parse(participants);
+      } catch (e) {
+        participants = [];
+      }
+    }
+
+    if (!Array.isArray(participants)) {
+      participants = [];
+    }
+    
     if (!participants.includes(userId)) {
       participants.push(userId);
       await pool.query('UPDATE events SET participants = $1 WHERE id = $2', [

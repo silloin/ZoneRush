@@ -1,89 +1,67 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
-const pool = require('../config/db');
+const pool = require('../config/database');
+const achievementService = require('../services/achievementService');
+const authenticateToken = require('../middleware/auth');
 
-// @route   GET api/achievements
-// @desc    Get user achievements
-// @access  Private
-router.get('/', auth, async (req, res) => {
+// Get all achievements
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const achievements = await pool.query(
-      'SELECT a.*, ua.unlockedat FROM achievements a LEFT JOIN user_achievements ua ON a.id = ua.achievementid AND ua.userid = $1',
-      [req.user.id]
-    );
-    res.json(achievements.rows);
-  } catch (err) {
-    console.error('GET /achievements error:', err.message);
-    console.error(err.stack);
-    res.status(500).json({ msg: 'Server Error', error: err.message });
+    const achievements = await achievementService.getAllAchievements();
+    res.json(achievements);
+  } catch (error) {
+    console.error('Error fetching achievements:', error);
+    res.status(500).json({ error: 'Failed to fetch achievements' });
   }
 });
 
-// @route   POST api/achievements/unlock
-// @desc    Unlock achievement
-// @access  Private
-router.post('/unlock', auth, async (req, res) => {
-  const { achievementId } = req.body;
+// Get user's unlocked achievements
+router.get('/user/:userId', authenticateToken, async (req, res) => {
   try {
-    const unlock = await pool.query(
-      'INSERT INTO user_achievements (userid, achievementid, unlockedat) VALUES ($1, $2, NOW()) ON CONFLICT DO NOTHING RETURNING *',
-      [req.user.id, achievementId]
-    );
+    const achievements = await achievementService.getUserAchievements(req.params.userId);
+    res.json(achievements);
+  } catch (error) {
+    console.error('Error fetching user achievements:', error);
+    res.status(500).json({ error: 'Failed to fetch user achievements' });
+  }
+});
+
+// Get achievement progress for user
+router.get('/user/:userId/progress', authenticateToken, async (req, res) => {
+  try {
+    const progress = await achievementService.getAchievementProgress(req.params.userId);
+    res.json(progress);
+  } catch (error) {
+    console.error('Error fetching achievement progress:', error);
+    res.status(500).json({ error: 'Failed to fetch achievement progress' });
+  }
+});
+
+// Check and unlock achievements
+router.post('/check/:userId', authenticateToken, async (req, res) => {
+  try {
+    const unlockedAchievements = await achievementService.checkAchievements(req.params.userId);
+    res.json({ unlocked: unlockedAchievements });
+  } catch (error) {
+    console.error('Error checking achievements:', error);
+    res.status(500).json({ error: 'Failed to check achievements' });
+  }
+});
+
+// Get user profile stats (XP, level, streak)
+router.get('/profile/:userId', authenticateToken, async (req, res) => {
+  try {
+    const query = 'SELECT id, username, xp, level, streak FROM users WHERE id = $1';
+    const result = await pool.query(query, [req.params.userId]);
     
-    // Award XP
-    const achievement = await pool.query('SELECT xpreward FROM achievements WHERE id = $1', [achievementId]);
-    if (achievement.rows[0]) {
-      await pool.query('UPDATE users SET xp = xp + $1, level = FLOOR(xp / 1000) + 1 WHERE id = $2', [
-        achievement.rows[0].xpreward,
-        req.user.id
-      ]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
     }
     
-    res.json(unlock.rows[0]);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
-});
-
-// @route   GET api/achievements/profile/:userId
-// @desc    Get user profile with stats
-// @access  Public
-router.get('/profile/:userId', async (req, res) => {
-  try {
-    const user = await pool.query(
-      `SELECT u.id, u.username, u.xp, u.level, u.city,
-       (SELECT COUNT(*) FROM tiles WHERE ownerid = u.id) as totaltiles,
-       (SELECT COALESCE(SUM(distance), 0) FROM runs WHERE userid = u.id) as totaldistance,
-       (SELECT COUNT(*) FROM user_achievements WHERE userid = u.id) as achievements
-       FROM users u WHERE u.id = $1`,
-      [req.params.userId]
-    );
-    res.json(user.rows[0]);
-  } catch (err) {
-    console.error('GET /achievements/profile error:', err.message);
-    console.error(err.stack);
-    res.status(500).json({ msg: 'Server Error', error: err.message });
-  }
-});
-
-// @route   POST api/achievements/xp
-// @desc    Add XP to user
-// @access  Private
-router.post('/xp', auth, async (req, res) => {
-  const { xp, reason } = req.body;
-  try {
-    await pool.query('UPDATE users SET xp = xp + $1, level = FLOOR((xp + $1) / 1000) + 1 WHERE id = $2', [
-      xp,
-      req.user.id
-    ]);
-    
-    const user = await pool.query('SELECT xp, level FROM users WHERE id = $1', [req.user.id]);
-    res.json({ xp: user.rows[0].xp, level: user.rows[0].level, added: xp, reason });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching user profile stats:', error);
+    res.status(500).json({ error: 'Failed to fetch profile stats' });
   }
 });
 

@@ -18,12 +18,16 @@ import './App.css';
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useContext(AuthContext);
 
+  console.log('🛡️ ProtectedRoute check:', { user: !!user, loading });
+
   if (loading) return <div className="h-screen w-screen bg-gray-900 flex items-center justify-center text-white text-2xl font-bold">RunTerra...</div>;
 
   if (!user) {
+    console.log('❌ No user found, redirecting to login');
     return <Navigate to="/login" />;
   }
 
+  console.log('✅ User authenticated, rendering protected content');
   return children;
 };
 

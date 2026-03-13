@@ -54,7 +54,7 @@ const Events = () => {
                   <div className="flex justify-between items-start mb-4">
                     <h2 className="text-2xl font-bold">{event.name}</h2>
                     <span className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
-                      {event.goaltype}
+                      {event.goal_type || event.goaltype}
                     </span>
                   </div>
                   
@@ -67,11 +67,11 @@ const Events = () => {
                     </div>
                     <div className="flex items-center text-gray-300">
                       <Trophy className="mr-2 text-yellow-500" size={18} />
-                      <span>Goal: {event.goalvalue}</span>
+                      <span>Goal: {event.goal_value || event.goalvalue}</span>
                     </div>
                     <div className="flex items-center text-gray-300">
                       <Clock className="mr-2 text-green-400" size={18} />
-                      <span>Ends: {new Date(event.enddate).toLocaleDateString()}</span>
+                      <span>Ends: {new Date(event.end_date || event.enddate).toLocaleDateString()}</span>
                     </div>
                   </div>
 

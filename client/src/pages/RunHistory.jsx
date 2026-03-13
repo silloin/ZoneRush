@@ -15,12 +15,15 @@ import {
   Share2
 } from 'lucide-react';
 
+import RouteReplay from '../components/RouteReplay/RouteReplay';
+
 const RunHistory = () => {
   const { user } = useContext(AuthContext);
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedRun, setExpandedRun] = useState(null);
   const [filter, setFilter] = useState('all'); // all, week, month
+  const [replayRun, setReplayRun] = useState(null);
 
   useEffect(() => {
     fetchRuns();
@@ -300,6 +303,15 @@ const RunHistory = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          setReplayRun(run);
+                        }}
+                        className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition"
+                      >
+                        <Activity className="mr-2" size={16} /> Replay Run
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           shareRun(run);
                         }}
                         className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition"
@@ -329,6 +341,23 @@ const RunHistory = () => {
           )}
         </div>
       </div>
+
+      {/* Route Replay Modal */}
+      {replayRun && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="bg-gray-800 rounded-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden relative shadow-2xl">
+            <button 
+              onClick={() => setReplayRun(null)}
+              className="absolute top-4 right-4 z-50 bg-gray-900/80 p-2 rounded-full hover:bg-red-500 transition"
+            >
+              <Trash2 size={24} />
+            </button>
+            <div className="flex-1">
+              <RouteReplay runId={replayRun.id} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

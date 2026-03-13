@@ -4,22 +4,25 @@ const pool = require('../config/db');
 // @desc    Get global or city leaderboard
 // @access  Public
 exports.getLeaderboard = async (req, res) => {
-  const { city } = req.query;
-  let query = 'SELECT username, totaltiles as "totalTiles", totaldistance as "totalDistance", city FROM users';
-  const params = [];
-
-  if (city) {
-    query += ' WHERE city ILIKE $1';
-    params.push(`%${city}%`);
-  }
-
-  query += ' ORDER BY totaltiles DESC LIMIT 20';
-
   try {
-    const users = await pool.query(query, params);
-    res.json(users.rows);
+    const query = `
+      SELECT 
+        u.id, 
+        u.username, 
+        u.xp, 
+        u.level, 
+        u.streak,
+        (SELECT COUNT(*) FROM captured_tiles ct WHERE ct.user_id = u.id) as "totalTiles",
+        (SELECT COALESCE(SUM(r.distance), 0) FROM runs r WHERE r.user_id = u.id) as "totalDistance"
+      FROM users u
+      ORDER BY xp DESC, "totalTiles" DESC
+      LIMIT 20
+    `;
+    
+    const result = await pool.query(query);
+    res.json(result.rows);
   } catch (err) {
-    console.error(err.message);
+    console.error('Error fetching leaderboard:', err.message);
     res.status(500).send('Server Error');
   }
 };

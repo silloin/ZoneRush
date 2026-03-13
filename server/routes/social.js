@@ -10,7 +10,7 @@ router.post('/posts', auth, async (req, res) => {
   const { runId, caption } = req.body;
   try {
     const post = await pool.query(
-      'INSERT INTO posts (userid, runid, caption, createdat) VALUES ($1, $2, $3, NOW()) RETURNING *',
+      'INSERT INTO posts (user_id, run_id, caption, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
       [req.user.id, runId, caption]
     );
     res.json(post.rows[0]);
@@ -27,17 +27,16 @@ router.get('/feed', auth, async (req, res) => {
   try {
     const feed = await pool.query(
       `SELECT p.*, u.username, r.distance, r.duration, 
-       (SELECT COUNT(*) FROM likes WHERE postid = p.id) as likes,
-       (SELECT COUNT(*) FROM comments WHERE postid = p.id) as comments
+       (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes,
+       (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comments
        FROM posts p 
-       JOIN users u ON p.userid = u.id 
-       LEFT JOIN runs r ON p.runid = r.id 
-       ORDER BY p.createdat DESC LIMIT 50`
+       JOIN users u ON p.user_id = u.id 
+       LEFT JOIN runs r ON p.run_id = r.id 
+       ORDER BY p.created_at DESC LIMIT 50`
     );
     res.json(feed.rows);
   } catch (err) {
     console.error('GET /social/feed error:', err.message);
-    console.error(err.stack);
     res.status(500).json({ msg: 'Server Error', error: err.message });
   }
 });
@@ -48,7 +47,7 @@ router.get('/feed', auth, async (req, res) => {
 router.post('/like/:postId', auth, async (req, res) => {
   try {
     await pool.query(
-      'INSERT INTO likes (userid, postid) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      'INSERT INTO likes (user_id, post_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
       [req.user.id, req.params.postId]
     );
     res.json({ msg: 'Post liked' });
@@ -63,7 +62,7 @@ router.post('/like/:postId', auth, async (req, res) => {
 // @access  Private
 router.delete('/like/:postId', auth, async (req, res) => {
   try {
-    await pool.query('DELETE FROM likes WHERE userid = $1 AND postid = $2', [
+    await pool.query('DELETE FROM likes WHERE user_id = $1 AND post_id = $2', [
       req.user.id,
       req.params.postId,
     ]);
@@ -81,7 +80,7 @@ router.post('/comment/:postId', auth, async (req, res) => {
   const { text } = req.body;
   try {
     const comment = await pool.query(
-      'INSERT INTO comments (userid, postid, text, createdat) VALUES ($1, $2, $3, NOW()) RETURNING *',
+      'INSERT INTO comments (user_id, post_id, text, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
       [req.user.id, req.params.postId, text]
     );
     res.json(comment.rows[0]);
@@ -97,7 +96,7 @@ router.post('/comment/:postId', auth, async (req, res) => {
 router.get('/comments/:postId', async (req, res) => {
   try {
     const comments = await pool.query(
-      'SELECT c.*, u.username FROM comments c JOIN users u ON c.userid = u.id WHERE c.postid = $1 ORDER BY c.createdat DESC',
+      'SELECT c.*, u.username FROM comments c JOIN users u ON c.user_id = u.id WHERE c.post_id = $1 ORDER BY c.created_at DESC',
       [req.params.postId]
     );
     res.json(comments.rows);

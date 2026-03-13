@@ -80,10 +80,19 @@ router.post('/upload', auth, upload.single('gpxFile'), async (req, res) => {
     // Calculate average pace (minutes per km)
     const avgPace = distance > 0 ? (duration / 60) / (distance / 1000) : 0;
 
+    // Create LineString from route points
+    const coordinates = route.map(p => `${p.lng} ${p.lat}`).join(', ');
+    const lineString = `LINESTRING(${coordinates})`;
+    const startPoint = `POINT(${route[0].lng} ${route[0].lat})`;
+    const endPoint = `POINT(${route[route.length - 1].lng} ${route[route.length - 1].lat})`;
+
     // Store run in database
     const newRun = await pool.query(
-      'INSERT INTO runs (userid, distance, duration, avgpace, route) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [req.user.id, distance, duration, avgPace, JSON.stringify(route)]
+      `INSERT INTO runs 
+       (user_id, distance, duration, pace, route_geometry, start_location, end_location, started_at, completed_at) 
+       VALUES ($1, $2, $3, $4, ST_GeomFromText($5, 4326), ST_GeomFromText($6, 4326), ST_GeomFromText($7, 4326), $8, $9) 
+       RETURNING *`,
+      [req.user.id, distance, duration, avgPace, lineString, startPoint, endPoint, route[0].timestamp, route[route.length - 1].timestamp]
     );
 
     res.json({

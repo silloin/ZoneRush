@@ -17,6 +17,7 @@ const RunTracker = ({
   const [distance, setDistance] = useState(runStats.distance);
   const [route, setRoute] = useState(externalRoute || []);
   const [pace, setPace] = useState(runStats.pace);
+  const [gpsStatus, setGpsStatus] = useState('idle'); // idle, searching, active, error
   const watchId = useRef(null);
   const timerId = useRef(null);
   
@@ -24,8 +25,16 @@ const RunTracker = ({
   useEffect(() => {
     if (externalRoute && externalRoute.length > 0) {
       setRoute(externalRoute);
+      setGpsStatus('active');
     }
   }, [externalRoute]);
+
+  // Update parent when route changes (avoid calling during render)
+  useEffect(() => {
+    if (onRouteUpdate && route.length > 0) {
+      onRouteUpdate(route);
+    }
+  }, [route, onRouteUpdate]);
 
   // Update parent state when local stats change
   useEffect(() => {
@@ -45,8 +54,13 @@ const RunTracker = ({
         (position) => {
           const { latitude, longitude, accuracy } = position.coords;
           
-          // Basic accuracy filter - ignore updates with accuracy > 50m
-          if (accuracy > 50) return;
+          setGpsStatus('active');
+          
+          // More lenient accuracy filter - ignore updates with accuracy > 100m
+          if (accuracy > 100) {
+            console.log('⚠️ Low accuracy GPS reading ignored:', accuracy + 'm');
+            return;
+          }
 
           const newPoint = { lat: latitude, lng: longitude };
           
@@ -56,7 +70,7 @@ const RunTracker = ({
             // Avoid duplicates or very small movements that are likely GPS jitter
             if (lastPoint) {
               const d = calculateDistance(lastPoint.lat, lastPoint.lng, latitude, longitude);
-              if (d < 2) return prevRoute; // Only add if moved more than 2 meters
+              if (d < 5) return prevRoute; // Only add if moved more than 5 meters
               setDistance((prevDist) => {
                 const newDist = prevDist + d;
                 return newDist;
@@ -64,15 +78,24 @@ const RunTracker = ({
             }
             
             const updatedRoute = [...prevRoute, newPoint];
-            if (onRouteUpdate) onRouteUpdate(updatedRoute);
             return updatedRoute;
           });
         },
-        (err) => console.error("Watch error:", err),
+        (err) => {
+          console.error("Watch error:", err);
+          setGpsStatus('error');
+          // Don't give up immediately, GPS might recover
+          setTimeout(() => {
+            if (isTracking) {
+              console.log('🔄 Retrying GPS...');
+              setGpsStatus('searching');
+            }
+          }, 5000);
+        },
         { 
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
+          enableHighAccuracy: false, // Less aggressive for better compatibility
+          timeout: 30000, // Longer timeout
+          maximumAge: 60000 // Allow slightly older readings
         }
       );
     } else {
@@ -80,6 +103,7 @@ const RunTracker = ({
       if (watchId.current) {
         navigator.geolocation.clearWatch(watchId.current);
       }
+      setGpsStatus('idle');
     }
 
     return () => {
@@ -118,6 +142,7 @@ const RunTracker = ({
   const startTracking = () => {
     const now = Date.now();
     setIsTracking(true);
+    setGpsStatus('searching');
     setStartTime(now);
     setDistance(0);
     setDuration(0);
@@ -136,16 +161,69 @@ const RunTracker = ({
           const { latitude, longitude } = position.coords;
           const initialPoint = { lat: latitude, lng: longitude };
           setRoute([initialPoint]);
-          if (onRouteUpdate) onRouteUpdate([initialPoint]);
+          setGpsStatus('active');
+          console.log('✅ Initial GPS position acquired');
         },
-        (err) => console.error("Initial position error:", err),
-        { enableHighAccuracy: true }
+        (err) => {
+          console.error("Initial position error:", err);
+          setGpsStatus('error');
+          // Try with less aggressive settings
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+              const initialPoint = { lat: latitude, lng: longitude };
+              setRoute([initialPoint]);
+              setGpsStatus('active');
+              console.log('✅ Initial GPS position acquired (fallback)');
+            },
+            (fallbackErr) => {
+              console.error('Fallback GPS also failed:', fallbackErr);
+              alert('GPS access failed. Please enable location services and try again.');
+            },
+            { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+          );
+        },
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
       );
     }
   };
 
+  const forceGpsRetry = () => {
+    setGpsStatus('searching');
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const newPoint = { lat: latitude, lng: longitude };
+          setRoute(prev => [...prev, newPoint]);
+          setGpsStatus('active');
+          console.log('✅ Manual GPS retry successful');
+        },
+        (err) => {
+          console.error('Manual GPS retry failed:', err);
+          setGpsStatus('error');
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+      );
+    }
+  };
+
+  const cancelRun = () => {
+    if (window.confirm('Are you sure you want to cancel this run? No data will be saved.')) {
+      setIsTracking(false);
+      setGpsStatus('idle');
+      if (onRunComplete) onRunComplete();
+    }
+  };
+
   const stopTracking = async () => {
+    if (route.length === 0) {
+      alert("Cannot save run: No GPS data collected yet. Wait for GPS signal or cancel the run.");
+      return;
+    }
+
     setIsTracking(false);
+    setGpsStatus('idle');
     
     const runData = {
       distance: (distance / 1000).toFixed(2), // km
@@ -179,6 +257,24 @@ const RunTracker = ({
 
   return (
     <div className="bg-gray-800 p-6 rounded-lg shadow-xl text-white">
+      {isTracking && (
+        <div className={`mb-4 p-2 rounded text-center text-sm font-bold ${
+          gpsStatus === 'active' ? 'bg-green-600' : 
+          gpsStatus === 'error' ? 'bg-red-600' : 'bg-yellow-600'
+        }`}>
+          {gpsStatus === 'active' ? '📶 GPS Active' : 
+           gpsStatus === 'error' ? '⚠️ GPS Error - Check Location Settings' : '🔍 Searching for GPS Signal...'}
+          {gpsStatus === 'error' && (
+            <button
+              onClick={forceGpsRetry}
+              className="ml-2 px-2 py-1 bg-white text-red-600 rounded text-xs hover:bg-gray-100"
+            >
+              Retry GPS
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="flex flex-col items-center p-4 bg-gray-700 rounded">
           <Timer className="mb-2 text-blue-400" />
@@ -210,12 +306,27 @@ const RunTracker = ({
           <Play className="mr-2" /> Start Run
         </button>
       ) : (
-        <button
-          onClick={stopTracking}
-          className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-full flex items-center justify-center transition"
-        >
-          <Square className="mr-2" /> Stop Run
-        </button>
+        <div className="flex space-x-2">
+          <button
+            onClick={stopTracking}
+            className={`flex-1 font-bold py-4 rounded-full flex items-center justify-center transition ${
+              route.length > 0 
+                ? 'bg-red-600 hover:bg-red-700 text-white' 
+                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+            }`}
+            disabled={route.length === 0}
+          >
+            <Square className="mr-2" /> {route.length > 0 ? 'Stop & Save' : 'Waiting for GPS...'}
+          </button>
+          
+          <button
+            onClick={cancelRun}
+            className="bg-gray-600 hover:bg-gray-700 text-white font-bold px-4 rounded-full flex items-center justify-center transition"
+            title="Cancel Run (No Save)"
+          >
+            X
+          </button>
+        </div>
       )}
     </div>
   );

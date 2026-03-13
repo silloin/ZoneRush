@@ -85,8 +85,8 @@ const TrainingPlans = () => {
           <div className="bg-gray-800 rounded-xl overflow-hidden shadow-2xl border border-gray-700">
             <div className="bg-gray-700 p-6 flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-bold uppercase tracking-wide">{plan.planType || 'Training'} Plan</h2>
-                <p className="text-gray-300">Started on {new Date(plan.startDate || Date.now()).toLocaleDateString()}</p>
+                <h2 className="text-2xl font-bold uppercase tracking-wide">{(plan.plan_type || plan.planType) || 'Training'} Plan</h2>
+                <p className="text-gray-300">Started on {new Date(plan.start_date || plan.startDate || Date.now()).toLocaleDateString()}</p>
               </div>
               <button
                 onClick={() => setPlan(null)}

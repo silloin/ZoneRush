@@ -10,13 +10,30 @@ const pool = require('../config/db');
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const user = await pool.query(
-      'SELECT id, username, email, city, totaldistance as "totalDistance", totaltiles as "totalTiles", weeklymileage as "weeklyMileage", role FROM users WHERE id = $1',
-      [req.user.id]
-    );
-    res.json(user.rows[0]);
+    const query = `
+      SELECT 
+        u.id, 
+        u.username, 
+        u.email, 
+        u.xp, 
+        u.level, 
+        u.streak,
+        u.total_distance as "totalDistance",
+        u.total_tiles as "totalTiles",
+        u.weekly_mileage as "weeklyMileage",
+        u.role
+      FROM users u
+      WHERE u.id = $1
+    `;
+    const result = await pool.query(query, [req.user.id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    
+    res.json(result.rows[0]);
   } catch (err) {
-    console.error(err.message);
+    console.error('Error in auth middleware:', err.message);
     res.status(500).send('Server Error');
   }
 });
@@ -102,12 +119,14 @@ router.post('/login', async (req, res) => {
     // Check if user exists
     let user = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     if (user.rows.length === 0) {
+      console.log(`Login failed: User not found for email ${email}`);
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
 
     // Check password
     const isMatch = await bcrypt.compare(password, user.rows[0].password);
     if (!isMatch) {
+      console.log(`Login failed: Password mismatch for user ${email}`);
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
 

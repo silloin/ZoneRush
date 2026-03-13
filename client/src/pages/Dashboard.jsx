@@ -13,17 +13,37 @@ import {
   Bar,
   Legend,
 } from 'recharts';
-import { Trophy, Map as MapIcon, Activity, TrendingUp, Calendar, Upload } from 'lucide-react';
+import { Trophy, Map as MapIcon, Activity, TrendingUp, Calendar, Upload, MessageSquare, Lightbulb } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [recommendations, setRecommendations] = useState([]);
 
   useEffect(() => {
     fetchRuns();
-  }, []);
+    if (user?.id) {
+      fetchRecommendations();
+    }
+  }, [user]);
+
+  const fetchRecommendations = async () => {
+    try {
+      if (!user?.id) return;
+      const res = await axios.get(`/ai-coach/recommendations/${user.id}`);
+      if (Array.isArray(res.data)) {
+        setRecommendations(res.data);
+      } else {
+        console.error('Recommendations API response is not an array:', res.data);
+        setRecommendations([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch recommendations:', err);
+      setRecommendations([]);
+    }
+  };
 
   const fetchRuns = async () => {
     try {
@@ -128,6 +148,35 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 mb-6 sm:mb-8">
+        {/* AI Coach Card */}
+        <div className="bg-gray-800 p-4 sm:p-6 rounded-lg border border-blue-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg sm:text-xl font-semibold flex items-center">
+              <Lightbulb className="text-yellow-400 mr-2" /> AI Running Coach
+            </h2>
+            <span className="text-xs bg-blue-600 px-2 py-1 rounded">BETA</span>
+          </div>
+          <div className="space-y-4">
+            {Array.isArray(recommendations) && recommendations.length > 0 ? (
+              recommendations.map((rec, idx) => (
+                <div key={idx} className="bg-gray-900/50 p-4 rounded-lg border-l-4 border-blue-500">
+                  <h3 className="font-bold text-blue-400 mb-1">{rec.title}</h3>
+                  <p className="text-sm sm:text-base text-gray-300">{rec.description}</p>
+                  {rec.recommendation_type && (
+                    <span className="text-[10px] uppercase tracking-wider text-blue-500/70 mt-2 block">
+                      {rec.recommendation_type.replace('_', ' ')}
+                    </span>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="bg-gray-900/50 p-4 rounded-lg italic text-gray-400 text-sm">
+                Analyze your runs to get personalized coaching advice.
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="bg-gray-800 p-4 sm:p-6 rounded-lg">
           <h2 className="text-lg sm:text-xl font-semibold mb-4">Distance (Last 7 Runs)</h2>
           <div className="h-48 sm:h-64">

@@ -7,6 +7,7 @@ import axios from 'axios';
 import { io } from 'socket.io-client';
 import ngeohash from 'ngeohash';
 import { AuthContext } from '../../context/AuthContext';
+import { Activity, Route } from 'lucide-react';
 import RunTracker from '../RunTracker';
 import IntervalTimer from '../IntervalTimer';
 import './Map.css';
@@ -20,26 +21,34 @@ const MapboxMap = () => {
   const socket = useRef(null);
   const watchId = useRef(null);
   const userMarker = useRef(null);
+  const startMarker = useRef(null);
   const userHeading = useRef(0);
+  const currentDirection = useRef(null);
+  const previousHeading = useRef(null);
+  const startTime = useRef(null);
   const [tiles, setTiles] = useState([]);
   const [showTracker, setShowTracker] = useState(false);
   const [showIntervals, setShowIntervals] = useState(false);
-  const [currentRoute, setCurrentRoute] = useState([]);
   const [isRunActive, setIsRunActive] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [center, setCenter] = useState([0, 0]);
   const directionsControl = useRef(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showDirections, setShowDirections] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const otherMarkers = useRef({});
   
   // Run tracking state - lifted up to persist when panel is hidden
   const [isTracking, setIsTracking] = useState(false);
+  const [liveRoute, setLiveRoute] = useState([]);
   const [runStats, setRunStats] = useState({
     duration: 0,
     distance: 0,
     pace: 0,
     startTime: null
   });
+  const [currentRoute, setCurrentRoute] = useState([]);
 
   useEffect(() => {
     if (map.current) return;
@@ -74,13 +83,143 @@ const MapboxMap = () => {
     map.current.on('load', () => {
       fetchTiles();
       startLocationTracking();
+      setupMapLayers();
     });
+  };
+
+  const setupMapLayers = () => {
+    if (!map.current) return;
+
+    // Add source for live route drawing
+    map.current.addSource('live-route', {
+      type: 'geojson',
+      data: {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: []
+        }
+      }
+    });
+
+    map.current.addLayer({
+      id: 'live-route-layer',
+      type: 'line',
+      source: 'live-route',
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': '#3b82f6',
+        'line-width': 5,
+        'line-opacity': 0.8
+      }
+    });
+
+    // Add source for heatmap
+    map.current.addSource('heatmap', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] }
+    });
+
+    map.current.addLayer({
+      id: 'heatmap-layer',
+      type: 'heatmap',
+      source: 'heatmap',
+      maxzoom: 15,
+      layout: { visibility: 'none' },
+      paint: {
+        'heatmap-weight': ['interpolate', ['linear'], ['get', 'intensity'], 0, 0, 10, 1],
+        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 3],
+        'heatmap-color': [
+          'interpolate',
+          ['linear'],
+          ['heatmap-density'],
+          0, 'rgba(33,102,172,0)',
+          0.2, 'rgb(103,169,207)',
+          0.4, 'rgb(209,229,240)',
+          0.6, 'rgb(253,219,199)',
+          0.8, 'rgb(239,138,98)',
+          1, 'rgb(178,24,43)'
+        ],
+        'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 2, 15, 20],
+        'heatmap-opacity': 0.6
+      }
+    });
+  };
+
+  const getDirection = (heading) => {
+    if (heading >= 337.5 || heading < 22.5) return 'N';
+    if (heading >= 22.5 && heading < 67.5) return 'NE';
+    if (heading >= 67.5 && heading < 112.5) return 'E';
+    if (heading >= 112.5 && heading < 157.5) return 'SE';
+    if (heading >= 157.5 && heading < 202.5) return 'S';
+    if (heading >= 202.5 && heading < 247.5) return 'SW';
+    if (heading >= 247.5 && heading < 292.5) return 'W';
+    if (heading >= 292.5 && heading < 337.5) return 'NW';
+    return 'N';
   };
 
   const startLocationTracking = () => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
     socket.current = io(apiUrl.replace('/api', ''));
-    socket.current.on('tiles-captured', () => fetchTiles());
+    
+    // Multiplayer events
+    socket.current.on('connect', () => {
+      if (user) {
+        socket.current.emit('authenticate', { userId: user.id });
+      }
+    });
+
+    socket.current.on('runner-started', (data) => {
+      updateOtherUserMarker({
+        userId: data.userId,
+        location: { lat: data.position.lat, lng: data.position.lng },
+        username: data.username
+      });
+      // Add to online users if not already there
+      setOnlineUsers(prev => {
+        if (!prev.find(u => u.userId === data.userId)) {
+          return [...prev, data];
+        }
+        return prev;
+      });
+    });
+
+    socket.current.on('runner-position-update', (data) => {
+      updateOtherUserMarker({
+        userId: data.userId,
+        location: { lat: data.position.lat, lng: data.position.lng },
+        username: data.username
+      });
+    });
+
+    socket.current.on('runner-stopped', (data) => {
+      if (otherMarkers.current[data.userId]) {
+        otherMarkers.current[data.userId].remove();
+        delete otherMarkers.current[data.userId];
+      }
+      setOnlineUsers(prev => prev.filter(u => u.userId !== data.userId));
+    });
+
+    socket.current.on('active-run-restored', (data) => {
+      // Logic to restore an active run if needed
+    });
+
+    socket.current.on('tile-captured', (data) => {
+      fetchTiles();
+      // Optional: Show toast notification for new tile
+    });
+
+    socket.current.on('achievements-unlocked', (achievements) => {
+      // Optional: Show achievement notification
+    });
+
+    if (user) {
+      socket.current.emit('authenticate', { userId: user.id });
+    }
 
     userMarker.current = new mapboxgl.Marker({ color: '#4285F4' })
       .setLngLat(center)
@@ -94,7 +233,46 @@ const MapboxMap = () => {
           
           setCenter(coords);
           
+          if (isTracking) {
+            setLiveRoute(prev => {
+              const newRoute = [...prev, coords];
+              if (map.current?.getSource('live-route')) {
+                map.current.getSource('live-route').setData({
+                  type: 'Feature',
+                  geometry: {
+                    type: 'LineString',
+                    coordinates: newRoute
+                  }
+                });
+              }
+              return newRoute;
+            });
+
+            // Send real-time update to others - match server protocol
+            socket.current?.emit('location-update', {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              speed: position.coords.speed,
+              heading: position.coords.heading,
+              accuracy: position.coords.accuracy,
+              timestamp: position.timestamp,
+              distance: runStats.distance,
+              pace: runStats.pace
+            });
+          }
+          
           if (heading !== null && heading !== undefined) {
+            // Detect direction change
+            if (previousHeading.current !== null) {
+              const headingDiff = Math.abs(heading - previousHeading.current);
+              if (headingDiff > 15) { // 15 degree threshold
+                currentDirection.current = getDirection(heading);
+              }
+            } else {
+              currentDirection.current = getDirection(heading);
+            }
+            
+            previousHeading.current = heading;
             userHeading.current = heading;
           }
           
@@ -113,6 +291,62 @@ const MapboxMap = () => {
         },
         { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
       );
+    }
+  };
+
+  const updateOtherUserMarker = (data) => {
+    const { userId, location, username } = data;
+    if (!userId || !location) return;
+
+    if (!otherMarkers.current[userId]) {
+      // Create new marker for this user
+      const el = document.createElement('div');
+      el.className = 'other-user-marker';
+      el.style.backgroundColor = '#ef4444';
+      el.style.width = '15px';
+      el.style.height = '15px';
+      el.style.borderRadius = '50%';
+      el.style.border = '2px solid white';
+      el.title = username || `User ${userId}`;
+
+      otherMarkers.current[userId] = new mapboxgl.Marker(el)
+        .setLngLat([location.lng, location.lat])
+        .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<h3>${username || 'Runner'}</h3>`))
+        .addTo(map.current);
+    } else {
+      // Update existing marker
+      otherMarkers.current[userId].setLngLat([location.lng, location.lat]);
+    }
+  };
+
+  // Toggle heatmap visibility
+  useEffect(() => {
+    if (!map.current || !map.current.isStyleLoaded()) return;
+    
+    if (showHeatmap) {
+      map.current.setLayoutProperty('heatmap-layer', 'visibility', 'visible');
+      fetchHeatmapData();
+    } else {
+      map.current.setLayoutProperty('heatmap-layer', 'visibility', 'none');
+    }
+  }, [showHeatmap]);
+
+  const fetchHeatmapData = async () => {
+    try {
+      const bounds = map.current.getBounds();
+      const res = await axios.get('/heatmap/bounds', {
+        params: {
+          minLat: bounds.getSouth(),
+          minLng: bounds.getWest(),
+          maxLat: bounds.getNorth(),
+          maxLng: bounds.getEast()
+        }
+      });
+      if (map.current.getSource('heatmap')) {
+        map.current.getSource('heatmap').setData(res.data);
+      }
+    } catch (err) {
+      console.error('Heatmap fetch error:', err);
     }
   };
 
@@ -195,6 +429,31 @@ const MapboxMap = () => {
       }
     }
   }, [showDirections, center]);
+
+  // Handle start/stop tracking events for socket.io
+  useEffect(() => {
+    if (!socket.current) return;
+
+    if (isTracking) {
+      socket.current.emit('start-tracking', {
+        userId: user?.id,
+        username: user?.username,
+        runId: null, // This will be assigned on server if needed, or we can get it from parent
+        initialPosition: center[0] !== 0 ? { lat: center[1], lng: center[0] } : null
+      });
+    } else if (startTime.current && !isTracking) {
+      // If we were tracking but now stopped
+      socket.current.emit('stop-tracking', {
+        finalStats: runStats
+      });
+    }
+    
+    if (isTracking) {
+      startTime.current = Date.now();
+    } else {
+      startTime.current = null;
+    }
+  }, [isTracking, user]);
 
   const fetchTiles = async () => {
     try {
@@ -293,7 +552,34 @@ const MapboxMap = () => {
 
   // Draw live route line on map when currentRoute changes
   useEffect(() => {
-    if (!map.current || currentRoute.length === 0) return;
+    if (!map.current) return;
+
+    // Handle Start Marker - only show when tracking is active
+    if (currentRoute.length > 0 && isTracking) {
+      if (!startMarker.current) {
+        const startCoords = [currentRoute[0].lng, currentRoute[0].lat];
+        const el = document.createElement('div');
+        el.className = 'marker-start';
+        el.style.backgroundColor = '#10b981'; // Emerald-500
+        el.style.width = '16px';
+        el.style.height = '16px';
+        el.style.borderRadius = '50%';
+        el.style.border = '3px solid white';
+        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+        
+        startMarker.current = new mapboxgl.Marker(el)
+          .setLngLat(startCoords)
+          .addTo(map.current);
+      }
+    } else {
+      // Remove start marker when not tracking or no route
+      if (startMarker.current) {
+        startMarker.current.remove();
+        startMarker.current = null;
+      }
+    }
+
+    if (currentRoute.length === 0 || !isTracking) return;
 
     const coordinates = currentRoute.map(point => [point.lng, point.lat]);
     
@@ -329,7 +615,7 @@ const MapboxMap = () => {
         }
       });
     }
-  }, [currentRoute]);
+  }, [currentRoute, isTracking]);
 
   useEffect(() => {
     return () => {
@@ -347,6 +633,37 @@ const MapboxMap = () => {
         </div>
       )}
       
+      {/* Map UI Controls */}
+      <div className="absolute top-20 right-4 flex flex-col space-y-2 z-10">
+        <button 
+          onClick={() => setShowHeatmap(!showHeatmap)}
+          className={`p-3 rounded-full shadow-lg transition ${showHeatmap ? 'bg-orange-500 text-white' : 'bg-white text-gray-700'}`}
+          title="Toggle Heatmap"
+        >
+          <Activity size={20} />
+        </button>
+        <button 
+          onClick={() => setShowDirections(!showDirections)}
+          className={`p-3 rounded-full shadow-lg transition ${showDirections ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'}`}
+          title="Toggle Directions"
+        >
+          <Route size={20} />
+        </button>
+      </div>
+
+      {isTracking && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-6 py-2 rounded-full shadow-2xl z-20 font-bold flex items-center space-x-3">
+          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+          <span>LIVE TRACKING ACTIVE</span>
+        </div>
+      )}
+
+      {/* Online Users Count */}
+      <div className="absolute bottom-24 right-4 bg-gray-900/80 text-white px-3 py-1 rounded-lg text-xs z-10 flex items-center space-x-2 border border-gray-700">
+        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+        <span>{onlineUsers.length + 1} Runners Online</span>
+      </div>
+
       <div ref={mapContainer} className="w-full h-full" />
 
       {/* --- Directions Search Icon --- */}
@@ -390,10 +707,22 @@ const MapboxMap = () => {
             Use My Location
           </button>
           <button
-            onClick={() => { setShowTracker(prev => !prev); setIsMenuOpen(false); }}
+            onClick={() => {
+              if (isTracking && !showTracker) {
+                // If tracking but panel hidden, show it
+                setShowTracker(true);
+              } else if (showTracker) {
+                // If panel is showing, hide it
+                setShowTracker(false);
+              } else {
+                // If not tracking and panel not showing, start new run
+                setShowTracker(true);
+              }
+              setIsMenuOpen(false);
+            }}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition"
           >
-            {showTracker ? 'Hide Panel' : isTracking ? 'Show Panel' : isRunActive ? 'Show Panel' : 'Start New Run'}
+            {showTracker ? 'Hide Panel' : isTracking ? 'Show Panel' : 'Start New Run'}
           </button>
           <button
             onClick={() => { setShowIntervals(!showIntervals); setIsMenuOpen(false); }}
@@ -450,10 +779,21 @@ const MapboxMap = () => {
           Use My Location
         </button>
         <button
-          onClick={() => setShowTracker(!showTracker)}
+          onClick={() => {
+            if (isTracking && !showTracker) {
+              // If tracking but panel hidden, show it
+              setShowTracker(true);
+            } else if (showTracker) {
+              // If panel is showing, hide it
+              setShowTracker(false);
+            } else {
+              // If not tracking and panel not showing, start new run
+              setShowTracker(true);
+            }
+          }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition"
         >
-          {showTracker ? 'Hide Panel' : isTracking ? 'Show Panel' : isRunActive ? 'Show Panel' : 'Start New Run'}
+          {showTracker ? 'Hide Panel' : isTracking ? 'Show Panel' : 'Start New Run'}
         </button>
         <button
           onClick={() => setShowIntervals(!showIntervals)}
@@ -549,7 +889,7 @@ const MapboxMap = () => {
         </div>
       )}
 
-      {(showTracker || isTracking) && (
+      {showTracker && (
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 w-full max-w-md px-4">
           <RunTracker 
             isTracking={isTracking}

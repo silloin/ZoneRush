@@ -1,13 +1,21 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const { login } = useContext(AuthContext);
+  const { login, user, loading } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const { email, password } = formData;
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!loading && user) {
+      console.log('✅ User already logged in, redirecting to dashboard');
+      navigate('/');
+    }
+  }, [user, loading, navigate]);
 
   const onChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -20,6 +28,20 @@ const Login = () => {
       alert(err.response?.data?.msg || 'Login failed');
     }
   };
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-900">
+        <div className="text-white text-xl">Checking authentication...</div>
+      </div>
+    );
+  }
+
+  // Don't render login form if user is already authenticated
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="flex items-center justify-center h-screen bg-gray-900">

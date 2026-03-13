@@ -91,6 +91,11 @@ app.use('/api/gpx', require('./routes/gpx'));
 app.use('/api/social', require('./routes/social'));
 app.use('/api/achievements', require('./routes/achievements'));
 app.use('/api/territories', require('./routes/territories'));
+app.use('/api/segments', require('./routes/segments'));
+app.use('/api/challenges', require('./routes/challenges'));
+app.use('/api/leaderboard', require('./routes/leaderboard'));
+app.use('/api/ai-coach', require('./routes/aiCoach'));
+app.use('/api/heatmap', require('./routes/heatmap'));
 
 // For any other request, serve the index.html from the frontend
 app.get('*', (req, res) => {
@@ -108,8 +113,9 @@ app.get('*', (req, res) => {
   }
 });
 
-// Socket.io integration
-require('./sockets')(io);
+// Socket.io integration - Use enhanced multiplayer handlers
+const multiplayerSocketHandlers = require('./multiplayerSocketHandlers');
+multiplayerSocketHandlers(io);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
