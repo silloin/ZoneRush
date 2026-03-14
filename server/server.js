@@ -26,7 +26,6 @@ const io = new Server(server, {
     methods: ['GET', 'POST'],
   },
   transports: ['polling', 'websocket'],
-  allowEIO3: true,
 });
 
 // Test the database connection

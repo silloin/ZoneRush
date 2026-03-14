@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../config/database');
+const pool = require('../config/db');
 const tileService = require('../services/tileService');
 const segmentService = require('../services/segmentService');
 const achievementService = require('../services/achievementService');

@@ -1,5 +1,5 @@
 const ngeohash = require('ngeohash');
-const pool = require('../config/database');
+const pool = require('../config/db');
 
 class TileService {
   constructor() {

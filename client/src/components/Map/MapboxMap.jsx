@@ -70,7 +70,7 @@ const MapboxMap = () => {
   }, []);
 
   const initializeMap = (coords) => {
-    if (map.current) return;
+    if (map.current || !mapContainer.current) return;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -499,10 +499,8 @@ const MapboxMap = () => {
   const renderTiles = (tilesData) => {
     if (!map.current) return;
 
-    if (map.current.getSource('tiles')) {
-      map.current.removeLayer('tiles-layer');
-      map.current.removeSource('tiles');
-    }
+    if (map.current.getLayer('tiles-layer')) map.current.removeLayer('tiles-layer');
+    if (map.current.getSource('tiles')) map.current.removeSource('tiles');
 
     const features = tilesData.map(tile => {
       const coords = ngeohash.decode(tile.geohash);
