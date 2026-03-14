@@ -1,6 +1,69 @@
 -- Enable PostGIS extension
 CREATE EXTENSION IF NOT EXISTS postgis;
 
+-- Migrate legacy tables to new column names if they exist (Run this early)
+DO $$
+BEGIN
+    -- Runs table
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'runs') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'userid') THEN
+            ALTER TABLE runs RENAME COLUMN userid TO user_id;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'avgpace') THEN
+            ALTER TABLE runs RENAME COLUMN avgpace TO pace;
+        END IF;
+    END IF;
+
+    -- Captured Tiles table
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'captured_tiles') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'userid') THEN
+            ALTER TABLE captured_tiles RENAME COLUMN userid TO user_id;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'tileid') THEN
+            ALTER TABLE captured_tiles RENAME COLUMN tileid TO tile_id;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'runid') THEN
+            ALTER TABLE captured_tiles RENAME COLUMN runid TO run_id;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'capturedat') THEN
+            ALTER TABLE captured_tiles RENAME COLUMN capturedat TO captured_at;
+        END IF;
+    END IF;
+
+    -- Training Plans table
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'training_plans') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'userid') THEN
+            ALTER TABLE training_plans RENAME COLUMN userid TO user_id;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'plantype') THEN
+            ALTER TABLE training_plans RENAME COLUMN plantype TO plan_type;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'startdate') THEN
+            ALTER TABLE training_plans RENAME COLUMN startdate TO start_date;
+        END IF;
+    END IF;
+
+    -- Territories table
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'territories') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'userid') THEN
+            ALTER TABLE territories RENAME COLUMN userid TO user_id;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'capturedat') THEN
+            ALTER TABLE territories RENAME COLUMN capturedat TO captured_at;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'tilescaptured') THEN
+            ALTER TABLE territories RENAME COLUMN tilescaptured TO tiles_captured;
+        END IF;
+    END IF;
+
+    -- Users table
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'lastrundate') THEN
+            ALTER TABLE users RENAME COLUMN lastrundate TO last_run_date;
+        END IF;
+    END IF;
+END $$;
+
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -133,29 +196,6 @@ CREATE TABLE IF NOT EXISTS territory_battles (
     points_transferred INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
--- Migrate territories table: rename legacy 'userid' column to 'user_id' if needed
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'territories' AND column_name = 'userid'
-    ) THEN
-        ALTER TABLE territories RENAME COLUMN userid TO user_id;
-    END IF;
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'territories' AND column_name = 'capturedat'
-    ) THEN
-        ALTER TABLE territories RENAME COLUMN capturedat TO captured_at;
-    END IF;
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'territories' AND column_name = 'tilescaptured'
-    ) THEN
-        ALTER TABLE territories RENAME COLUMN tilescaptured TO tiles_captured;
-    END IF;
-END $$;
 
 -- Add missing columns to territories if not present
 ALTER TABLE territories ADD COLUMN IF NOT EXISTS area_km2 NUMERIC;

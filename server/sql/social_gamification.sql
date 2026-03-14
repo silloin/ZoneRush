@@ -63,6 +63,55 @@ INSERT INTO achievements (name, description, icon, xp_reward, requirement) VALUE
 ('Marathon Runner', 'Run 42 kilometers', '🏆', 1000, '{"distance": 42}')
 ON CONFLICT DO NOTHING;
 
+-- Migrate all tables to new column names if they exist with legacy names
+DO $$
+BEGIN
+    -- Posts table
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'userid') THEN
+        ALTER TABLE posts RENAME COLUMN userid TO user_id;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'runid') THEN
+        ALTER TABLE posts RENAME COLUMN runid TO run_id;
+    END IF;
+
+    -- Likes table
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'likes' AND column_name = 'userid') THEN
+        ALTER TABLE likes RENAME COLUMN userid TO user_id;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'likes' AND column_name = 'postid') THEN
+        ALTER TABLE likes RENAME COLUMN postid TO post_id;
+    END IF;
+
+    -- Comments table
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comments' AND column_name = 'userid') THEN
+        ALTER TABLE comments RENAME COLUMN userid TO user_id;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comments' AND column_name = 'postid') THEN
+        ALTER TABLE comments RENAME COLUMN postid TO post_id;
+    END IF;
+
+    -- User Achievements table
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_achievements' AND column_name = 'userid') THEN
+        ALTER TABLE user_achievements RENAME COLUMN userid TO user_id;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_achievements' AND column_name = 'achievementid') THEN
+        ALTER TABLE user_achievements RENAME COLUMN achievementid TO achievement_id;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_achievements' AND column_name = 'unlockedat') THEN
+        ALTER TABLE user_achievements RENAME COLUMN unlockedat TO unlocked_at;
+    END IF;
+
+    -- Push Tokens table
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'push_tokens' AND column_name = 'userid') THEN
+        ALTER TABLE push_tokens RENAME COLUMN userid TO user_id;
+    END IF;
+
+    -- AI Recommendations table
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ai_recommendations' AND column_name = 'userid') THEN
+        ALTER TABLE ai_recommendations RENAME COLUMN userid TO user_id;
+    END IF;
+END $$;
+
 -- AI Recommendations Table
 CREATE TABLE IF NOT EXISTS ai_recommendations (
     id SERIAL PRIMARY KEY,

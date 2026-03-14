@@ -226,20 +226,28 @@ const RunTracker = ({
     setGpsStatus('idle');
     
     const runData = {
-      distance: (distance / 1000).toFixed(2), // km
+      distance: parseFloat((distance / 1000).toFixed(2)), // km
       duration, // seconds
-      avgPace: pace.toFixed(2),
-      route,
+      pace: parseFloat(pace.toFixed(2)),
+      route_points: route.map((p, idx) => ({
+        lat: p.lat,
+        lng: p.lng,
+        timestamp: new Date(startTime + (idx * (duration / route.length) * 1000)).toISOString()
+      })),
+      started_at: new Date(startTime).toISOString(),
+      completed_at: new Date().toISOString()
     };
+
+    console.log('📤 Sending run data to backend:', runData);
 
     try {
       // Save run
       const runRes = await axios.post('/runs', runData);
+      console.log('✅ Run saved successfully:', runRes.data);
       
       // Capture tiles
       const tileRes = await axios.post('/tiles/capture', { route });
-      
-      alert(`Run saved! You captured ${tileRes.data.length} tiles.`);
+      console.log('✅ Tiles captured:', tileRes.data);
       if (onRunComplete) onRunComplete();
     } catch (err) {
       console.error('Error saving run:', err);

@@ -33,6 +33,7 @@ const MapboxMap = () => {
   const [locationError, setLocationError] = useState(null);
   const [center, setCenter] = useState([0, 0]);
   const directionsControl = useRef(null);
+  const currentStyle = useRef('mapbox://styles/mapbox/dark-v11');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showDirections, setShowDirections] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(false);
@@ -350,6 +351,24 @@ const MapboxMap = () => {
     }
   };
 
+  const toggleStyle = () => {
+    if (!map.current) return;
+    const newStyle = currentStyle.current === 'mapbox://styles/mapbox/dark-v11' 
+      ? 'mapbox://styles/mapbox/satellite-streets-v12' 
+      : 'mapbox://styles/mapbox/dark-v11';
+    
+    currentStyle.current = newStyle;
+    
+    // Use setStyle with diff: false to avoid sprite update warnings
+    map.current.setStyle(newStyle, { diff: false });
+    
+    // Wait for style to load before re-adding layers
+    map.current.once('style.load', () => {
+      setupMapLayers();
+      fetchTiles();
+    });
+  };
+
   // Add/Remove Directions Control based on state
   useEffect(() => {
     if (!map.current) return;
@@ -635,6 +654,13 @@ const MapboxMap = () => {
       
       {/* Map UI Controls */}
       <div className="absolute top-20 right-4 flex flex-col space-y-2 z-10">
+        <button 
+          onClick={toggleStyle}
+          className="p-3 rounded-full shadow-lg transition bg-white text-gray-700"
+          title="Toggle Map Style"
+        >
+          <MapIcon size={20} />
+        </button>
         <button 
           onClick={() => setShowHeatmap(!showHeatmap)}
           className={`p-3 rounded-full shadow-lg transition ${showHeatmap ? 'bg-orange-500 text-white' : 'bg-white text-gray-700'}`}
