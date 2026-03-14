@@ -82,8 +82,12 @@ async function investigateDatabase() {
     
     // 7. Test creating a user manually
     console.log('🧪 Testing user creation...');
-    const testEmail = 'debug@test.com';
-    const testPassword = 'debug123';
+    const testEmail = process.env.DEBUG_USER_EMAIL || 'debug@test.com';
+    const testPassword = process.env.DEBUG_USER_PASSWORD;
+    if (!testPassword) {
+      console.log('⚠️  Skipping user creation test: DEBUG_USER_PASSWORD env var not set');
+      return;
+    }
     
     try {
       // Check if test user already exists
