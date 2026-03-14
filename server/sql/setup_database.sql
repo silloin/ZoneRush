@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS postgis;
+
 -- Migrate legacy tables to new column names if they exist (Run this early)
 DO $$
 BEGIN
