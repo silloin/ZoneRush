@@ -5,75 +5,106 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 DO $$
 BEGIN
     -- Runs table
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'runs') THEN
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'userid') 
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'user_id') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'runs' AND table_schema = 'public') THEN
+        -- Rename legacy columns
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'userid' AND table_schema = 'public') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'user_id' AND table_schema = 'public') THEN
             ALTER TABLE runs RENAME COLUMN userid TO user_id;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'avgpace') 
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'pace') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'avgpace' AND table_schema = 'public') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'pace' AND table_schema = 'public') THEN
             ALTER TABLE runs RENAME COLUMN avgpace TO pace;
         END IF;
+        
+        -- Add missing columns using ALTER TABLE ... ADD COLUMN IF NOT EXISTS for simplicity and robustness
+        EXECUTE 'ALTER TABLE runs ADD COLUMN IF NOT EXISTS calories INTEGER';
+        EXECUTE 'ALTER TABLE runs ADD COLUMN IF NOT EXISTS elevation_gain NUMERIC';
+        EXECUTE 'ALTER TABLE runs ADD COLUMN IF NOT EXISTS route_geometry GEOMETRY(LineString, 4326)';
+        EXECUTE 'ALTER TABLE runs ADD COLUMN IF NOT EXISTS start_location GEOMETRY(Point, 4326)';
+        EXECUTE 'ALTER TABLE runs ADD COLUMN IF NOT EXISTS end_location GEOMETRY(Point, 4326)';
+        EXECUTE 'ALTER TABLE runs ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ';
+        EXECUTE 'ALTER TABLE runs ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ';
     END IF;
 
     -- Captured Tiles table
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'captured_tiles') THEN
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'userid') 
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'user_id') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'captured_tiles' AND table_schema = 'public') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'userid' AND table_schema = 'public') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'user_id' AND table_schema = 'public') THEN
             ALTER TABLE captured_tiles RENAME COLUMN userid TO user_id;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'tileid') 
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'tile_id') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'tileid' AND table_schema = 'public') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'tile_id' AND table_schema = 'public') THEN
             ALTER TABLE captured_tiles RENAME COLUMN tileid TO tile_id;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'runid') 
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'run_id') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'runid' AND table_schema = 'public') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'run_id' AND table_schema = 'public') THEN
             ALTER TABLE captured_tiles RENAME COLUMN runid TO run_id;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'capturedat') 
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'captured_at') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'capturedat' AND table_schema = 'public') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'captured_at' AND table_schema = 'public') THEN
             ALTER TABLE captured_tiles RENAME COLUMN capturedat TO captured_at;
         END IF;
     END IF;
 
     -- Training Plans table
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'training_plans') THEN
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'userid') 
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'user_id') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'training_plans' AND table_schema = 'public') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'userid' AND table_schema = 'public') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'user_id' AND table_schema = 'public') THEN
             ALTER TABLE training_plans RENAME COLUMN userid TO user_id;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'plantype') 
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'plan_type') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'plantype' AND table_schema = 'public') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'plan_type' AND table_schema = 'public') THEN
             ALTER TABLE training_plans RENAME COLUMN plantype TO plan_type;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'startdate') 
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'start_date') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'startdate' AND table_schema = 'public') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'start_date' AND table_schema = 'public') THEN
             ALTER TABLE training_plans RENAME COLUMN startdate TO start_date;
         END IF;
     END IF;
 
     -- Territories table
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'territories') THEN
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'userid') 
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'user_id') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'territories' AND table_schema = 'public') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'userid' AND table_schema = 'public') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'user_id' AND table_schema = 'public') THEN
             ALTER TABLE territories RENAME COLUMN userid TO user_id;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'capturedat') 
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'captured_at') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'capturedat' AND table_schema = 'public') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'captured_at' AND table_schema = 'public') THEN
             ALTER TABLE territories RENAME COLUMN capturedat TO captured_at;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'tilescaptured') 
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'tiles_captured') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'tilescaptured' AND table_schema = 'public') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'tiles_captured' AND table_schema = 'public') THEN
             ALTER TABLE territories RENAME COLUMN tilescaptured TO tiles_captured;
         END IF;
+
+        -- Add missing columns to territories
+        EXECUTE 'ALTER TABLE territories ADD COLUMN IF NOT EXISTS area_km2 NUMERIC';
+        EXECUTE 'ALTER TABLE territories ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0';
+        EXECUTE 'ALTER TABLE territories ADD COLUMN IF NOT EXISTS is_stolen BOOLEAN DEFAULT FALSE';
+        EXECUTE 'ALTER TABLE territories ADD COLUMN IF NOT EXISTS stolen_from_id INTEGER REFERENCES users(id) ON DELETE SET NULL';
+    END IF;
+
+    -- Route Points table
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'route_points' AND table_schema = 'public') THEN
+        EXECUTE 'ALTER TABLE route_points ADD COLUMN IF NOT EXISTS altitude NUMERIC';
+        EXECUTE 'ALTER TABLE route_points ADD COLUMN IF NOT EXISTS speed NUMERIC';
+        EXECUTE 'ALTER TABLE route_points ADD COLUMN IF NOT EXISTS heading NUMERIC';
+        EXECUTE 'ALTER TABLE route_points ADD COLUMN IF NOT EXISTS accuracy NUMERIC';
     END IF;
 
     -- Users table
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'lastrundate') 
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'last_run_date') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users' AND table_schema = 'public') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'lastrundate' AND table_schema = 'public') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'last_run_date' AND table_schema = 'public') THEN
             ALTER TABLE users RENAME COLUMN lastrundate TO last_run_date;
         END IF;
+        
+        -- Add other user columns
+        EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS xp INTEGER DEFAULT 0';
+        EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1';
+        EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS streak INTEGER DEFAULT 0';
+        EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS total_territory_area NUMERIC DEFAULT 0';
+        EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS territory_points INTEGER DEFAULT 0';
     END IF;
 END $$;
 
@@ -209,23 +240,6 @@ CREATE TABLE IF NOT EXISTS territory_battles (
     points_transferred INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
--- Add missing columns to territories if not present
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='territories' AND column_name='area_km2') THEN
-        ALTER TABLE territories ADD COLUMN area_km2 NUMERIC;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='territories' AND column_name='points') THEN
-        ALTER TABLE territories ADD COLUMN points INTEGER DEFAULT 0;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='territories' AND column_name='is_stolen') THEN
-        ALTER TABLE territories ADD COLUMN is_stolen BOOLEAN DEFAULT FALSE;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='territories' AND column_name='stolen_from_id') THEN
-        ALTER TABLE territories ADD COLUMN stolen_from_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
-    END IF;
-END $$;
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_tiles_geohash ON tiles(geohash);

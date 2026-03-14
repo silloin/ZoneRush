@@ -140,11 +140,11 @@ router.post('/', authenticateToken, async (req, res) => {
     await client.query('BEGIN');
     
     const {
-      distance,
-      duration,
-      pace,
-      calories,
-      elevation_gain,
+      distance = 0,
+      duration = 0,
+      pace = 0,
+      calories = 0,
+      elevation_gain = 0,
       route_points,
       started_at,
       completed_at
@@ -152,8 +152,18 @@ router.post('/', authenticateToken, async (req, res) => {
     
     const userId = req.user.id;
     
-    if (!distance || !duration || !route_points || route_points.length === 0) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    // Check for required fields more robustly
+    if (!route_points || route_points.length === 0 || !started_at || !completed_at) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        received: { 
+          distance, 
+          duration, 
+          route_points_count: route_points?.length,
+          started_at,
+          completed_at
+        }
+      });
     }
     
     // Create LineString from route points

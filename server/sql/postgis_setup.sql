@@ -2,15 +2,15 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS postgis_topology;
 
--- Add geometry columns to runs table for LINESTRING storage
-ALTER TABLE runs ADD COLUMN IF NOT EXISTS route_geom GEOMETRY(LINESTRING, 4326);
+-- Add geometry columns to runs table for LINESTRING storage (consistent with setup_database.sql)
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS route_geometry GEOMETRY(LINESTRING, 4326);
 
 -- Create index for spatial queries
-CREATE INDEX IF NOT EXISTS idx_runs_route_geom ON runs USING GIST(route_geom);
+CREATE INDEX IF NOT EXISTS idx_runs_route_geometry ON runs USING GIST(route_geometry);
 
 -- Add geometry column to tiles for polygon storage
-ALTER TABLE tiles ADD COLUMN IF NOT EXISTS area_geom GEOMETRY(POLYGON, 4326);
-CREATE INDEX IF NOT EXISTS idx_tiles_area_geom ON tiles USING GIST(area_geom);
+ALTER TABLE tiles ADD COLUMN IF NOT EXISTS geometry GEOMETRY(POLYGON, 4326);
+CREATE INDEX IF NOT EXISTS idx_tiles_geometry ON tiles USING GIST(geometry);
 
 -- Function to convert route JSON to LINESTRING
 CREATE OR REPLACE FUNCTION json_to_linestring(route_json JSONB)
