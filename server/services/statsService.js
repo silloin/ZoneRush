@@ -231,26 +231,24 @@ class StatsService {
 
   // Get leaderboard
   async getLeaderboard(type = 'distance', limit = 50) {
-    const allowedTypes = { distance: 'u.total_distance DESC', runs: '(SELECT COUNT(*) FROM runs WHERE user_id = u.id) DESC', tiles: 'u.total_tiles DESC', xp: 'u.xp DESC', streak: 'u.streak DESC' };
+    const allowedTypes = {
+      distance: 'u.total_distance DESC',
+      runs: '(SELECT COUNT(*) FROM runs WHERE user_id = u.id) DESC',
+      tiles: 'u.total_tiles DESC',
+      xp: 'u.xp DESC',
+      streak: 'u.streak DESC'
+    };
     const orderBy = allowedTypes[type] || allowedTypes.distance;
     const safeLimit = Math.max(1, Math.min(100, parseInt(limit) || 50));
 
-    const query = `
-      SELECT 
-        u.id,
-        u.username,
-        u.level,
-        u.xp,
-        u.total_distance,
-        u.total_tiles,
-        u.streak,
-        (SELECT MIN(pace) FROM runs WHERE user_id = u.id) as best_pace,
-        (SELECT COUNT(*) FROM runs WHERE user_id = u.id) as total_runs,
-        ROW_NUMBER() OVER (ORDER BY ${orderBy}) as rank
-      FROM users u
-      ORDER BY ${orderBy}
-      LIMIT $1
-    `;
+    const queries = {
+      distance: `SELECT u.id, u.username, u.level, u.xp, u.total_distance, u.total_tiles, u.streak, (SELECT MIN(pace) FROM runs WHERE user_id = u.id) as best_pace, (SELECT COUNT(*) FROM runs WHERE user_id = u.id) as total_runs, ROW_NUMBER() OVER (ORDER BY u.total_distance DESC) as rank FROM users u ORDER BY u.total_distance DESC LIMIT $1`,
+      runs: `SELECT u.id, u.username, u.level, u.xp, u.total_distance, u.total_tiles, u.streak, (SELECT MIN(pace) FROM runs WHERE user_id = u.id) as best_pace, (SELECT COUNT(*) FROM runs WHERE user_id = u.id) as total_runs, ROW_NUMBER() OVER (ORDER BY (SELECT COUNT(*) FROM runs WHERE user_id = u.id) DESC) as rank FROM users u ORDER BY (SELECT COUNT(*) FROM runs WHERE user_id = u.id) DESC LIMIT $1`,
+      tiles: `SELECT u.id, u.username, u.level, u.xp, u.total_distance, u.total_tiles, u.streak, (SELECT MIN(pace) FROM runs WHERE user_id = u.id) as best_pace, (SELECT COUNT(*) FROM runs WHERE user_id = u.id) as total_runs, ROW_NUMBER() OVER (ORDER BY u.total_tiles DESC) as rank FROM users u ORDER BY u.total_tiles DESC LIMIT $1`,
+      xp: `SELECT u.id, u.username, u.level, u.xp, u.total_distance, u.total_tiles, u.streak, (SELECT MIN(pace) FROM runs WHERE user_id = u.id) as best_pace, (SELECT COUNT(*) FROM runs WHERE user_id = u.id) as total_runs, ROW_NUMBER() OVER (ORDER BY u.xp DESC) as rank FROM users u ORDER BY u.xp DESC LIMIT $1`,
+      streak: `SELECT u.id, u.username, u.level, u.xp, u.total_distance, u.total_tiles, u.streak, (SELECT MIN(pace) FROM runs WHERE user_id = u.id) as best_pace, (SELECT COUNT(*) FROM runs WHERE user_id = u.id) as total_runs, ROW_NUMBER() OVER (ORDER BY u.streak DESC) as rank FROM users u ORDER BY u.streak DESC LIMIT $1`,
+    };
+    const query = queries[type] || queries.distance;
 
     const result = await pool.query(query, [safeLimit]);
     return result.rows;

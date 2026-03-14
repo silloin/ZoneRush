@@ -1,5 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA public;
 -- Migrate legacy tables to new column names if they exist (Run this early)
+CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA public;
 DO $$
 BEGIN
     -- Runs table
