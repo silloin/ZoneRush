@@ -67,47 +67,58 @@ ON CONFLICT DO NOTHING;
 DO $$
 BEGIN
     -- Posts table
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'userid') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'userid') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'user_id') THEN
         ALTER TABLE posts RENAME COLUMN userid TO user_id;
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'runid') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'runid') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'run_id') THEN
         ALTER TABLE posts RENAME COLUMN runid TO run_id;
     END IF;
 
     -- Likes table
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'likes' AND column_name = 'userid') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'likes' AND column_name = 'userid') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'likes' AND column_name = 'user_id') THEN
         ALTER TABLE likes RENAME COLUMN userid TO user_id;
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'likes' AND column_name = 'postid') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'likes' AND column_name = 'postid') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'likes' AND column_name = 'post_id') THEN
         ALTER TABLE likes RENAME COLUMN postid TO post_id;
     END IF;
 
     -- Comments table
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comments' AND column_name = 'userid') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comments' AND column_name = 'userid') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comments' AND column_name = 'user_id') THEN
         ALTER TABLE comments RENAME COLUMN userid TO user_id;
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comments' AND column_name = 'postid') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comments' AND column_name = 'postid') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comments' AND column_name = 'post_id') THEN
         ALTER TABLE comments RENAME COLUMN postid TO post_id;
     END IF;
 
     -- User Achievements table
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_achievements' AND column_name = 'userid') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_achievements' AND column_name = 'userid') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_achievements' AND column_name = 'user_id') THEN
         ALTER TABLE user_achievements RENAME COLUMN userid TO user_id;
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_achievements' AND column_name = 'achievementid') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_achievements' AND column_name = 'achievementid') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_achievements' AND column_name = 'achievement_id') THEN
         ALTER TABLE user_achievements RENAME COLUMN achievementid TO achievement_id;
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_achievements' AND column_name = 'unlockedat') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_achievements' AND column_name = 'unlockedat') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_achievements' AND column_name = 'unlocked_at') THEN
         ALTER TABLE user_achievements RENAME COLUMN unlockedat TO unlocked_at;
     END IF;
 
     -- Push Tokens table
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'push_tokens' AND column_name = 'userid') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'push_tokens' AND column_name = 'userid') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'push_tokens' AND column_name = 'user_id') THEN
         ALTER TABLE push_tokens RENAME COLUMN userid TO user_id;
     END IF;
 
     -- AI Recommendations table
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ai_recommendations' AND column_name = 'userid') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ai_recommendations' AND column_name = 'userid') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ai_recommendations' AND column_name = 'user_id') THEN
         ALTER TABLE ai_recommendations RENAME COLUMN userid TO user_id;
     END IF;
 END $$;

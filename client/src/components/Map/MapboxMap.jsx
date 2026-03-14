@@ -7,7 +7,7 @@ import axios from 'axios';
 import { io } from 'socket.io-client';
 import ngeohash from 'ngeohash';
 import { AuthContext } from '../../context/AuthContext';
-import { Activity, Route } from 'lucide-react';
+import { Activity, Route, Map as MapIcon } from 'lucide-react';
 import RunTracker from '../RunTracker';
 import IntervalTimer from '../IntervalTimer';
 import './Map.css';

@@ -6,62 +6,72 @@ DO $$
 BEGIN
     -- Runs table
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'runs') THEN
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'userid') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'userid') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'user_id') THEN
             ALTER TABLE runs RENAME COLUMN userid TO user_id;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'avgpace') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'avgpace') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'runs' AND column_name = 'pace') THEN
             ALTER TABLE runs RENAME COLUMN avgpace TO pace;
         END IF;
     END IF;
 
     -- Captured Tiles table
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'captured_tiles') THEN
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'userid') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'userid') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'user_id') THEN
             ALTER TABLE captured_tiles RENAME COLUMN userid TO user_id;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'tileid') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'tileid') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'tile_id') THEN
             ALTER TABLE captured_tiles RENAME COLUMN tileid TO tile_id;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'runid') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'runid') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'run_id') THEN
             ALTER TABLE captured_tiles RENAME COLUMN runid TO run_id;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'capturedat') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'capturedat') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captured_tiles' AND column_name = 'captured_at') THEN
             ALTER TABLE captured_tiles RENAME COLUMN capturedat TO captured_at;
         END IF;
     END IF;
 
     -- Training Plans table
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'training_plans') THEN
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'userid') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'userid') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'user_id') THEN
             ALTER TABLE training_plans RENAME COLUMN userid TO user_id;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'plantype') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'plantype') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'plan_type') THEN
             ALTER TABLE training_plans RENAME COLUMN plantype TO plan_type;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'startdate') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'startdate') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'training_plans' AND column_name = 'start_date') THEN
             ALTER TABLE training_plans RENAME COLUMN startdate TO start_date;
         END IF;
     END IF;
 
     -- Territories table
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'territories' AND table_schema = 'public') THEN
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'userid' AND table_schema = 'public')
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'user_id' AND table_schema = 'public') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'territories') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'userid') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'user_id') THEN
             ALTER TABLE territories RENAME COLUMN userid TO user_id;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'capturedat' AND table_schema = 'public')
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'captured_at' AND table_schema = 'public') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'capturedat') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'captured_at') THEN
             ALTER TABLE territories RENAME COLUMN capturedat TO captured_at;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'tilescaptured' AND table_schema = 'public')
-           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'tiles_captured' AND table_schema = 'public') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'tilescaptured') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'tiles_captured') THEN
             ALTER TABLE territories RENAME COLUMN tilescaptured TO tiles_captured;
         END IF;
     END IF;
 
     -- Users table
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'lastrundate') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'lastrundate') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'last_run_date') THEN
             ALTER TABLE users RENAME COLUMN lastrundate TO last_run_date;
         END IF;
     END IF;
