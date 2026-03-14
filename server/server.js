@@ -9,6 +9,7 @@ require('dotenv').config(); // Load from .env in the server directory
 
 // Create Express app
 const app = express();
+app.set('trust proxy', 1);
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? (process.env.FRONTEND_URL || true)  // same-origin on Render; set FRONTEND_URL if separate
