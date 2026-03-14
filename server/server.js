@@ -104,7 +104,7 @@ app.use('/api/ai-coach', require('./routes/aiCoach'));
 app.use('/api/heatmap', require('./routes/heatmap'));
 
 // For any other request, serve the index.html from the frontend
-app.get('*', (req, res) => {
+app.get('/{*splat}', (req, res) => {
   const indexPath = path.resolve(publicPath, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
