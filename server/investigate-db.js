@@ -82,10 +82,11 @@ async function investigateDatabase() {
     
     // 7. Test creating a user manually
     console.log('🧪 Testing user creation...');
-    const testEmail = process.env.DEBUG_USER_EMAIL || 'debug@test.com';
+    const testEmail = process.env.DEBUG_USER_EMAIL;
     const testPassword = process.env.DEBUG_USER_PASSWORD;
-    if (!testPassword) {
-      console.log('⚠️  Skipping user creation test: DEBUG_USER_PASSWORD env var not set');
+    const testUsername = process.env.DEBUG_USER_NAME;
+    if (!testPassword || !testEmail || !testUsername) {
+      console.log('⚠️  Skipping user creation test: DEBUG_USER_EMAIL, DEBUG_USER_NAME, DEBUG_USER_PASSWORD env vars required');
       return;
     }
     
@@ -105,7 +106,6 @@ async function investigateDatabase() {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(testPassword, salt);
         
-        const testUsername = process.env.DEBUG_USER_NAME || 'debuguser';
         const newUser = await pool.query(
           'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email',
           [testUsername, testEmail, hashedPassword]
