@@ -164,7 +164,7 @@ const MapboxMap = () => {
   };
 
   const startLocationTracking = () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const apiUrl = import.meta.env.VITE_API_URL || '/api';
     socket.current = io(apiUrl.replace('/api', ''));
     
     // Multiplayer events
