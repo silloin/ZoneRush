@@ -12,7 +12,6 @@
   "dependencies": {
     "@mapbox/mapbox-gl-directions": "^4.3.1",
     "axios": "^1.7.2",
-    "location-tracker": "file:..",
     "lucide-react": "^0.395.0",
     "mapbox-gl": "^3.19.1",
     "ngeohash": "^0.6.3",

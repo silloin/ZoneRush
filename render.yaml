@@ -2,8 +2,8 @@ services:
   - type: web
     name: zonerush
     env: node
-    buildCommand: npm run build
-    startCommand: npm start
+    buildCommand: npm install --prefix server --legacy-peer-deps && npm install --prefix client --legacy-peer-deps && npm run build --prefix client
+    startCommand: cd server && npm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -17,4 +17,3 @@ services:
 databases:
   - name: zonerush-db
     plan: free
-    postgis: true

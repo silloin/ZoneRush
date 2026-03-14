@@ -9,7 +9,12 @@ require('dotenv').config(); // Load from .env in the server directory
 
 // Create Express app
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production'
+    ? (process.env.FRONTEND_URL || true)  // same-origin on Render; set FRONTEND_URL if separate
+    : '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+}));
 app.use(express.json());
 
 // Create HTTP server and attach Socket.io
@@ -47,6 +52,7 @@ const executeSqlFile = async (filePath) => {
 const initializeDatabase = async () => {
   console.log('Initializing database schema...');
   try {
+    await pool.query('CREATE EXTENSION IF NOT EXISTS postgis');
     // It's crucial to run these in the correct order
     await executeSqlFile('./sql/setup_database.sql');
     await executeSqlFile('./sql/postgis_setup.sql');

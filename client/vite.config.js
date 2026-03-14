@@ -14,8 +14,8 @@ export default defineConfig({
   build: {
     outDir: '../server/public',
     emptyOutDir: true,
-  },
-  define: {
-    'process.env.NODE_ENV': JSON.stringify('production'),
+    define: {
+      'process.env.NODE_ENV': JSON.stringify('production'),
+    },
   },
 });
