@@ -44,14 +44,17 @@ BEGIN
     END IF;
 
     -- Territories table
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'territories') THEN
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'userid') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'territories' AND table_schema = 'public') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'userid' AND table_schema = 'public')
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'user_id' AND table_schema = 'public') THEN
             ALTER TABLE territories RENAME COLUMN userid TO user_id;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'capturedat') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'capturedat' AND table_schema = 'public')
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'captured_at' AND table_schema = 'public') THEN
             ALTER TABLE territories RENAME COLUMN capturedat TO captured_at;
         END IF;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'tilescaptured') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'tilescaptured' AND table_schema = 'public')
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'territories' AND column_name = 'tiles_captured' AND table_schema = 'public') THEN
             ALTER TABLE territories RENAME COLUMN tilescaptured TO tiles_captured;
         END IF;
     END IF;
@@ -198,10 +201,21 @@ CREATE TABLE IF NOT EXISTS territory_battles (
 );
 
 -- Add missing columns to territories if not present
-ALTER TABLE territories ADD COLUMN IF NOT EXISTS area_km2 NUMERIC;
-ALTER TABLE territories ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;
-ALTER TABLE territories ADD COLUMN IF NOT EXISTS is_stolen BOOLEAN DEFAULT FALSE;
-ALTER TABLE territories ADD COLUMN IF NOT EXISTS stolen_from_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='territories' AND column_name='area_km2') THEN
+        ALTER TABLE territories ADD COLUMN area_km2 NUMERIC;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='territories' AND column_name='points') THEN
+        ALTER TABLE territories ADD COLUMN points INTEGER DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='territories' AND column_name='is_stolen') THEN
+        ALTER TABLE territories ADD COLUMN is_stolen BOOLEAN DEFAULT FALSE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='territories' AND column_name='stolen_from_id') THEN
+        ALTER TABLE territories ADD COLUMN stolen_from_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_tiles_geohash ON tiles(geohash);
