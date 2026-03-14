@@ -164,8 +164,12 @@ const MapboxMap = () => {
   };
 
   const startLocationTracking = () => {
+    const isProduction = import.meta.env.MODE === 'production';
     const apiUrl = import.meta.env.VITE_API_URL || '/api';
-    socket.current = io(apiUrl.replace('/api', ''));
+    
+    // In production, connect to the same host as the frontend
+    const socketUrl = isProduction ? window.location.origin : apiUrl.replace('/api', '');
+    socket.current = io(socketUrl);
     
     // Multiplayer events
     socket.current.on('connect', () => {

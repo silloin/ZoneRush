@@ -51,7 +51,12 @@ async function checkDatabase() {
     try {
       const bcrypt = require('bcryptjs');
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash('test123', salt);
+      const testPassword = process.env.TEST_USER_PASSWORD;
+      if (!testPassword) {
+        console.log('⚠️ Skipping test user creation: TEST_USER_PASSWORD env var not set');
+        return;
+      }
+      const hashedPassword = await bcrypt.hash(testPassword, salt);
       
       const newUser = await pool.query(
         'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email',

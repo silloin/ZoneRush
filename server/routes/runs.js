@@ -7,6 +7,7 @@ const achievementService = require('../services/achievementService');
 const challengeService = require('../services/challengeService');
 const statsService = require('../services/statsService');
 const authenticateToken = require('../middleware/auth');
+const { antiCheatMiddleware } = require('../middleware/anticheat');
 
 // Get all runs for user
 router.get('/', authenticateToken, async (req, res) => {
@@ -133,7 +134,7 @@ router.get('/:runId', authenticateToken, async (req, res) => {
 });
 
 // Create new run
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, antiCheatMiddleware, async (req, res) => {
   const client = await pool.connect();
   
   try {

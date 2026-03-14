@@ -4,6 +4,7 @@ const auth = require('../middleware/auth');
 const pool = require('../config/db');
 const multer = require('multer');
 const xml2js = require('xml2js');
+const { calculateDistance, calculatePace, metersToKm } = require('../utils/geoUtils');
 
 // Configure multer for file uploads
 const upload = multer({
@@ -77,8 +78,9 @@ router.post('/upload', auth, upload.single('gpxFile'), async (req, res) => {
       }
     }
 
-    // Calculate average pace (minutes per km)
-    const avgPace = distance > 0 ? (duration / 60) / (distance / 1000) : 0;
+    // Calculate average pace (minutes per km) using utility
+    const avgPace = calculatePace(distance, duration);
+    const distanceKm = metersToKm(distance);
 
     // Create LineString from route points
     const coordinates = route.map(p => `${p.lng} ${p.lat}`).join(', ');
@@ -92,7 +94,7 @@ router.post('/upload', auth, upload.single('gpxFile'), async (req, res) => {
        (user_id, distance, duration, pace, route_geometry, start_location, end_location, started_at, completed_at) 
        VALUES ($1, $2, $3, $4, ST_GeomFromText($5, 4326), ST_GeomFromText($6, 4326), ST_GeomFromText($7, 4326), $8, $9) 
        RETURNING *`,
-      [req.user.id, distance, duration, avgPace, lineString, startPoint, endPoint, route[0].timestamp, route[route.length - 1].timestamp]
+      [req.user.id, distanceKm, duration, avgPace, lineString, startPoint, endPoint, route[0].timestamp, route[route.length - 1].timestamp]
     );
 
     res.json({
@@ -117,20 +119,5 @@ router.get('/', async (req, res) => {
     res.status(500).send('Server Error');
   }
 });
-
-// Helper function to calculate distance between two coordinates (Haversine formula)
-function calculateDistance(lat1, lng1, lat2, lng2) {
-  const R = 6371; // Earth's radius in km
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
 
 module.exports = router;

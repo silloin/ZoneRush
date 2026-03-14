@@ -1,9 +1,20 @@
 services:
   - type: web
-    name: zonerush-backend
+    name: zonerush
     env: node
-    buildCommand: cd server && npm install
-    startCommand: cd server && npm start
+    buildCommand: npm run build
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: zonerush-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+
+databases:
+  - name: zonerush-db
+    plan: free
+    postgis: true

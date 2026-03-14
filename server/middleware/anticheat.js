@@ -1,5 +1,6 @@
 // Anti-cheat GPS validation module
 const pool = require('../config/db');
+const { calculateDistance } = require('../utils/geoUtils');
 
 // Constants for validation
 const MAX_SPEED_KMH = 25; // Maximum realistic running speed (km/h)
@@ -215,30 +216,12 @@ const checkSpoofingPatterns = (route) => {
 };
 
 /**
- * Calculate distance between two coordinates (Haversine formula)
- */
-function calculateDistance(lat1, lng1, lat2, lng2) {
-  const R = 6371e3; // Earth's radius in meters
-  const φ1 = (lat1 * Math.PI) / 180;
-  const φ2 = (lat2 * Math.PI) / 180;
-  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-  const Δλ = ((lng2 - lng1) * Math.PI) / 180;
-
-  const a =
-    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
-
-/**
  * Full anti-cheat validation middleware
  */
 const antiCheatMiddleware = async (req, res, next) => {
-  const { route } = req.body;
+  const route = req.body.route || req.body.route_points;
 
-  if (!route) {
+  if (!route || !Array.isArray(route) || route.length === 0) {
     return next(); // No route to validate
   }
 
@@ -249,8 +232,9 @@ const antiCheatMiddleware = async (req, res, next) => {
 
   // Log suspicious activity
   if (!routeValidation.valid || teleportCheck.hasTeleportation || spoofingCheck.isSuspicious) {
+    const userId = req.user ? req.user.id : null;
     console.warn('Anti-cheat: Suspicious activity detected', {
-      userId: req.user?.id,
+      userId,
       routeValidation,
       teleportCheck,
       spoofingCheck
@@ -262,7 +246,7 @@ const antiCheatMiddleware = async (req, res, next) => {
         `INSERT INTO cheat_flags (user_id, route_data, violations, severity, created_at)
          VALUES ($1, $2, $3, $4, NOW())`,
         [
-          req.user?.id,
+          userId,
           JSON.stringify(route),
           JSON.stringify({
             routeValidation,
