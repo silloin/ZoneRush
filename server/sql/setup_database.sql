@@ -250,3 +250,17 @@ CREATE INDEX IF NOT EXISTS idx_runs_route_geometry ON runs USING GIST(route_geom
 CREATE INDEX IF NOT EXISTS idx_tiles_geometry ON tiles USING GIST(geometry);
 CREATE INDEX IF NOT EXISTS idx_territories_area ON territories USING GIST(area);
 CREATE INDEX IF NOT EXISTS idx_territories_user_id ON territories(user_id);
+
+-- Create route_heatmap table
+CREATE TABLE IF NOT EXISTS route_heatmap (
+    id SERIAL PRIMARY KEY,
+    location GEOMETRY(Point, 4326) NOT NULL,
+    geohash VARCHAR(12) NOT NULL UNIQUE,
+    run_count INTEGER DEFAULT 1,
+    total_runners INTEGER DEFAULT 1,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_route_heatmap_location ON route_heatmap USING GIST(location);
+CREATE INDEX IF NOT EXISTS idx_route_heatmap_geohash ON route_heatmap(geohash);
+CREATE INDEX IF NOT EXISTS idx_route_heatmap_count ON route_heatmap(run_count DESC);

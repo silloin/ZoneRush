@@ -130,7 +130,7 @@ const MapboxMap = () => {
       type: 'heatmap',
       source: 'heatmap',
       maxzoom: 15,
-      layout: { visibility: 'none' },
+      layout: { visibility: showHeatmap ? 'visible' : 'none' },
       paint: {
         'heatmap-weight': ['interpolate', ['linear'], ['get', 'intensity'], 0, 0, 10, 1],
         'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 3],
@@ -322,8 +322,12 @@ const MapboxMap = () => {
 
   // Toggle heatmap visibility
   useEffect(() => {
-    if (!map.current || !map.current.isStyleLoaded()) return;
+    if (!map.current) return;
     
+    // Check if style is loaded and layer exists
+    const hasLayer = map.current.getLayer('heatmap-layer');
+    if (!hasLayer) return;
+
     if (showHeatmap) {
       map.current.setLayoutProperty('heatmap-layer', 'visibility', 'visible');
       fetchHeatmapData();
@@ -366,6 +370,9 @@ const MapboxMap = () => {
     map.current.once('style.load', () => {
       setupMapLayers();
       fetchTiles();
+      if (showHeatmap) {
+        fetchHeatmapData();
+      }
     });
   };
 

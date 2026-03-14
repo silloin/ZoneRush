@@ -8,6 +8,8 @@ router.get('/bounds', authenticateToken, async (req, res) => {
   try {
     const { minLat, minLng, maxLat, maxLng, minIntensity = 5 } = req.query;
     
+    console.log('🔍 Fetching heatmap for bounds:', { minLat, minLng, maxLat, maxLng, minIntensity });
+
     if (!minLat || !minLng || !maxLat || !maxLng) {
       return res.status(400).json({ error: 'Missing bounding box parameters' });
     }
@@ -22,8 +24,12 @@ router.get('/bounds', authenticateToken, async (req, res) => {
     
     res.json(heatmap);
   } catch (error) {
-    console.error('Error fetching heatmap:', error);
-    res.status(500).json({ error: 'Failed to fetch heatmap' });
+    console.error('❌ Error fetching heatmap:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch heatmap',
+      details: error.message,
+      hint: 'Ensure route_heatmap table exists and PostGIS is enabled'
+    });
   }
 });
 

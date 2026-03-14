@@ -56,10 +56,12 @@ class HeatmapService {
   // Get heatmap data for map bounds
   async getHeatmapData(minLat, minLng, maxLat, maxLng, minIntensity = 5) {
     try {
+      console.log('📊 Heatmap Query Params:', { minLat, minLng, maxLat, maxLng, minIntensity });
+      
       const query = `
         SELECT 
-          ST_X(location::geometry) as lng,
-          ST_Y(location::geometry) as lat,
+          ST_X(location) as lng,
+          ST_Y(location) as lat,
           run_count,
           total_runners
         FROM route_heatmap
@@ -72,8 +74,16 @@ class HeatmapService {
         LIMIT 10000
       `;
       
-      const result = await pool.query(query, [minLng, minLat, maxLng, maxLat, minIntensity]);
+      const result = await pool.query(query, [
+        parseFloat(minLng), 
+        parseFloat(minLat), 
+        parseFloat(maxLng), 
+        parseFloat(maxLat), 
+        parseInt(minIntensity)
+      ]);
       
+      console.log(`✅ Found ${result.rows.length} heatmap points`);
+
       // Format for Mapbox heatmap layer
       return {
         type: 'FeatureCollection',
@@ -85,12 +95,12 @@ class HeatmapService {
           },
           geometry: {
             type: 'Point',
-            coordinates: [row.lng, row.lat]
+            coordinates: [parseFloat(row.lng), parseFloat(row.lat)]
           }
         }))
       };
     } catch (error) {
-      console.error('Error fetching heatmap data:', error);
+      console.error('❌ Heatmap Service Error:', error);
       throw error;
     }
   }
