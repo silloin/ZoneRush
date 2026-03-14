@@ -24,9 +24,12 @@ const SocialFeed = () => {
     }
   };
 
+  const isSafeId = (id) => Number.isInteger(Number(id)) && Number(id) > 0;
+
   const handleLike = async (postId) => {
+    if (!isSafeId(postId)) return;
     try {
-      await axios.post(`/social/like/${postId}`, {}, getAuthConfig());
+      await axios.post(`/social/like/${Number(postId)}`, {}, getAuthConfig());
       fetchFeed();
     } catch (err) {
       console.error(err);
@@ -34,8 +37,9 @@ const SocialFeed = () => {
   };
 
   const handleComment = async (postId) => {
+    if (!isSafeId(postId)) return;
     try {
-      await axios.post(`/social/comment/${postId}`, { text: comment[postId] }, getAuthConfig());
+      await axios.post(`/social/comment/${Number(postId)}`, { text: comment[postId] }, getAuthConfig());
       setComment({ ...comment, [postId]: '' });
       fetchFeed();
     } catch (err) {

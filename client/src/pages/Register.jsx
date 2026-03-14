@@ -58,8 +58,9 @@ const Register = () => {
         <h2 className="text-2xl font-bold mb-6 text-white text-center">Register for RunTerra</h2>
         <form onSubmit={onSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-400 mb-2">Username</label>
+            <label htmlFor="username" className="block text-gray-400 mb-2">Username</label>
             <input
+              id="username"
               type="text"
               name="username"
               value={username}
@@ -69,8 +70,9 @@ const Register = () => {
             />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-400 mb-2">Email</label>
+            <label htmlFor="email" className="block text-gray-400 mb-2">Email</label>
             <input
+              id="email"
               type="email"
               name="email"
               value={email}
@@ -80,8 +82,9 @@ const Register = () => {
             />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-400 mb-2">Password</label>
+            <label htmlFor="password" className="block text-gray-400 mb-2">Password</label>
             <input
+              id="password"
               type="password"
               name="password"
               value={password}
@@ -91,8 +94,9 @@ const Register = () => {
             />
           </div>
           <div className="mb-6">
-            <label className="block text-gray-400 mb-2">Confirm Password</label>
+            <label htmlFor="confirmPassword" className="block text-gray-400 mb-2">Confirm Password</label>
             <input
+              id="confirmPassword"
               type="password"
               name="confirmPassword"
               value={confirmPassword}

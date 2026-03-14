@@ -210,13 +210,13 @@ class HeatmapService {
   // Clean old heatmap data (maintenance function)
   async cleanOldHeatmapData(daysOld = 180) {
     try {
+      const safeDays = Math.max(1, Math.min(3650, parseInt(daysOld) || 180));
       const query = `
         DELETE FROM route_heatmap
         WHERE run_count < 3
-        AND last_updated < CURRENT_DATE - INTERVAL '${daysOld} days'
+        AND last_updated < CURRENT_DATE - ($1 || ' days')::INTERVAL
       `;
-      
-      const result = await pool.query(query);
+      const result = await pool.query(query, [safeDays]);
       return result.rowCount;
     } catch (error) {
       console.error('Error cleaning heatmap data:', error);

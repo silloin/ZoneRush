@@ -42,9 +42,10 @@ const TrainingPlans = () => {
   };
 
   const completeWorkout = async (workoutId) => {
+    if (!workoutId || !Number.isInteger(Number(workoutId)) || Number(workoutId) <= 0) return;
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.put(`/training-plans/workout/${workoutId}`, {}, {
+      const res = await axios.put(`/training-plans/workout/${Number(workoutId)}`, {}, {
         headers: { 'x-auth-token': token }
       });
       setPlan(res.data || null);

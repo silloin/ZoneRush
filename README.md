@@ -83,15 +83,15 @@ npm install --prefix client --legacy-peer-deps
 
 `server/.env`
 ```env
-DATABASE_URL=postgresql://username:password@localhost:5432/zonerush
-JWT_SECRET=your_jwt_secret
+DATABASE_URL=postgresql://<db_user>:<db_password>@<db_host>:5432/<db_name>
+JWT_SECRET=<your_jwt_secret>
 PORT=5000
 NODE_ENV=development
 ```
 
 `client/.env`
 ```env
-VITE_MAPBOX_API_KEY=your_mapbox_access_token
+VITE_MAPBOX_API_KEY=<your_mapbox_access_token>
 VITE_API_URL=http://localhost:5000/api
 ```
 

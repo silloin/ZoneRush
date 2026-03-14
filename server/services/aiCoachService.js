@@ -377,15 +377,16 @@ class AICoachService {
 
   // Helper: Get recent run details
   async getRecentRunDetails(userId, days) {
+    const safeDays = Math.max(1, Math.min(365, parseInt(days) || 7));
     const query = `
       SELECT pace, distance, duration, completed_at
       FROM runs
       WHERE user_id = $1
-      AND completed_at >= CURRENT_DATE - INTERVAL '${days} days'
+      AND completed_at >= CURRENT_DATE - ($2 || ' days')::INTERVAL
       ORDER BY completed_at DESC
     `;
     
-    const result = await pool.query(query, [userId]);
+    const result = await pool.query(query, [userId, safeDays]);
     return result.rows;
   }
 

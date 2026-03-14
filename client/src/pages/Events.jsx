@@ -25,9 +25,10 @@ const Events = () => {
   };
 
   const joinEvent = async (eventId) => {
+    if (!eventId || !Number.isInteger(Number(eventId)) || Number(eventId) <= 0) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`/events/join/${eventId}`, {}, {
+      await axios.post(`/events/join/${Number(eventId)}`, {}, {
         headers: { 'x-auth-token': token }
       });
       fetchEvents();

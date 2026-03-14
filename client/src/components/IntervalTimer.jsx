@@ -100,8 +100,9 @@ const IntervalTimer = ({ onClose }) => {
 
       <div className="mt-8 grid grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Fast (s)</label>
+          <label htmlFor="fastTime" className="block text-xs text-gray-400 mb-1">Fast (s)</label>
           <input
+            id="fastTime"
             type="number"
             value={fastTime}
             onChange={(e) => setFastTime(parseInt(e.target.value))}
@@ -109,8 +110,9 @@ const IntervalTimer = ({ onClose }) => {
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Slow (s)</label>
+          <label htmlFor="slowTime" className="block text-xs text-gray-400 mb-1">Slow (s)</label>
           <input
+            id="slowTime"
             type="number"
             value={slowTime}
             onChange={(e) => setSlowTime(parseInt(e.target.value))}
@@ -118,8 +120,9 @@ const IntervalTimer = ({ onClose }) => {
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Cycles</label>
+          <label htmlFor="cycles" className="block text-xs text-gray-400 mb-1">Cycles</label>
           <input
+            id="cycles"
             type="number"
             value={cycles}
             onChange={(e) => setCycles(parseInt(e.target.value))}

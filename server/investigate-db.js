@@ -105,9 +105,10 @@ async function investigateDatabase() {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(testPassword, salt);
         
+        const testUsername = process.env.DEBUG_USER_NAME || 'debuguser';
         const newUser = await pool.query(
           'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email',
-          ['debuguser', testEmail, hashedPassword]
+          [testUsername, testEmail, hashedPassword]
         );
         
         console.log('✅ Test user created successfully:', newUser.rows[0]);

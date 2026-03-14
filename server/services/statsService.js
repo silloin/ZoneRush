@@ -93,6 +93,7 @@ class StatsService {
 
   // Get activity heatmap data
   async getActivityHeatmap(userId, days = 365) {
+    const safeDays = Math.max(1, Math.min(3650, parseInt(days) || 365));
     const query = `
       SELECT 
         DATE(completed_at) as date,
@@ -100,12 +101,12 @@ class StatsService {
         SUM(distance) as total_distance
       FROM runs
       WHERE user_id = $1
-      AND completed_at >= CURRENT_DATE - INTERVAL '${days} days'
+      AND completed_at >= CURRENT_DATE - ($2 || ' days')::INTERVAL
       GROUP BY DATE(completed_at)
       ORDER BY date ASC
     `;
     
-    const result = await pool.query(query, [userId]);
+    const result = await pool.query(query, [userId, safeDays]);
     return result.rows;
   }
 
@@ -128,6 +129,7 @@ class StatsService {
 
   // Get distance progression
   async getDistanceProgression(userId, days = 30) {
+    const safeDays = Math.max(1, Math.min(3650, parseInt(days) || 30));
     const query = `
       SELECT 
         DATE(completed_at) as date,
@@ -135,12 +137,12 @@ class StatsService {
         COUNT(*) as run_count
       FROM runs
       WHERE user_id = $1
-      AND completed_at >= CURRENT_DATE - INTERVAL '${days} days'
+      AND completed_at >= CURRENT_DATE - ($2 || ' days')::INTERVAL
       GROUP BY DATE(completed_at)
       ORDER BY date ASC
     `;
     
-    const result = await pool.query(query, [userId]);
+    const result = await pool.query(query, [userId, safeDays]);
     return result.rows;
   }
 
@@ -229,23 +231,10 @@ class StatsService {
 
   // Get leaderboard
   async getLeaderboard(type = 'distance', limit = 50) {
-    let orderBy = 'u.total_distance DESC';
-    
-    switch (type) {
-      case 'runs':
-        orderBy = '(SELECT COUNT(*) FROM runs WHERE user_id = u.id) DESC';
-        break;
-      case 'tiles':
-        orderBy = 'u.total_tiles DESC';
-        break;
-      case 'xp':
-        orderBy = 'u.xp DESC';
-        break;
-      case 'streak':
-        orderBy = 'u.streak DESC';
-        break;
-    }
-    
+    const allowedTypes = { distance: 'u.total_distance DESC', runs: '(SELECT COUNT(*) FROM runs WHERE user_id = u.id) DESC', tiles: 'u.total_tiles DESC', xp: 'u.xp DESC', streak: 'u.streak DESC' };
+    const orderBy = allowedTypes[type] || allowedTypes.distance;
+    const safeLimit = Math.max(1, Math.min(100, parseInt(limit) || 50));
+
     const query = `
       SELECT 
         u.id,
@@ -262,8 +251,8 @@ class StatsService {
       ORDER BY ${orderBy}
       LIMIT $1
     `;
-    
-    const result = await pool.query(query, [limit]);
+
+    const result = await pool.query(query, [safeLimit]);
     return result.rows;
   }
 }

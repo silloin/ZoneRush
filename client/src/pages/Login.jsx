@@ -49,8 +49,9 @@ const Login = () => {
         <h2 className="text-2xl font-bold mb-6 text-white text-center">Login to RunTerra</h2>
         <form onSubmit={onSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-400 mb-2">Email</label>
+            <label htmlFor="email" className="block text-gray-400 mb-2">Email</label>
             <input
+              id="email"
               type="email"
               name="email"
               value={email}
@@ -60,8 +61,9 @@ const Login = () => {
             />
           </div>
           <div className="mb-6">
-            <label className="block text-gray-400 mb-2">Password</label>
+            <label htmlFor="password" className="block text-gray-400 mb-2">Password</label>
             <input
+              id="password"
               type="password"
               name="password"
               value={password}
