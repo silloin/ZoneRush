@@ -1,0 +1,29 @@
+.map-container {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+/* Fix for Mapbox controls overlapping sidebar */
+.mapboxgl-ctrl-top-right {
+  top: 10px;
+  right: 10px;
+}
+
+/* Fix Mapbox Directions text visibility */
+.mapboxgl-ctrl-directions .suggestions li,
+.mapboxgl-ctrl-directions .suggestions li a {
+  color: #000 !important;
+  background-color: #fff !important;
+}
+
+.mapboxgl-ctrl-directions .suggestions li:hover,
+.mapboxgl-ctrl-directions .suggestions li:hover a {
+  color: #000 !important;
+  background-color: #f0f0f0 !important;
+}
+
+.mapboxgl-ctrl-directions input {
+  color: #000 !important;
+}
