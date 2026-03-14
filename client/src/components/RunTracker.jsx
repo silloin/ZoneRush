@@ -217,14 +217,11 @@ const RunTracker = ({
   };
 
   const stopTracking = async () => {
-    if (route.length === 0) {
-      alert("Cannot save run: No GPS data collected yet. Wait for GPS signal or cancel the run.");
+    if (route.length < 2) {
+      alert("Cannot save run: A run must have at least 2 points. Try moving around a bit more!");
       return;
     }
 
-    setIsTracking(false);
-    setGpsStatus('idle');
-    
     const runData = {
       distance: parseFloat((distance / 1000).toFixed(2)), // km
       duration, // seconds
@@ -248,11 +245,18 @@ const RunTracker = ({
       // Capture tiles
       const tileRes = await axios.post('/tiles/capture', { route });
       console.log('✅ Tiles captured:', tileRes.data);
+      
+      setIsTracking(false);
+      setGpsStatus('idle');
       if (onRunComplete) onRunComplete();
     } catch (err) {
       console.error('Error saving run:', err);
       console.error('Error details:', err.response?.data);
-      alert(`Error saving run: ${err.response?.data?.msg || err.message}`);
+      
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message;
+      alert(`Error saving run: ${errorMsg}`);
+      
+      // Don't stop tracking if it failed, allow user to try again or cancel
     }
   };
 

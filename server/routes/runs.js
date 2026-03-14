@@ -153,9 +153,9 @@ router.post('/', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     
     // Check for required fields more robustly
-    if (!route_points || route_points.length === 0 || !started_at || !completed_at) {
+    if (!route_points || route_points.length < 2 || !started_at || !completed_at) {
       return res.status(400).json({ 
-        error: 'Missing required fields',
+        error: route_points?.length < 2 ? 'Run must have at least 2 points' : 'Missing required fields',
         received: { 
           distance, 
           duration, 
@@ -166,11 +166,36 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
     
-    // Create LineString from route points
-    const coordinates = route_points.map(p => `${p.lng} ${p.lat}`).join(', ');
+    // Create LineString from route points - filter out duplicate consecutive points
+    const uniquePoints = [];
+    for (let i = 0; i < route_points.length; i++) {
+      const p = route_points[i];
+      // Ensure p has lng and lat and they are numbers
+      if (typeof p.lng !== 'number' || typeof p.lat !== 'number') continue;
+      
+      if (uniquePoints.length === 0 || 
+          p.lng !== uniquePoints[uniquePoints.length - 1].lng || 
+          p.lat !== uniquePoints[uniquePoints.length - 1].lat) {
+        uniquePoints.push(p);
+      }
+    }
+
+    // Still need at least 2 unique points for a LINESTRING
+    if (uniquePoints.length < 2) {
+      // If we only have 1 unique point, we can't make a LINESTRING. 
+      // We could either return an error or duplicate the point (not ideal but avoids crash).
+      // Let's return a descriptive error.
+      return res.status(400).json({ 
+        error: 'Run must have at least 2 distinct GPS locations',
+        received_points: route_points.length,
+        unique_points: uniquePoints.length
+      });
+    }
+
+    const coordinates = uniquePoints.map(p => `${p.lng} ${p.lat}`).join(', ');
     const lineString = `LINESTRING(${coordinates})`;
-    const startPoint = `POINT(${route_points[0].lng} ${route_points[0].lat})`;
-    const endPoint = `POINT(${route_points[route_points.length - 1].lng} ${route_points[route_points.length - 1].lat})`;
+    const startPoint = `POINT(${uniquePoints[0].lng} ${uniquePoints[0].lat})`;
+    const endPoint = `POINT(${uniquePoints[uniquePoints.length - 1].lng} ${uniquePoints[uniquePoints.length - 1].lat})`;
     
     // Insert run
     const runQuery = `
@@ -241,11 +266,20 @@ router.post('/', authenticateToken, async (req, res) => {
     });
     
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error creating run:', error);
-    res.status(500).json({ error: 'Failed to create run' });
+    if (client) {
+      await client.query('ROLLBACK');
+    }
+    console.error('❌ Error creating run:', error);
+    res.status(500).json({ 
+      error: 'Failed to create run',
+      message: error.message,
+      detail: error.detail,
+      hint: error.hint
+    });
   } finally {
-    client.release();
+    if (client) {
+      client.release();
+    }
   }
 });
 

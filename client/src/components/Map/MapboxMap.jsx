@@ -619,28 +619,28 @@ const MapboxMap = () => {
     };
 
     if (map.current.getSource('live-route')) {
-      map.current.getSource('live-route').setData(routeGeoJSON);
-    } else {
-      map.current.addSource('live-route', {
-        type: 'geojson',
-        data: routeGeoJSON
-      });
-      
-      map.current.addLayer({
-        id: 'live-route-line',
-        type: 'line',
-        source: 'live-route',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        paint: {
-          'line-color': '#ef4444',
-          'line-width': 4,
-          'line-opacity': 0.8
-        }
-      });
-    }
+        map.current.getSource('live-route').setData(routeGeoJSON);
+      } else {
+        map.current.addSource('live-route', {
+          type: 'geojson',
+          data: routeGeoJSON
+        });
+        
+        map.current.addLayer({
+          id: 'live-route-layer',
+          type: 'line',
+          source: 'live-route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#ef4444',
+            'line-width': 4,
+            'line-opacity': 0.8
+          }
+        });
+      }
   }, [currentRoute, isTracking]);
 
   useEffect(() => {
@@ -940,10 +940,16 @@ const MapboxMap = () => {
               setIsTracking(false);
               setRunStats({ duration: 0, distance: 0, pace: 0, startTime: null });
               
-              // Clear the live route line from map
+              // Clear the live route line from map instead of removing it
               if (map.current && map.current.getSource('live-route')) {
-                map.current.removeLayer('live-route-line');
-                map.current.removeSource('live-route');
+                map.current.getSource('live-route').setData({
+                  type: 'Feature',
+                  properties: {},
+                  geometry: {
+                    type: 'LineString',
+                    coordinates: []
+                  }
+                });
               }
               
               setCurrentRoute([]);

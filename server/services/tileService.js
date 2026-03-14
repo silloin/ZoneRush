@@ -37,8 +37,8 @@ class TileService {
     const centerPoint = `POINT(${lng} ${lat})`;
     
     const insertQuery = `
-      INSERT INTO tiles (geohash, geometry, center_point, tile_type)
-      VALUES ($1, ST_GeomFromText($2, 4326), ST_GeomFromText($3, 4326), 'grid')
+      INSERT INTO tiles (geohash, geometry, center_point, value)
+      VALUES ($1, ST_GeomFromText($2, 4326), ST_GeomFromText($3, 4326), 1)
       RETURNING *
     `;
     

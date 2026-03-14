@@ -60,11 +60,11 @@ const Leaderboard = ({ currentUserId }) => {
       case 'runs':
         return entry.total_runs;
       case 'tiles':
-        return entry.total_tiles_captured;
+        return entry.total_tiles;
       case 'xp':
-        return entry.total_xp;
+        return entry.xp;
       case 'streak':
-        return entry.current_streak;
+        return entry.streak;
       default:
         return 0;
     }

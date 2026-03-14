@@ -66,20 +66,24 @@ class ChallengeService {
   async rewardChallenge(userId, challenge) {
     const query = `
       UPDATE users 
-      SET total_xp = total_xp + $2,
-          level = FLOOR((total_xp + $2) / 1000) + 1
+      SET xp = xp + $2,
+          level = FLOOR((xp + $2) / 1000) + 1
       WHERE id = $1
-      RETURNING total_xp, level
+      RETURNING xp, level
     `;
     
     await pool.query(query, [userId, challenge.xp_reward]);
     
     const activityQuery = `
-      INSERT INTO activities (user_id, activity_type, activity_data)
-      VALUES ($1, 'challenge_completed', $2)
+      INSERT INTO posts (user_id, content, activity_type, activity_data)
+      VALUES ($1, $2, 'challenge_completed', $3)
     `;
     
-    await pool.query(activityQuery, [userId, JSON.stringify({ challengeId: challenge.id, title: challenge.title })]);
+    await pool.query(activityQuery, [
+      userId, 
+      `Completed challenge: ${challenge.title}`, 
+      JSON.stringify({ challengeId: challenge.id, title: challenge.title })
+    ]);
   }
 
   // Get challenge by ID

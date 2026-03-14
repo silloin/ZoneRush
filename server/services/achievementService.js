@@ -184,12 +184,13 @@ class AchievementService {
   // Create activity feed entry
   async createActivity(userId, activityType, activityData) {
     const query = `
-      INSERT INTO activities (user_id, activity_type, activity_data)
-      VALUES ($1, $2, $3)
+      INSERT INTO posts (user_id, content, activity_type, activity_data)
+      VALUES ($1, $2, $3, $4)
       RETURNING *
     `;
     
-    const result = await pool.query(query, [userId, activityType, JSON.stringify(activityData)]);
+    const content = `Unlocked achievement: ${activityData.title || activityType}`;
+    const result = await pool.query(query, [userId, content, activityType, JSON.stringify(activityData)]);
     return result.rows[0];
   }
 }

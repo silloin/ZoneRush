@@ -137,8 +137,8 @@ const AdvancedDashboard = ({ userId }) => {
           <MetricCard
             icon="🗺️"
             title="Tiles Captured"
-            value={stats?.unique_tiles_captured || 0}
-            subtitle={`Level ${stats?.level || 1} • ${stats?.total_xp || 0} XP`}
+            value={stats?.total_tiles || 0}
+            subtitle={`Level ${stats?.level || 1} • ${stats?.xp || 0} XP`}
             color="orange"
           />
         </div>
@@ -169,7 +169,7 @@ const AdvancedDashboard = ({ userId }) => {
             />
             <PersonalBest
               label="Current Streak"
-              value={stats?.current_streak || 0}
+              value={stats?.streak || 0}
               unit="days"
               icon="🔥"
             />
