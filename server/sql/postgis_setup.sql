@@ -12,18 +12,6 @@ CREATE INDEX IF NOT EXISTS idx_runs_route_geom ON runs USING GIST(route_geom);
 ALTER TABLE tiles ADD COLUMN IF NOT EXISTS area_geom GEOMETRY(POLYGON, 4326);
 CREATE INDEX IF NOT EXISTS idx_tiles_area_geom ON tiles USING GIST(area_geom);
 
--- Create territories table for claimed polygons
-CREATE TABLE IF NOT EXISTS territories (
-    id SERIAL PRIMARY KEY,
-    userid INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    area GEOMETRY(POLYGON, 4326) NOT NULL,
-    capturedat TIMESTAMP DEFAULT NOW(),
-    tilescaptured INTEGER DEFAULT 0
-);
-
-CREATE INDEX IF NOT EXISTS idx_territories_area ON territories USING GIST(area);
-CREATE INDEX IF NOT EXISTS idx_territories_userid ON territories(userid);
-
 -- Function to convert route JSON to LINESTRING
 CREATE OR REPLACE FUNCTION json_to_linestring(route_json JSONB)
 RETURNS GEOMETRY AS $$
@@ -64,24 +52,8 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS territories_captured INTEGER DEFAULT 
 -- Add created_at to runs if not exists
 ALTER TABLE runs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 
--- Enhance territories table
-ALTER TABLE territories ADD COLUMN IF NOT EXISTS area_km2 NUMERIC DEFAULT 0;
-ALTER TABLE territories ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;
+-- Enhance territories table (columns already defined in setup_database.sql, add any extras)
 ALTER TABLE territories ADD COLUMN IF NOT EXISTS stolen_from INTEGER REFERENCES users(id);
-ALTER TABLE territories ADD COLUMN IF NOT EXISTS is_stolen BOOLEAN DEFAULT FALSE;
-
--- Create territory battles table for tracking wars
-CREATE TABLE IF NOT EXISTS territory_battles (
-    id SERIAL PRIMARY KEY,
-    attacker_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    defender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    territory_id INTEGER REFERENCES territories(id) ON DELETE CASCADE,
-    attacker_area NUMERIC DEFAULT 0,
-    defender_area NUMERIC DEFAULT 0,
-    winner_id INTEGER REFERENCES users(id),
-    battle_date TIMESTAMP DEFAULT NOW(),
-    points_transferred INTEGER DEFAULT 0
-);
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_territories_area_km2 ON territories(area_km2 DESC);
