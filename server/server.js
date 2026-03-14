@@ -1,6 +1,6 @@
 const express = require('express');
 const http = require('http');
-const socketIo = require('socket.io');
+const { Server } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
@@ -20,11 +20,13 @@ app.use(express.json());
 
 // Create HTTP server and attach Socket.io
 const server = http.createServer(app);
-const io = socketIo(server, {
+const io = new Server(server, {
   cors: {
-    origin: '*', // Allow all origins for development
+    origin: '*',
     methods: ['GET', 'POST'],
   },
+  transports: ['polling', 'websocket'],
+  allowEIO3: true,
 });
 
 // Test the database connection
