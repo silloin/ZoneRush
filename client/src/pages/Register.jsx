@@ -2,6 +2,8 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
+const LABELS = { title: 'Register for RunTerra', username: 'Username', email: 'Email', password: 'Password', confirmPassword: 'Confirm Password', submit: 'Register' };
+
 const Register = () => {
   const [formData, setFormData] = useState({
     username: '',
@@ -55,10 +57,10 @@ const Register = () => {
   return (
     <div className="flex items-center justify-center h-screen bg-gray-900">
       <div className="bg-gray-800 p-8 rounded shadow-md w-96">
-        <h2 className="text-2xl font-bold mb-6 text-white text-center">Register for RunTerra</h2>
+        <h2 className="text-2xl font-bold mb-6 text-white text-center">{LABELS.title}</h2>
         <form onSubmit={onSubmit}>
           <div className="mb-4">
-            <label htmlFor="username" className="block text-gray-400 mb-2">Username</label>
+            <label htmlFor="username" className="block text-gray-400 mb-2">{LABELS.username}</label>
             <input
               id="username"
               type="text"
@@ -70,7 +72,7 @@ const Register = () => {
             />
           </div>
           <div className="mb-4">
-            <label htmlFor="email" className="block text-gray-400 mb-2">Email</label>
+            <label htmlFor="email" className="block text-gray-400 mb-2">{LABELS.email}</label>
             <input
               id="email"
               type="email"
@@ -82,7 +84,7 @@ const Register = () => {
             />
           </div>
           <div className="mb-4">
-            <label htmlFor="password" className="block text-gray-400 mb-2">Password</label>
+            <label htmlFor="password" className="block text-gray-400 mb-2">{LABELS.password}</label>
             <input
               id="password"
               type="password"
@@ -94,7 +96,7 @@ const Register = () => {
             />
           </div>
           <div className="mb-6">
-            <label htmlFor="confirmPassword" className="block text-gray-400 mb-2">Confirm Password</label>
+            <label htmlFor="confirmPassword" className="block text-gray-400 mb-2">{LABELS.confirmPassword}</label>
             <input
               id="confirmPassword"
               type="password"
@@ -106,8 +108,7 @@ const Register = () => {
             />
           </div>
           <button className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
-            Register
-          </button>
+            {LABELS.submit}
         </form>
         <p className="mt-4 text-gray-400 text-center">
           Already have an account? <Link to="/login" className="text-blue-500">Login</Link>

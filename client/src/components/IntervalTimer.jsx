@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Timer, Play, Pause, RotateCcw, Bell } from 'lucide-react';
 
+const LABELS = { fastTime: 'Fast (s)', slowTime: 'Slow (s)', cycles: 'Cycles' };
+
 const IntervalTimer = ({ onClose }) => {
   const [fastTime, setFastTime] = useState(60); // 1 min fast
   const [slowTime, setSlowTime] = useState(120); // 2 min slow
@@ -100,7 +102,7 @@ const IntervalTimer = ({ onClose }) => {
 
       <div className="mt-8 grid grid-cols-3 gap-4">
         <div>
-          <label htmlFor="fastTime" className="block text-xs text-gray-400 mb-1">Fast (s)</label>
+          <label htmlFor="fastTime" className="block text-xs text-gray-400 mb-1">{LABELS.fastTime}</label>
           <input
             id="fastTime"
             type="number"
@@ -110,7 +112,7 @@ const IntervalTimer = ({ onClose }) => {
           />
         </div>
         <div>
-          <label htmlFor="slowTime" className="block text-xs text-gray-400 mb-1">Slow (s)</label>
+          <label htmlFor="slowTime" className="block text-xs text-gray-400 mb-1">{LABELS.slowTime}</label>
           <input
             id="slowTime"
             type="number"
@@ -120,7 +122,7 @@ const IntervalTimer = ({ onClose }) => {
           />
         </div>
         <div>
-          <label htmlFor="cycles" className="block text-xs text-gray-400 mb-1">Cycles</label>
+          <label htmlFor="cycles" className="block text-xs text-gray-400 mb-1">{LABELS.cycles}</label>
           <input
             id="cycles"
             type="number"
