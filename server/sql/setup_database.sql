@@ -134,6 +134,35 @@ CREATE TABLE IF NOT EXISTS territory_battles (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Migrate territories table: rename legacy 'userid' column to 'user_id' if needed
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'territories' AND column_name = 'userid'
+    ) THEN
+        ALTER TABLE territories RENAME COLUMN userid TO user_id;
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'territories' AND column_name = 'capturedat'
+    ) THEN
+        ALTER TABLE territories RENAME COLUMN capturedat TO captured_at;
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'territories' AND column_name = 'tilescaptured'
+    ) THEN
+        ALTER TABLE territories RENAME COLUMN tilescaptured TO tiles_captured;
+    END IF;
+END $$;
+
+-- Add missing columns to territories if not present
+ALTER TABLE territories ADD COLUMN IF NOT EXISTS area_km2 NUMERIC;
+ALTER TABLE territories ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;
+ALTER TABLE territories ADD COLUMN IF NOT EXISTS is_stolen BOOLEAN DEFAULT FALSE;
+ALTER TABLE territories ADD COLUMN IF NOT EXISTS stolen_from_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_tiles_geohash ON tiles(geohash);
 CREATE INDEX IF NOT EXISTS idx_captured_tiles_user_id ON captured_tiles(user_id);
