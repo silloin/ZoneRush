@@ -69,7 +69,38 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create cheat_flags table for anti-cheat system
+-- Create segments tables
+CREATE TABLE IF NOT EXISTS segments (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    geometry GEOMETRY(LineString, 4326) NOT NULL,
+    start_point GEOMETRY(Point, 4326),
+    end_point GEOMETRY(Point, 4326),
+    distance NUMERIC,
+    difficulty VARCHAR(20) DEFAULT 'moderate',
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS segment_efforts (
+    id SERIAL PRIMARY KEY,
+    segment_id INTEGER REFERENCES segments(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    run_id INTEGER REFERENCES runs(id) ON DELETE CASCADE,
+    elapsed_time INTEGER,
+    pace NUMERIC,
+    rank INTEGER,
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_segments_geometry ON segments USING GIST(geometry);
+CREATE INDEX IF NOT EXISTS idx_segment_efforts_segment ON segment_efforts(segment_id);
+CREATE INDEX IF NOT EXISTS idx_segment_efforts_user ON segment_efforts(user_id);
+
 CREATE TABLE IF NOT EXISTS cheat_flags (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,

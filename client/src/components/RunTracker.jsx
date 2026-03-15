@@ -242,10 +242,6 @@ const RunTracker = ({
       const runRes = await axios.post('/runs', runData);
       console.log('✅ Run saved successfully:', runRes.data);
       
-      // Capture tiles
-      const tileRes = await axios.post('/tiles/capture', { route });
-      console.log('✅ Tiles captured:', tileRes.data);
-      
       setIsTracking(false);
       setGpsStatus('idle');
       if (onRunComplete) onRunComplete();

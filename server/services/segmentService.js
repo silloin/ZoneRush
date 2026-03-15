@@ -3,21 +3,22 @@ const pool = require('../config/db');
 class SegmentService {
   // Detect if route intersects with segments
   async detectSegments(routeGeometry) {
-    const query = `
-      SELECT s.*, ST_AsGeoJSON(s.geometry) as geometry_json
-      FROM segments s
-      WHERE s.is_active = true
-      AND ST_Intersects(
-        s.geometry,
-        ST_GeomFromText($1, 4326)
-      )
-    `;
-    
-    const result = await pool.query(query, [routeGeometry]);
-    return result.rows.map(row => ({
-      ...row,
-      geometry: JSON.parse(row.geometry_json)
-    }));
+    try {
+      const query = `
+        SELECT s.*, ST_AsGeoJSON(s.geometry) as geometry_json
+        FROM segments s
+        WHERE s.is_active = true
+        AND ST_Intersects(
+          s.geometry,
+          ST_GeomFromText($1, 4326)
+        )
+      `;
+      const result = await pool.query(query, [routeGeometry]);
+      return result.rows.map(row => ({ ...row, geometry: JSON.parse(row.geometry_json) }));
+    } catch (err) {
+      console.warn('Segment detection skipped:', err.message);
+      return [];
+    }
   }
 
   // Record segment effort

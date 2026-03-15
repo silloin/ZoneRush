@@ -123,6 +123,64 @@ BEGIN
     END IF;
 END $$;
 
+-- Challenges Tables
+CREATE TABLE IF NOT EXISTS challenges (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(100) NOT NULL,
+    description TEXT,
+    challenge_type VARCHAR(50) NOT NULL,
+    target_value NUMERIC NOT NULL,
+    xp_reward INTEGER DEFAULT 100,
+    valid_date DATE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS user_challenges (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    challenge_id INTEGER REFERENCES challenges(id) ON DELETE CASCADE,
+    current_progress NUMERIC DEFAULT 0,
+    is_completed BOOLEAN DEFAULT FALSE,
+    completed_at TIMESTAMP,
+    UNIQUE(user_id, challenge_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_challenges_valid_date ON challenges(valid_date);
+CREATE INDEX IF NOT EXISTS idx_user_challenges_user ON user_challenges(user_id);
+
+-- Segments Tables
+CREATE TABLE IF NOT EXISTS segments (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    geometry GEOMETRY(LineString, 4326) NOT NULL,
+    start_point GEOMETRY(Point, 4326),
+    end_point GEOMETRY(Point, 4326),
+    distance NUMERIC,
+    difficulty VARCHAR(20) DEFAULT 'moderate',
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS segment_efforts (
+    id SERIAL PRIMARY KEY,
+    segment_id INTEGER REFERENCES segments(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    run_id INTEGER REFERENCES runs(id) ON DELETE CASCADE,
+    elapsed_time INTEGER,
+    pace NUMERIC,
+    rank INTEGER,
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_segments_geometry ON segments USING GIST(geometry);
+CREATE INDEX IF NOT EXISTS idx_segment_efforts_segment ON segment_efforts(segment_id);
+CREATE INDEX IF NOT EXISTS idx_segment_efforts_user ON segment_efforts(user_id);
+
 -- AI Recommendations Table
 CREATE TABLE IF NOT EXISTS ai_recommendations (
     id SERIAL PRIMARY KEY,

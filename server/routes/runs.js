@@ -237,27 +237,17 @@ router.post('/', authenticateToken, antiCheatMiddleware, async (req, res) => {
       ]);
     }
     
-    // Process tiles
-    const capturedTiles = await tileService.processRouteForTiles(userId, route_points, run.id);
-    
-    // Detect segments
-    const segments = await segmentService.detectSegments(lineString);
-    
-    // Check achievements
-    const unlockedAchievements = await achievementService.checkAchievements(userId);
-    
-    // Update challenges
-    await challengeService.processRunForChallenges(userId, {
-      distance,
-      duration,
-      pace,
-      tilesCapture: capturedTiles.length
-    });
-    
-    // Calculate streak
-    await statsService.calculateStreak(userId);
-    
     await client.query('COMMIT');
+    
+    // Post-commit processing (run row now exists in DB)
+    let capturedTiles = [];
+    try { capturedTiles = await tileService.processRouteForTiles(userId, route_points, run.id); } catch(e) { console.warn('tileService failed:', e.message); }
+    let segments = [];
+    try { segments = await segmentService.detectSegments(lineString); } catch(e) { console.warn('segmentService failed:', e.message); }
+    let unlockedAchievements = [];
+    try { unlockedAchievements = await achievementService.checkAchievements(userId); } catch(e) { console.warn('achievementService failed:', e.message); }
+    try { await challengeService.processRunForChallenges(userId, { distance, duration, pace, tilesCapture: capturedTiles.length }); } catch(e) { console.warn('challengeService failed:', e.message); }
+    try { await statsService.calculateStreak(userId); } catch(e) { console.warn('statsService failed:', e.message); }
     
     res.status(201).json({
       run,
@@ -267,9 +257,7 @@ router.post('/', authenticateToken, antiCheatMiddleware, async (req, res) => {
     });
     
   } catch (error) {
-    if (client) {
-      await client.query('ROLLBACK');
-    }
+    try { await client.query('ROLLBACK'); } catch (_) {}
     console.error('❌ Error creating run:', error);
     res.status(500).json({ 
       error: 'Failed to create run',
