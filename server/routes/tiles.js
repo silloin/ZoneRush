@@ -3,7 +3,6 @@ const router = express.Router();
 const tileService = require('../services/tileService');
 const authenticateToken = require('../middleware/auth');
 
-// Get all tiles for the authenticated user
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const tiles = await tileService.getUserCapturedTiles(req.user.id);

@@ -66,24 +66,16 @@ class TileService {
     return { captured: false, tile, isNew: false };
   }
 
-  // Get all captured tiles for user
-  async getUserCapturedTiles(userId) {
+  async getUserCapturedTiles(currentUserId) {
     const query = `
-      SELECT t.*, ct.captured_at, ct.run_id,
-             ST_AsGeoJSON(t.geometry) as geometry_json,
-             ST_AsGeoJSON(t.center_point) as center_json
+      SELECT t.geohash, ct.user_id,
+             ct.user_id = $1 as is_mine
       FROM tiles t
       JOIN captured_tiles ct ON t.id = ct.tile_id
-      WHERE ct.user_id = $1
       ORDER BY ct.captured_at DESC
     `;
-    
-    const result = await pool.query(query, [userId]);
-    return result.rows.map(row => ({
-      ...row,
-      geometry: JSON.parse(row.geometry_json),
-      center: JSON.parse(row.center_json)
-    }));
+    const result = await pool.query(query, [currentUserId]);
+    return result.rows;
   }
 
   // Get tiles in bounding box

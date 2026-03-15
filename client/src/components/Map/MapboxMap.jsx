@@ -504,10 +504,10 @@ const MapboxMap = () => {
 
     const features = tilesData.map(tile => {
       const coords = ngeohash.decode(tile.geohash);
-      const isMine = tile.ownerId === user?.id;
+      const isMine = tile.is_mine === true || tile.is_mine === 'true';
       return {
         type: 'Feature',
-        properties: { color: isMine ? '#3b82f6' : '#ef4444' },
+        properties: { color: isMine ? '#22c55e' : '#ef4444' },
         geometry: {
           type: 'Polygon',
           coordinates: [[
