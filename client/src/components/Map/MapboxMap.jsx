@@ -42,6 +42,7 @@ const MapboxMap = () => {
   
   // Run tracking state - lifted up to persist when panel is hidden
   const [isTracking, setIsTracking] = useState(false);
+  const isTrackingRef = useRef(false);
   const [liveRoute, setLiveRoute] = useState([]);
   const [runStats, setRunStats] = useState({
     duration: 0,
@@ -113,7 +114,7 @@ const MapboxMap = () => {
         'line-cap': 'round'
       },
       paint: {
-        'line-color': '#3b82f6',
+        'line-color': '#ef4444',
         'line-width': 5,
         'line-opacity': 0.8
       }
@@ -238,7 +239,7 @@ const MapboxMap = () => {
           
           setCenter(coords);
           
-          if (isTracking) {
+          if (isTrackingRef.current) {
             setLiveRoute(prev => {
               const newRoute = [...prev, coords];
               if (map.current?.getSource('live-route')) {
@@ -464,6 +465,7 @@ const MapboxMap = () => {
   useEffect(() => {
     if (!socket.current) return;
 
+    isTrackingRef.current = isTracking;
     if (isTracking) {
       socket.current.emit('start-tracking', {
         userId: user?.id,
@@ -582,29 +584,9 @@ const MapboxMap = () => {
   useEffect(() => {
     if (!map.current) return;
 
-    // Handle Start Marker - only show when tracking is active
-    if (currentRoute.length > 0 && isTracking) {
-      if (!startMarker.current) {
-        const startCoords = [currentRoute[0].lng, currentRoute[0].lat];
-        const el = document.createElement('div');
-        el.className = 'marker-start';
-        el.style.backgroundColor = '#10b981'; // Emerald-500
-        el.style.width = '16px';
-        el.style.height = '16px';
-        el.style.borderRadius = '50%';
-        el.style.border = '3px solid white';
-        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
-        
-        startMarker.current = new mapboxgl.Marker(el)
-          .setLngLat(startCoords)
-          .addTo(map.current);
-      }
-    } else {
-      // Remove start marker when not tracking or no route
-      if (startMarker.current) {
-        startMarker.current.remove();
-        startMarker.current = null;
-      }
+    if (!isTracking && startMarker.current) {
+      startMarker.current.remove();
+      startMarker.current = null;
     }
 
     if (currentRoute.length === 0 || !isTracking) return;
