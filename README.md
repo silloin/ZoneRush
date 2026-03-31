@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/Deployed-Render-purple?style=for-the-badge" alt="Render">
 </div>
 
-<div align="center">
+<div align=\"center\">
   <h3>🎮 Turn your runs into epic territory battles! 🗺️</h3>
   <p><em>Capture zones, compete globally, and level up your running game</em></p>
 </div>
@@ -31,30 +31,36 @@
 | 📁 GPX Import | Upload runs from Garmin, Strava, etc. | ✅ Active |
 | 🏅 Challenges | Join time-limited running challenges | ✅ Active |
 | 📱 Mobile Optimized | Responsive UI for all devices | ✅ Active |
+| 🆘 SOS Safety System | Emergency location sharing with contacts | ✅ Active |
+| 💬 Full Chat System | Private/global chat, friends, clans | ✅ Active |
+| 👥 Clans & Social | Team territories and clan competitions | ✅ Active |
 
 ---
 
 ## 🛠️ Tech Stack
 
 **Frontend**
-- React 18 + Vite
-- Tailwind CSS
+- React 18 + Vite 5
+- Tailwind CSS + clsx/tailwind-merge
 - Mapbox GL JS + Mapbox Directions
 - Recharts (analytics)
-- Socket.io Client
+- Socket.io Client 4
 - Lucide React (icons)
+- Tanstack Query, Framer Motion, react-i18next
 
 **Backend**
-- Node.js + Express.js
+- Node.js + Express.js 5
 - PostgreSQL + PostGIS (spatial queries)
-- Socket.io (real-time multiplayer)
-- JWT Authentication
-- Multer (GPX file uploads)
-- ngeohash (tile/territory encoding)
+- Socket.io 4 + Redis Adapter (real-time multiplayer)
+- JWT/Jose + Bcrypt (auth)
+- Multer (GPX uploads), ngeohash (tiles)
+- Firebase Admin (push), Stripe/Twilio (monetization)
+- Rate limiting (Redis/express-rate-limit)
 
 **Infrastructure**
-- Deployed on Render (web service)
-- Frontend built with Vite, served from `server/public`
+- Deployed on Render (PostgreSQL DB)
+- Auto DB init (PostGIS schemas)
+- Vite PWA plugin (progressive web app)
 
 ---
 
@@ -65,69 +71,73 @@
 ```
 Node.js 18+
 PostgreSQL with PostGIS extension
-Mapbox API key
+Mapbox API key (https://mapbox.com)
 ```
 
 ### Installation
 
-**1. Clone & install dependencies**
-
+**Recommended (Windows - One-click):**
 ```bash
 git clone https://github.com/silloin/ZoneRush.git
 cd ZoneRush
+setup-everything.bat
+```
+
+**Or Manual:**
+```bash
+npm install  # Root deps + scripts
 npm install --prefix server
 npm install --prefix client --legacy-peer-deps
 ```
 
-**2. Configure environment variables**
+**Environment Variables**
 
-`server/.env`
+`server/.env` (create if missing):
 ```env
-DATABASE_URL=postgresql://<db_user>:<db_password>@<db_host>:5432/<db_name>
-JWT_SECRET=<your_jwt_secret>
+DATABASE_URL=postgresql://user:pass@host:5432/zonerush
+JWT_SECRET=your_super_secret_jwt_key_here
 PORT=5000
 NODE_ENV=development
+MAPBOX_TOKEN=your_mapbox_pk_here
 ```
 
-`client/.env`
+`client/.env`:
 ```env
-VITE_MAPBOX_API_KEY=<your_mapbox_access_token>
+VITE_MAPBOX_API_KEY=your_mapbox_pk_here
 VITE_API_URL=http://localhost:5000/api
 ```
 
-**3. Run the app**
+### Run the app
 
+**One-command:**
 ```bash
-# Start backend
+start.bat
+```
+
+**Or Manual:**
+```bash
+# Backend (auto-inits DB schemas)
 cd server && npm run dev
 
-# Start frontend (separate terminal)
+# Frontend (new terminal)
 cd client && npm run dev
 ```
 
-Frontend runs on `http://localhost:5173`, backend on `http://localhost:5000`.
+Frontend: `http://localhost:5173` | Backend/API: `http://localhost:5000`
 
 ---
 
 ## 🗄️ Database Setup
 
-The server auto-initializes the database schema on startup by running:
+Server **auto-initializes** PostgreSQL + PostGIS on startup:
+1. `CREATE EXTENSION postgis`
+2. `./sql/postgis_setup.sql` — spatial indexes/functions
+3. `./sql/setup_database.sql` — core tables (users/runs/tiles/territories)
+4. `./sql/social_gamification.sql` — achievements/XP/leaderboard
+5. `./sql/emergency_contacts.sql` / `sos_alerts.sql` — safety
+6. `./sql/chat_system.sql` / `clans.sql` — social
 
-1. `sql/setup_database.sql` — all core tables + PostGIS + migration guards
-2. `sql/postgis_setup.sql` — spatial indexes and helper functions
-3. `sql/social_gamification.sql` — achievements, social feed, AI recommendations
-
-Tables created:
-- `users` — profiles, XP, level, streak
-- `runs` — run history with geometry
-- `route_points` — GPS point log per run
-- `tiles` / `captured_tiles` — territory tile system
-- `territories` / `territory_battles` — polygon territory wars
-- `route_heatmap` — aggregated heatmap data
-- `achievements` / `user_achievements` — gamification
-- `posts` / `likes` / `comments` — social feed
-- `challenges` / `events` / `training_plans`
-- `cheat_flags` — anti-cheat records
+**Tables**: users, runs/route_points, tiles/captured_tiles/territories, route_heatmap, achievements/user_achievements, posts/likes/comments, challenges, sos_alerts/emergency_contacts, conversations/messages.
 
 ---
 
@@ -137,63 +147,71 @@ Tables created:
 |--------|----------|-------------|------|
 | `POST` | `/api/auth/register` | Register new user | ❌ |
 | `POST` | `/api/auth/login` | Login | ❌ |
-| `GET` | `/api/runs` | Get user runs | ✅ |
-| `POST` | `/api/runs` | Save a run | ✅ |
-| `POST` | `/api/gpx/upload` | Upload GPX file | ✅ |
-| `GET` | `/api/tiles` | Get all captured tiles | ✅ |
-| `GET` | `/api/territories` | Get territory polygons | ✅ |
-| `GET` | `/api/heatmap/bounds` | Heatmap data for map bounds | ✅ |
-| `GET` | `/api/achievements` | All achievements | ✅ |
-| `GET` | `/api/users/leaderboard` | Global leaderboard | ✅ |
+| `GET/POST` | `/api/runs` | Get/save user runs | ✅ |
+| `POST` | `/api/gpx/upload` | GPX import | ✅ |
+| `GET` | `/api/tiles` | Captured tiles | ✅ |
+| `GET` | `/api/territories` | Territory polygons | ✅ |
+| `GET` | `/api/heatmap/bounds` | Heatmap data | ✅ |
+| `GET` | `/api/achievements` | Achievements list | ✅ |
+| `GET` | `/api/leaderboard` | Global leaderboard | ✅ |
 | `GET` | `/api/challenges` | Active challenges | ✅ |
-| `GET` | `/api/ai-coach` | AI training recommendations | ✅ |
-| `GET` | `/api/social` | Social feed | ✅ |
+| `GET` | `/api/ai-coach` | AI recommendations | ✅ |
+| `GET` | `/api/users/leaderboard` | Users ranking | ✅ |
+| `GET/POST` | `/api/social` | Social feed/posts | ✅ |
 | `GET` | `/api/segments` | Route segments | ✅ |
+| `POST/GET` | `/api/emergency` | SOS/live sharing | ✅ |
+| `GET/POST` | `/api/messages` | Chat messages | ✅ |
+| `GET/POST` | `/api/friend-requests` | Friends system | ✅ |
+
+**Full routes**: zones/events/training-plans/clans/notifications/safety/monetization/global-chat.
 
 ---
 
 ## 🎮 How to Play
 
-1. Register/Login — create your runner profile
-2. Start a Run — enable GPS tracking from the map
-3. Capture Tiles — run through geohash grid cells to claim territory
-4. Defend Territory — other runners can steal your zones
-5. Earn XP & Level Up — complete achievements and challenges
-6. Climb Leaderboards — compete globally or in your city
+1. **Register/Login** — Create runner profile
+2. **Start Run** — GPS tracking on live map (Mapbox)
+3. **Capture Tiles** — Run through geohash grid cells to claim territory
+4. **Battle Territories** — Defend vs steal from others (tiles/territories)
+5. **Earn XP/Levels** — Achievements, challenges, segments
+6. **Social/Compete** — Chat with friends/clans, climb leaderboards
+7. **Safety** — SOS button shares live location w/ contacts
+
+**Multiplayer**: See others live via Socket.io, race ghosts, clan wars.
 
 ---
 
 ## 🚀 Deployment (Render)
 
-The app is configured for Render via `render.yaml`:
-
+Ready via `render.yaml`:
 ```yaml
 services:
-  - type: web
-    name: zonerush-backend
-    env: node
-    buildCommand: cd server && npm install
-    startCommand: cd server && npm start
+  - type: web  # Builds client → server/public, runs server npm start
+databases:
+  - name: zonerush-db  # PostgreSQL
 ```
 
-The build pipeline (`npm run build` at root) installs both client and server dependencies, builds the Vite frontend, and outputs it to `server/public` for Express to serve.
-
-Required environment variables on Render:
+**Env Vars** (Render dashboard):
 ```
-DATABASE_URL
-JWT_SECRET
+DATABASE_URL  # From Render PostgreSQL
+JWT_SECRET    # Generate
 NODE_ENV=production
+MAPBOX_TOKEN
 ```
+
+`npm run build` → client build to server/public (Express serves).
 
 ---
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit changes (`git commit -m 'Add your feature'`)
-4. Push to branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
+1. Fork repository
+2. `git checkout -b feature/amazing-feature`
+3. `git commit -m 'feat: add amazing feature'`
+4. `git push origin feature/amazing-feature`
+5. Open Pull Request
+
+Run `npm run lint` before push. See [TODO.md](TODO.md).
 
 ---
 
@@ -203,7 +221,8 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-<div align="center">
+<div align=\"center\">
   <sub>Made with ❤️ by the ZoneRush team</sub><br>
-  <sub>📧 support@zonerush.com · 💬 <a href="https://discord.gg/zonerush">Discord</a> · 🐦 <a href="https://twitter.com/zonerushapp">@ZoneRushApp</a></sub>
+  <sub>📧 support@zonerush.com · 💬 <a href=\"https://discord.gg/zonerush\">Discord</a> · 🐦 </sub>
 </div>
+
