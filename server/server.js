@@ -69,20 +69,32 @@ if (process.env.NODE_ENV === 'production') {
 
 // CORS configuration
 const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.FRONTEND_URL].filter(Boolean)
+  ? [
+      process.env.FRONTEND_URL,
+      process.env.RENDER_EXTERNAL_URL, // Render deployment
+      /.render\.com$/, // All render subdomains
+    ].filter(Boolean)
   : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
+    
+    // Check if origin is allowed
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (typeof allowed === 'string') return allowed === origin;
+      if (allowed instanceof RegExp) return allowed.test(origin);
+      return false;
+    });
+    
+    if (!isAllowed) {
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
       return callback(new Error(msg), false);
     }
     return callback(null, true);
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true
 }));
 app.use(express.json());
@@ -93,7 +105,9 @@ app.use(csrfProtection);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: process.env.NODE_ENV === 'production'
+      ? [process.env.FRONTEND_URL, process.env.RENDER_EXTERNAL_URL, /.render\.com$/].filter(Boolean)
+      : ['http://localhost:5173', 'http://localhost:3000'],
     methods: ['GET', 'POST'],
     credentials: true
   },
@@ -256,8 +270,18 @@ app.use((err, req, res, next) => {
 // Start the server
 const port = process.env.PORT || 5000;
 server.listen(port, () => {
-  console.log(`✅ Server started on port ${port}`);
-  console.log(`🌐 API available at http://localhost:${port}/api`);
+  const env = process.env.NODE_ENV || 'development';
+  console.log(`✅ Server started in ${env} mode on port ${port}`);
+  
+  if (env === 'development') {
+    console.log(`🌐 API available at http://localhost:${port}/api`);
+    console.log(`🔌 Socket.IO server running on http://localhost:${port}`);
+  } else {
+    console.log(`🌐 Production server running on port ${port}`);
+    if (process.env.RENDER_EXTERNAL_URL) {
+      console.log(`🌐 External URL: ${process.env.RENDER_EXTERNAL_URL}`);
+    }
+  }
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`❌ Port ${port} is already in use!`);

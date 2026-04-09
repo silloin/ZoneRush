@@ -2,8 +2,11 @@ services:
   - type: web
     name: zonerush
     env: node
-    buildCommand: npm install --prefix server --legacy-peer-deps && npm install --prefix client --legacy-peer-deps && npm run build --prefix client
+    region: oregon # Choose your preferred region
+    plan: free
+    buildCommand: npm install --prefix server --legacy-peer-deps && npm run build --prefix client
     startCommand: cd server && npm start
+    healthCheckPath: /api
     envVars:
       - key: NODE_ENV
         value: production
@@ -13,7 +16,26 @@ services:
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: zonerush
+          property: host
+      - key: CORS_ORIGIN
+        fromService:
+          type: web
+          name: zonerush
+          property: host
+      # Add these manually in Render dashboard:
+      # - WEATHER_API_KEY
+      # - AQI_API_KEY
+      # - GROQ_API_KEY
+      # - EMAIL_SERVICE
+      # - EMAIL_USER
+      # - EMAIL_APP_PASSWORD
+      # - MAPBOX_API_KEY
 
 databases:
   - name: zonerush-db
     plan: free
+    region: oregon # Should match web service region

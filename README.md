@@ -53,6 +53,21 @@
 
 ## 🚀 Getting Started
 
+### Quick Start (Windows)
+
+```bash
+# Just run this script - it handles everything!
+start-dev.bat
+```
+
+This will:
+1. Install dependencies (if needed)
+2. Start backend server (port 5000)
+3. Start frontend server (port 5173)
+4. Open browser automatically
+
+### Manual Setup
+
 ### Prerequisites
 
 - **Node.js** (v18 or higher)
@@ -150,6 +165,42 @@ Navigate to `http://localhost:5173`
 
 ---
 
+## 🌐 Deployment
+
+### Deploy to Render (Free)
+
+1. **Push to GitHub**
+   ```bash
+   git add .
+   git commit -m "Ready for deployment"
+   git push origin main
+   ```
+
+2. **Connect to Render**
+   - Go to [render.com](https://render.com)
+   - Click **New +** → **Blueprint**
+   - Connect your GitHub repo
+   - Render auto-detects `render.yaml`
+   - Click **Apply**
+
+3. **Add Environment Variables**
+   In Render dashboard, add:
+   ```
+   WEATHER_API_KEY=your_key
+   AQI_API_KEY=your_key
+   GROQ_API_KEY=your_key
+   EMAIL_SERVICE=gmail
+   EMAIL_USER=your_email@gmail.com
+   EMAIL_APP_PASSWORD=your_app_password
+   ```
+
+4. **Done!** 🎉
+   Your app will be live at: `https://zonerush.onrender.com`
+
+📖 **Full Deployment Guide:** See [DEPLOYMENT.md](DEPLOYMENT.md)
+
+---
+
 ## 📱 Features Overview
 
 ### Map Interface
@@ -180,6 +231,28 @@ Navigate to `http://localhost:5173`
 ---
 
 ## 🛠️ Tech Stack
+
+### How It Works (Local vs Production)
+
+**Development Mode:**
+- Frontend: `http://localhost:5173` (Vite dev server)
+- Backend: `http://localhost:5000` (Express)
+- Vite proxies `/api` requests to backend automatically
+- Socket.IO connects to `localhost:5000`
+
+**Production Mode:**
+- Frontend & Backend: Same domain (e.g., `zonerush.onrender.com`)
+- API calls use relative URLs (`/api`)
+- Socket.IO uses `window.location.origin`
+- No CORS issues!
+
+### Smart Configuration
+
+The app automatically detects the environment:
+- ✅ Works on localhost without changes
+- ✅ Works in production without code changes
+- ✅ No hardcoded URLs
+- ✅ Environment variables handled automatically
 
 ### Frontend
 - **React 18** - UI framework

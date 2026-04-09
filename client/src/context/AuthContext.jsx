@@ -1,7 +1,23 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || '/api';
+// Smart API URL detection: works for both localhost and production
+const getApiUrl = () => {
+  // If explicitly set in env, use it
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // For production (same domain), use relative URL
+  if (import.meta.env.PROD) {
+    return '/api';
+  }
+  
+  // For development, use relative URL (Vite proxy will forward to localhost:5000)
+  return '/api';
+};
+
+axios.defaults.baseURL = getApiUrl();
 axios.defaults.withCredentials = true;
 
 // Helper to get cookie value
@@ -22,8 +38,6 @@ axios.interceptors.request.use((config) => {
 }, (error) => {
   return Promise.reject(error);
 });
-
-console.log('🌐 API Base URL:', axios.defaults.baseURL);
 
 export const AuthContext = createContext();
 

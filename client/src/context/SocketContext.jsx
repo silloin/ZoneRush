@@ -22,7 +22,23 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     if (!user) return;
 
-    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    // Smart URL detection: works for both localhost and production
+    const getSocketUrl = () => {
+      // If explicitly set, use it
+      if (import.meta.env.VITE_SOCKET_URL) {
+        return import.meta.env.VITE_SOCKET_URL;
+      }
+      
+      // For production (same domain), use relative URL
+      if (import.meta.env.PROD) {
+        return window.location.origin;
+      }
+      
+      // For development, use localhost
+      return 'http://localhost:5000';
+    };
+
+    const SOCKET_URL = getSocketUrl();
     
     const newSocket = io(SOCKET_URL, {
       withCredentials: true,
