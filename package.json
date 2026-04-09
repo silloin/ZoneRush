@@ -1,0 +1,30 @@
+{
+  "name": "@silloin/zonerush",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "install-all": "npm install --legacy-peer-deps && npm install --prefix server --legacy-peer-deps && npm install --prefix client --legacy-peer-deps",
+    "build": "echo 'Installing dependencies...' && npm install --prefix client --legacy-peer-deps && npm install --prefix server --legacy-peer-deps && echo 'Building client...' && npm run build --prefix client && echo 'Build complete - frontend is in server/public'",
+    "start": "cd server && npm start",
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "legacy-dev": "node app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^5.2.1",
+    "ngeohash": "0.6.3",
+    "node": "^18.20.4",
+    "socket.io": "^4.7.5"
+  },
+  "overrides": {
+    "ngeohash": "0.6.3"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

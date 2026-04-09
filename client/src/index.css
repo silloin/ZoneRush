@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* AI Coach Markdown Styling */
+.markdown-content h2 {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+  color: #60a5fa;
+}
+
+.markdown-content ul {
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+
+.markdown-content li {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.markdown-content ol {
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+
+.markdown-content strong {
+  font-weight: bold;
+  color: #fbbf24;
+}
+
+.markdown-content p {
+  margin: 0.5rem 0;
+  line-height: 1.5;
+}

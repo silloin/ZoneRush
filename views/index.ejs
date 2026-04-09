@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RunTerra - Realtime Location Tracker</title>
+    <link rel="stylesheet" href="/stylesheets/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
+      integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+    />
+  </head>
+  <body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="logo">RunTerra</h1>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/" class="nav-item"> 
+           <span class="nav-icon">📍</span> 
+           <span class="nav-text">Live Map</span> 
+         </a> 
+         <a href="/dashboard" class="nav-item"> 
+           <span class="nav-icon">📊</span> 
+           <span class="nav-text">Dashboard</span> 
+         </a> 
+         <a href="/leaderboard" class="nav-item"> 
+           <span class="nav-icon">🏆</span> 
+           <span class="nav-text">Leaderboard</span> 
+         </a> 
+         <a href="/training" class="nav-item"> 
+           <span class="nav-icon">💪</span> 
+           <span class="nav-text">Training Plans</span> 
+         </a> 
+         <a href="/events" class="nav-item"> 
+           <span class="nav-icon">🚩</span> 
+           <span class="nav-text">Events</span> 
+         </a> 
+         <a href="/profile" class="nav-item"> 
+           <span class="nav-icon">👤</span> 
+           <span class="nav-text">Profile</span> 
+         </a>
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="header">
+        <h1>Realtime Device Tracker</h1>
+      </div>
+      <!-- Leaflet map and scripts removed - using React Mapbox instead -->
+    </div>
+  </body>
+</html>

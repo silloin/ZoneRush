@@ -1,0 +1,82 @@
+.map-container {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+/* Ensure map container takes full height */
+.w-full.h-full {
+  height: 100vh;
+  width: 100%;
+}
+
+/* Controls now on LEFT - adjust Mapbox top-left/right */
+.mapboxgl-ctrl-top-right {
+  top: 16px !important;
+  right: 10px !important;
+}
+.mapboxgl-ctrl-top-left {
+  top: 16px !important;
+  left: 10px !important; /* True top-left for desktop */
+}
+
+/* Ensure desktop specificity */
+@media (min-width: 768px) {
+  .mapboxgl-ctrl-top-left {
+    top: 16px !important;
+    left: 10px !important;
+  }
+}
+
+
+/* Ensure top-right controls stay at top */
+.mapboxgl-ctrl-group {
+  z-index: 10 !important;
+}
+
+/* Fix Mapbox Directions text visibility */
+.mapboxgl-ctrl-directions .suggestions li,
+.mapboxgl-ctrl-directions .suggestions li a {
+  color: #000 !important;
+  background-color: #fff !important;
+}
+
+.mapboxgl-ctrl-directions .suggestions li:hover,
+.mapboxgl-ctrl-directions .suggestions li:hover a {
+  color: #000 !important;
+  background-color: #f0f0f0 !important;
+}
+
+.mapboxgl-ctrl-directions input {
+  color: #000 !important;
+}
+
+/* Ensure UI buttons stay at top */
+.absolute.top-20.right-4,
+.absolute.top-4.right-4,
+.absolute.top-16.right-4 {
+  z-index: 20 !important;
+}
+
+/* Fix directions close button overlap */
+.directions-close-container {
+  z-index: 30 !important;
+  pointer-events: auto;
+}
+
+.directions-close-container button {
+  pointer-events: auto;
+  z-index: 30 !important;
+}
+
+/* Adjust Mapbox Directions panel to avoid overlap */
+.mapboxgl-ctrl-directions {
+  margin-left: 50px !important;
+  margin-top: 10px !important;
+  max-width: 350px;
+}
+
+.mapboxgl-ctrl-directions .directions-directions {
+  margin-top: 10px;
+}

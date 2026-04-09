@@ -1,0 +1,382 @@
+# 🏃‍♂️ ZoneRush - Real-Time GPS Territory Capture Game
+
+**ZoneRush** is a modern, real-time multiplayer fitness game that turns running into an exciting territory conquest experience. Capture zones, compete with other runners, track your progress, and stay safe with AI-powered features.
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)
+![PostgreSQL](https://img.shields.io/badge/postgresql-14+-blue.svg)
+![React](https://img.shields.io/badge/react-18+-61dafb.svg)
+
+---
+
+## ✨ Features
+
+### 🗺️ **Live Territory Capture**
+- Real-time GPS tracking with Mapbox integration
+- Capture and defend territories as you run
+- See other runners live on the map
+- Territory battle system with real-time updates
+
+### 🏆 **Gamification & Competition**
+- XP points and level progression system
+- Global and friend leaderboards
+- Achievements and badges
+- Weekly challenges and events
+- Clan system for team competition
+
+### 🤖 **AI-Powered Features**
+- AI Running Coach for personalized training advice
+- Smart safety checks during runs
+- Weather-based training recommendations
+- Air quality monitoring for safe outdoor runs
+
+### 💬 **Social & Communication**
+- Real-time private messaging
+- Global chat for community interaction
+- Friend requests and social feed
+- Activity sharing and kudos system
+
+### 🆘 **Safety First**
+- SOS emergency alerts with live location sharing
+- Emergency contact management
+- Real-time location sharing with trusted contacts
+- AI safety monitoring during runs
+
+### 📊 **Advanced Analytics**
+- Run history with detailed statistics
+- Route tracking with GPX support
+- Performance insights and pace analysis
+- Heatmap visualization of popular routes
+- Territory capture statistics
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js** (v18 or higher)
+- **PostgreSQL** (v14 or higher) with **PostGIS** extension
+- **Mapbox API Key** (get from [mapbox.com](https://www.mapbox.com))
+- **npm** or **yarn**
+
+### Installation
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/yourusername/zonerush.git
+cd zonerush
+```
+
+2. **Install dependencies**
+```bash
+# Install server dependencies
+cd server
+npm install
+
+# Install client dependencies
+cd ../client
+npm install
+```
+
+3. **Set up PostgreSQL database**
+```bash
+# Create database
+createdb zonerush
+
+# Enable PostGIS extension
+psql -d zonerush -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+
+# Run database migrations
+psql -d zonerush -f database/complete_schema.sql
+```
+
+4. **Configure environment variables**
+
+**Server (.env)** - Create in `/server` directory:
+```env
+# PostgreSQL Connection
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_HOST=localhost
+DB_DATABASE=zonerush
+DB_PORT=5432
+
+# Authentication
+JWT_SECRET=your_super_secret_jwt_key_here
+
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+CORS_ORIGIN=http://localhost:5173
+
+# Mapbox API
+MAPBOX_API_KEY=your_mapbox_api_key
+
+# Weather API (OpenWeatherMap)
+WEATHER_API_KEY=your_weather_api_key
+
+# Air Quality API (WAQI)
+AQI_API_KEY=your_aqi_api_key
+
+# Email Configuration (Gmail)
+EMAIL_SERVICE=gmail
+EMAIL_USER=your_email@gmail.com
+EMAIL_APP_PASSWORD=your_app_password
+
+# Frontend URL
+FRONTEND_URL=http://localhost:5173
+```
+
+**Client (.env)** - Create in `/client` directory:
+```env
+VITE_MAPBOX_API_KEY=your_mapbox_api_key
+```
+
+5. **Start the application**
+```bash
+# From the root directory
+# Terminal 1 - Start backend server
+cd server
+npm run dev
+
+# Terminal 2 - Start frontend
+cd client
+npm run dev
+```
+
+6. **Open your browser**
+Navigate to `http://localhost:5173`
+
+---
+
+## 📱 Features Overview
+
+### Map Interface
+- **Live Tracking**: Real-time GPS location updates
+- **Territory Visualization**: See captured zones in real-time
+- **Multiplayer View**: Watch other runners on the map
+- **Heatmap**: View popular running routes
+- **Route Planning**: Get directions with Mapbox
+
+### Run Tracking
+- **Start/Stop Runs**: Track your running sessions
+- **Live Statistics**: Distance, pace, duration, tiles captured
+- **Route Recording**: GPS route with accuracy filtering
+- **Auto-Save**: Runs automatically saved to database
+
+### Social Features
+- **Private Chat**: Message other runners directly
+- **Global Chat**: Community-wide communication
+- **Friend System**: Add and manage friends
+- **Activity Feed**: Share and view running activities
+
+### Safety & Emergency
+- **SOS Button**: Instant emergency alerts
+- **Live Location Sharing**: Real-time tracking for emergencies
+- **Emergency Contacts**: Manage your safety network
+- **WhatsApp Integration**: Quick contact via WhatsApp
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **React 18** - UI framework
+- **Vite** - Build tool and dev server
+- **Tailwind CSS** - Utility-first styling
+- **Mapbox GL** - Interactive maps
+- **Socket.IO Client** - Real-time communication
+- **Framer Motion** - Smooth animations
+- **Recharts** - Data visualization
+- **Axios** - HTTP client
+- **React Router** - Client-side routing
+
+### Backend
+- **Node.js** - Runtime environment
+- **Express 5** - Web framework
+- **Socket.IO** - Real-time bidirectional communication
+- **PostgreSQL** - Relational database
+- **PostGIS** - Spatial database extension
+- **JWT** - Authentication
+- **Bcrypt** - Password hashing
+- **Nodemailer** - Email service
+
+### Services & APIs
+- **Mapbox** - Maps and geocoding
+- **OpenWeatherMap** - Weather data
+- **WAQI** - Air quality index
+- **Groq AI** - AI coach integration
+- **Firebase** - Push notifications (optional)
+
+---
+
+## 📊 Database Schema
+
+The application uses PostgreSQL with PostGIS for spatial data:
+
+**Core Tables:**
+- `users` - User accounts and profiles
+- `runs` - Running sessions with route geometry
+- `tiles` - Territory tiles with spatial data
+- `territories` - Captured territories
+- `messages` - Private chat messages
+- `global_messages` - Global chat
+- `friend_requests` - Friend connections
+- `notifications` - User notifications
+- `sos_alerts` - Emergency alerts
+- `achievements` - User achievements
+- `training_plans` - AI-generated training plans
+
+**Spatial Columns (SRID: 4326):**
+- Route geometries (LINESTRING)
+- Location points (POINT)
+- Tile polygons (POLYGON)
+- Territory areas (POLYGON)
+
+---
+
+## 🎮 How to Play
+
+1. **Register** an account or login
+2. **Start a run** from the map page
+3. **Run around** your area to capture tiles
+4. **Compete** with other runners for territories
+5. **Level up** by earning XP points
+6. **Join clans** and participate in team challenges
+7. **Check leaderboards** to see your ranking
+8. **Chat** with other runners in real-time
+9. **Stay safe** with SOS and emergency contacts
+
+---
+
+## 🔧 Development
+
+### Project Structure
+```
+zonerush/
+├── client/                 # React frontend
+│   ├── src/
+│   │   ├── components/    # Reusable components
+│   │   ├── pages/         # Page components
+│   │   ├── context/       # React context (Auth, Socket)
+│   │   ├── services/      # API services
+│   │   └── hooks/         # Custom hooks
+│   └── package.json
+├── server/                # Express backend
+│   ├── routes/           # API routes
+│   ├── services/         # Business logic
+│   ├── middleware/       # Auth, validation, etc.
+│   ├── config/           # Database config
+│   └── package.json
+├── database/             # SQL migrations and schemas
+└── README.md
+```
+
+### Available Scripts
+
+**Client:**
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run lint         # Run ESLint
+```
+
+**Server:**
+```bash
+npm run dev          # Start with nodemon (auto-reload)
+npm start            # Start production server
+npm test             # Run tests
+```
+
+---
+
+## 🚀 Deployment
+
+### Backend (Railway/Render/Heroku)
+1. Set up PostgreSQL add-on
+2. Configure environment variables
+3. Deploy server code
+4. Run database migrations
+
+### Frontend (Vercel/Netlify)
+1. Build the client: `npm run build`
+2. Deploy the `client/dist` folder
+3. Set environment variables
+4. Configure API base URL
+
+---
+
+## 📝 API Documentation
+
+### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login user
+- `GET /api/auth` - Get current user (protected)
+
+### Runs
+- `POST /api/runs` - Save a run
+- `GET /api/runs` - Get user's runs
+- `GET /api/runs/:id` - Get specific run
+
+### Tiles & Territories
+- `GET /api/tiles` - Get all tiles
+- `GET /api/tiles/count/:userId` - Get user's tile count
+- `GET /api/territories` - Get territories
+
+### Social
+- `GET /api/messages/conversations` - Get chat conversations
+- `POST /api/messages/:userId` - Send message
+- `GET /api/friends/list` - Get friends list
+- `POST /api/friends/request` - Send friend request
+
+### AI Coach
+- `GET /api/ai-coach/recommendations/:userId` - Get recommendations
+- `POST /api/ai-coach/ask` - Ask AI coach a question
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- **Mapbox** for the amazing mapping platform
+- **OpenStreetMap** contributors for map data
+- **OpenWeatherMap** for weather data
+- **PostGIS** for spatial database capabilities
+- All contributors and testers
+
+---
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/yourusername/zonerush/issues)
+- **Email**: your-email@example.com
+- **Documentation**: [Wiki](https://github.com/yourusername/zonerush/wiki)
+
+---
+
+## 🌟 Show Your Support
+
+Give a ⭐️ if this project helped you!
+
+---
+
+**Built with ❤️ for runners everywhere** 🏃‍♂️💨
