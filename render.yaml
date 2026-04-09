@@ -4,7 +4,7 @@ services:
     env: node
     region: oregon # Choose your preferred region
     plan: free
-    buildCommand: npm install --prefix server --legacy-peer-deps && npm install --prefix client --legacy-peer-deps && npm run build --prefix client
+    buildCommand: bash build.sh
     startCommand: cd server && npm start
     healthCheckPath: /api
     envVars:
