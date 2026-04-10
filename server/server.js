@@ -101,6 +101,19 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+// Serve manifest.webmanifest publicly (before CSRF middleware)
+app.get('/manifest.webmanifest', (req, res) => {
+  const manifestPath = path.resolve(__dirname, 'public', 'manifest.webmanifest');
+  if (fs.existsSync(manifestPath)) {
+    res.setHeader('Content-Type', 'application/manifest+json');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.sendFile(manifestPath);
+  } else {
+    res.status(404).json({ error: 'Manifest not found' });
+  }
+});
+
 app.use(csrfProtection);
 
 // Create HTTP server and attach Socket.io

@@ -13,11 +13,19 @@ const csrfProtection = (req, res, next) => {
   let csrfToken = req.cookies['csrf-token'];
   if (!csrfToken) {
     csrfToken = crypto.randomBytes(32).toString('hex');
-    res.cookie('csrf-token', csrfToken, {
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+    const cookieOptions = {
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       secure: process.env.NODE_ENV === 'production',
-      httpOnly: false // Must be accessible by frontend
-    });
+      httpOnly: false, // Must be accessible by frontend
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    };
+    
+    // In production, don't set domain to allow cross-origin cookies
+    if (process.env.NODE_ENV !== 'production') {
+      cookieOptions.domain = 'localhost';
+    }
+    
+    res.cookie('csrf-token', csrfToken, cookieOptions);
   }
 
   // 2. Skip validation for safe methods
