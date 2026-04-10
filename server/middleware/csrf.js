@@ -14,7 +14,7 @@ const csrfProtection = (req, res, next) => {
   if (!csrfToken) {
     csrfToken = crypto.randomBytes(32).toString('hex');
     res.cookie('csrf-token', csrfToken, {
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
       secure: process.env.NODE_ENV === 'production',
       httpOnly: false // Must be accessible by frontend
     });

@@ -92,6 +92,12 @@ BEGIN
 
     -- Users table
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users' AND table_schema = 'public') THEN
+        -- Rename password to password_hash for consistency
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password' AND table_schema = 'public') 
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password_hash' AND table_schema = 'public') THEN
+            ALTER TABLE users RENAME COLUMN password TO password_hash;
+        END IF;
+        
         IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'lastrundate' AND table_schema = 'public') 
            AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'last_run_date' AND table_schema = 'public') THEN
             ALTER TABLE users RENAME COLUMN lastrundate TO last_run_date;
@@ -127,7 +133,7 @@ CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(100) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    password VARCHAR(100) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
     city VARCHAR(100),
     profile_photo_url TEXT,
     total_distance NUMERIC DEFAULT 0,
