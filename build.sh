@@ -13,8 +13,8 @@ cd client
 npm install --legacy-peer-deps
 
 echo "🏗️ Building client..."
-# Use npx to ensure vite is found
-npx vite build
+# Run vite build directly from node_modules
+./node_modules/.bin/vite build
 cd ..
 
 # Verify build output
