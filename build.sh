@@ -10,11 +10,13 @@ cd ..
 
 echo "🔧 Installing client dependencies..."
 cd client
-npm install --legacy-peer-deps
+
+# Force install ALL dependencies (including devDependencies)
+npm install --legacy-peer-deps --include=dev
 
 echo "🏗️ Building client..."
-# Run vite build directly from node_modules
-./node_modules/.bin/vite build
+npm run build
+
 cd ..
 
 # Verify build output
@@ -31,8 +33,6 @@ else
     echo "✅ Copied successfully!"
   else
     echo "❌ ERROR: Build output not found!"
-    echo "Listing client directory:"
-    ls -la client/
     exit 1
   fi
 fi
