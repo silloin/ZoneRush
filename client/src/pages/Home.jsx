@@ -284,28 +284,33 @@ const Home = () => {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="bg-gradient-to-br from-orange-900/30 to-red-900/30 border border-orange-500/30 p-6 rounded-3xl"
           >
+              {!weather ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-400">Loading weather...</p>
+                </div>
+              ) : (
+              <div className="space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-lg font-bold flex items-center gap-2">
                     <Thermometer className="text-blue-400" size={20} />
                     Current Weather
                   </h2>
-                  {weather.weather.location && (
+                  {weather.weather?.location && (
                     <p className="text-xs text-gray-400 mt-1">
                       📍 {weather.weather.location.city}, {weather.weather.location.country}
                     </p>
                   )}
                 </div>
-                {getWeatherIcon(weather.weather.condition)}
+                {getWeatherIcon(weather.weather?.condition)}
               </div>
               
-              <div className="space-y-4">
                 {/* Temperature */}
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400 text-sm">Temperature</span>
                   <div className="text-right">
-                    <span className="text-2xl font-bold">{Math.round(weather.weather.temp)}°C</span>
-                    {weather.weather.feels_like && (
+                    <span className="text-2xl font-bold">{Math.round(weather.weather?.temp || 0)}°C</span>
+                    {weather.weather?.feels_like && (
                       <p className="text-xs text-gray-500">Feels like {Math.round(weather.weather.feels_like)}°C</p>
                     )}
                   </div>
@@ -314,7 +319,7 @@ const Home = () => {
                 {/* Condition */}
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400 text-sm">Condition</span>
-                  <span className="font-semibold capitalize">{weather.weather.description || weather.weather.condition}</span>
+                  <span className="font-semibold capitalize">{weather.weather?.description || weather.weather?.condition}</span>
                 </div>
                 
                 {/* Humidity */}
@@ -323,7 +328,7 @@ const Home = () => {
                     <Droplets size={16} />
                     Humidity
                   </div>
-                  <span className="font-semibold">{weather.weather.humidity}%</span>
+                  <span className="font-semibold">{weather.weather?.humidity}%</span>
                 </div>
                 
                 {/* Wind Speed */}
@@ -332,18 +337,18 @@ const Home = () => {
                     <Wind size={16} />
                     Wind
                   </div>
-                  <span className="font-semibold">{weather.weather.windSpeed} m/s</span>
+                  <span className="font-semibold">{weather.weather?.windSpeed} m/s</span>
                 </div>
 
                 {/* Visibility & Pressure */}
                 <div className="grid grid-cols-2 gap-2 pt-2">
-                  {weather.weather.visibility && (
+                  {weather.weather?.visibility && (
                     <div className="bg-gray-800/50 p-2 rounded-lg">
                       <p className="text-xs text-gray-500">Visibility</p>
                       <p className="font-semibold text-sm">{weather.weather.visibility} km</p>
                     </div>
                   )}
-                  {weather.weather.pressure && (
+                  {weather.weather?.pressure && (
                     <div className="bg-gray-800/50 p-2 rounded-lg">
                       <p className="text-xs text-gray-500">Pressure</p>
                       <p className="font-semibold text-sm">{weather.weather.pressure} hPa</p>
@@ -356,25 +361,25 @@ const Home = () => {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-gray-400 text-sm">Air Quality Index (AQI)</span>
                     <div className="text-right">
-                      <span className={`font-bold text-lg ${getAQIColor(weather.weather.aqi)}`}>
-                        {weather.weather.aqi}
+                      <span className={`font-bold text-lg ${getAQIColor(weather.weather?.aqi)}`}>
+                        {weather.weather?.aqi}
                       </span>
-                      <p className={`text-xs ${getAQIColor(weather.weather.aqi)}`}>
-                        {getAQILabel(weather.weather.aqi)}
+                      <p className={`text-xs ${getAQIColor(weather.weather?.aqi)}`}>
+                        {getAQILabel(weather.weather?.aqi)}
                       </p>
                     </div>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-3">
                     <div 
-                      className={`h-3 rounded-full transition-all ${getAQIBarColor(weather.weather.aqi)}`}
-                      style={{ width: `${Math.min((weather.weather.aqi / 500) * 100, 100)}%` }}
+                      className={`h-3 rounded-full transition-all ${getAQIBarColor(weather.weather?.aqi)}`}
+                      style={{ width: `${Math.min(((weather.weather?.aqi || 0) / 500) * 100, 100)}%` }}
                     ></div>
                   </div>
                   <div className="flex justify-between mt-1">
                     <p className="text-xs text-gray-500">0</p>
                     <p className="text-xs text-gray-500">500+</p>
                   </div>
-                  {weather.weather.aqiSource && (
+                  {weather.weather?.aqiSource && (
                     <p className="text-xs text-gray-600 mt-1 text-center">
                       Source: {weather.weather.aqiSource}
                     </p>
@@ -382,7 +387,7 @@ const Home = () => {
                 </div>
                 
                 {/* Training Recommendation */}
-                {weather.recommendation.recommendations.length > 0 && (
+                {weather.recommendation?.recommendations?.length > 0 && (
                   <div className={`p-3 rounded-xl mt-3 ${
                     weather.recommendation.canRun ? 'bg-green-900/30 border border-green-500/30' : 'bg-red-900/30 border border-red-500/30'
                   }`}>
@@ -399,6 +404,7 @@ const Home = () => {
                   </div>
                 )}
               </div>
+              )}
           </motion.section>
 
           <motion.section 
