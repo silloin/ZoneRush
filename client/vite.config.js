@@ -57,7 +57,8 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../server/public',
+    // Output to 'dist' for Vercel, '../server/public' for Render/local
+    outDir: process.env.VERCEL ? 'dist' : '../server/public',
     emptyOutDir: true,
     define: {
       'process.env.NODE_ENV': JSON.stringify('production'),
