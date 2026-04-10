@@ -298,7 +298,7 @@ const Home = () => {
                   </h2>
                   {weather.weather?.location && (
                     <p className="text-xs text-gray-400 mt-1">
-                      📍 {weather.weather.location.city}, {weather.weather.location.country}
+                      📍 {weather.weather?.location?.city}, {weather.weather?.location?.country}
                     </p>
                   )}
                 </div>
@@ -311,7 +311,7 @@ const Home = () => {
                   <div className="text-right">
                     <span className="text-2xl font-bold">{Math.round(weather.weather?.temp || 0)}°C</span>
                     {weather.weather?.feels_like && (
-                      <p className="text-xs text-gray-500">Feels like {Math.round(weather.weather.feels_like)}°C</p>
+                      <p className="text-xs text-gray-500">Feels like {Math.round(weather.weather?.feels_like)}°C</p>
                     )}
                   </div>
                 </div>
@@ -345,13 +345,13 @@ const Home = () => {
                   {weather.weather?.visibility && (
                     <div className="bg-gray-800/50 p-2 rounded-lg">
                       <p className="text-xs text-gray-500">Visibility</p>
-                      <p className="font-semibold text-sm">{weather.weather.visibility} km</p>
+                      <p className="font-semibold text-sm">{weather.weather?.visibility} km</p>
                     </div>
                   )}
                   {weather.weather?.pressure && (
                     <div className="bg-gray-800/50 p-2 rounded-lg">
                       <p className="text-xs text-gray-500">Pressure</p>
-                      <p className="font-semibold text-sm">{weather.weather.pressure} hPa</p>
+                      <p className="font-semibold text-sm">{weather.weather?.pressure} hPa</p>
                     </div>
                   )}
                 </div>
@@ -381,7 +381,7 @@ const Home = () => {
                   </div>
                   {weather.weather?.aqiSource && (
                     <p className="text-xs text-gray-600 mt-1 text-center">
-                      Source: {weather.weather.aqiSource}
+                      Source: {weather.weather?.aqiSource}
                     </p>
                   )}
                 </div>
@@ -389,15 +389,15 @@ const Home = () => {
                 {/* Training Recommendation */}
                 {weather.recommendation?.recommendations?.length > 0 && (
                   <div className={`p-3 rounded-xl mt-3 ${
-                    weather.recommendation.canRun ? 'bg-green-900/30 border border-green-500/30' : 'bg-red-900/30 border border-red-500/30'
+                    weather.recommendation?.canRun ? 'bg-green-900/30 border border-green-500/30' : 'bg-red-900/30 border border-red-500/30'
                   }`}>
                     <p className={`text-xs font-bold mb-2 ${
-                      weather.recommendation.canRun ? 'text-green-400' : 'text-red-400'
+                      weather.recommendation?.canRun ? 'text-green-400' : 'text-red-400'
                     }`}>
-                      {weather.recommendation.canRun ? '✓ Good for Running' : '⚠ Caution Advised'}
+                      {weather.recommendation?.canRun ? '✓ Good for Running' : '⚠ Caution Advised'}
                     </p>
                     <ul className="space-y-1">
-                      {weather.recommendation.recommendations.map((rec, idx) => (
+                      {weather.recommendation?.recommendations?.map((rec, idx) => (
                         <li key={idx} className="text-xs text-gray-300">• {rec}</li>
                       ))}
                     </ul>
