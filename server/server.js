@@ -157,13 +157,13 @@ const executeSqlFile = async (filePath) => {
 const initializeDatabase = async () => {
   console.log('🔄 Initializing database schema...');
   const files = [
-    './sql/postgis_setup.sql',        // Geometry columns/indexes first
-    './sql/setup_database.sql',       // Core tables after PostGIS ready
+    './sql/setup_database.sql',       // Core tables first (includes PostGIS setup)
+    './sql/postgis_setup.sql',        // Geometry columns/indexes after tables exist
     './sql/social_gamification.sql',
     './sql/emergency_contacts.sql',
     './sql/sos_alerts.sql',
-    './sql/chat_system.sql',
-    './sql/clans.sql'
+    './sql/clans.sql',
+    './sql/chat_system.sql'           // Chat system last (depends on users table)
   ];
   
   let successCount = 0;
