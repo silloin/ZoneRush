@@ -80,6 +80,10 @@ export const AuthProvider = ({ children }) => {
   const register = async (username, email, password) => {
     console.log('📝 Attempting registration with:', { username, email, baseURL: axios.defaults.baseURL });
     try {
+      // First, make a GET request to establish session and get CSRF token
+      await axios.get('/auth/csrf-token');
+      
+      // Now make the POST request with the CSRF token
       const res = await axios.post('/auth/register', { username, email, password });
       console.log('✅ Registration successful:', res.data);
       setUser(res.data.user);

@@ -8,6 +8,14 @@ const pool = require('../config/db');
 const emailVerificationService = require('../services/emailVerificationService');
 const passwordResetService = require('../services/passwordResetService');
 
+// @route   GET api/auth/csrf-token
+// @desc    Get CSRF token (public endpoint for establishing session)
+// @access  Public
+router.get('/csrf-token', (req, res) => {
+  // CSRF middleware already sets the cookie, just return success
+  res.json({ msg: 'CSRF token set' });
+});
+
 // @route   GET api/auth
 // @desc    Get user by token
 // @access  Private
