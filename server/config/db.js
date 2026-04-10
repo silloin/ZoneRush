@@ -23,7 +23,19 @@ const poolConfig = {
   }
 };
 
-const pool = process.env.DATABASE_URL
+// Helper function to validate DATABASE_URL
+function isValidDatabaseUrl(url) {
+  if (!url) return false;
+  try {
+    new URL(url);
+    // Check if it has the basic postgres structure
+    return url.startsWith('postgres://') || url.startsWith('postgresql://');
+  } catch (e) {
+    return false;
+  }
+}
+
+const pool = isValidDatabaseUrl(process.env.DATABASE_URL)
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
@@ -38,6 +50,16 @@ const pool = process.env.DATABASE_URL
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
       ...poolConfig
     });
+
+// Log which configuration is being used
+if (isValidDatabaseUrl(process.env.DATABASE_URL)) {
+  console.log('[DB] Using DATABASE_URL connection string');
+} else {
+  console.log('[DB] Using individual database parameters (DATABASE_URL is invalid or not set)');
+  if (process.env.DATABASE_URL) {
+    console.warn('[DB] WARNING: DATABASE_URL appears to be malformed. Using fallback configuration.');
+  }
+}
 
 // Error handling for the pool
 pool.on('error', (err, client) => {
