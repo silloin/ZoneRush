@@ -400,7 +400,6 @@ const Home = () => {
                 )}
               </div>
           </motion.section>
-          )}
 
           <motion.section 
             initial={{ opacity: 0, x: 20 }}
