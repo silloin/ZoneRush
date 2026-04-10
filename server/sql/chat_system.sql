@@ -22,16 +22,10 @@ CREATE INDEX IF NOT EXISTS idx_friend_requests_status ON friend_requests(status)
 -- ============================================
 -- MESSAGES TABLE (Private Messages)
 -- ============================================
-CREATE TABLE IF NOT EXISTS messages (
-    id SERIAL PRIMARY KEY,
-    sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    is_read BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_by_sender BOOLEAN DEFAULT FALSE,
-    deleted_by_receiver BOOLEAN DEFAULT FALSE
-);
+-- Note: messages table is created in setup_database.sql
+-- Add missing columns if they don't exist
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS deleted_by_sender BOOLEAN DEFAULT FALSE;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS deleted_by_receiver BOOLEAN DEFAULT FALSE;
 
 -- Indexes for message retrieval
 CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
@@ -42,14 +36,14 @@ CREATE INDEX IF NOT EXISTS idx_messages_unread ON messages(receiver_id, is_read)
 -- ============================================
 -- GLOBAL MESSAGES TABLE (Public Chat)
 -- ============================================
-CREATE TABLE IF NOT EXISTS global_messages (
-    id SERIAL PRIMARY KEY,
-    sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    edited BOOLEAN DEFAULT FALSE,
-    deleted BOOLEAN DEFAULT FALSE
-);
+-- Note: global_messages table is created in setup_database.sql
+-- Add sender_id column if it doesn't exist (for compatibility)
+ALTER TABLE global_messages ADD COLUMN IF NOT EXISTS sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE global_messages ADD COLUMN IF NOT EXISTS edited BOOLEAN DEFAULT FALSE;
+ALTER TABLE global_messages ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT FALSE;
+
+-- Migrate user_id to sender_id if sender_id doesn't have data
+UPDATE global_messages SET sender_id = user_id WHERE sender_id IS NULL AND user_id IS NOT NULL;
 
 -- Index for retrieving recent global messages
 CREATE INDEX IF NOT EXISTS idx_global_messages_created ON global_messages(created_at DESC);
