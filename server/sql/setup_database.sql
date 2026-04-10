@@ -120,11 +120,13 @@ BEGIN
         EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS total_tiles INTEGER DEFAULT 0';
         EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS weekly_mileage NUMERIC DEFAULT 0';
         EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS xp INTEGER DEFAULT 0';
+        EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS total_xp INTEGER DEFAULT 0';
         EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1';
         EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS streak INTEGER DEFAULT 0';
         EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS total_territory_area NUMERIC DEFAULT 0';
         EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS territory_points INTEGER DEFAULT 0';
         EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS territories_captured INTEGER DEFAULT 0';
+        EXECUTE 'ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE';
     END IF;
 END $$;
 
@@ -189,8 +191,26 @@ CREATE TABLE IF NOT EXISTS captured_tiles (
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     run_id INTEGER REFERENCES runs(id) ON DELETE SET NULL,
     captured_at TIMESTAMPTZ DEFAULT NOW(),
+    last_captured_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(tile_id, user_id)
 );
+
+-- Create email_verifications table
+CREATE TABLE IF NOT EXISTS email_verifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email VARCHAR(255) NOT NULL,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    verified_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Create indexes for email verifications
+CREATE INDEX IF NOT EXISTS idx_email_verifications_token ON email_verifications(token);
+CREATE INDEX IF NOT EXISTS idx_email_verifications_user_id ON email_verifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_verifications_expires ON email_verifications(expires_at);
 
 -- Create zones table
 CREATE TABLE IF NOT EXISTS zones (
