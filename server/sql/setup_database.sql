@@ -195,6 +195,9 @@ CREATE TABLE IF NOT EXISTS captured_tiles (
     UNIQUE(tile_id, user_id)
 );
 
+-- Ensure last_captured_at column exists (for existing tables)
+ALTER TABLE captured_tiles ADD COLUMN IF NOT EXISTS last_captured_at TIMESTAMPTZ DEFAULT NOW();
+
 -- Create email_verifications table
 CREATE TABLE IF NOT EXISTS email_verifications (
     id SERIAL PRIMARY KEY,
