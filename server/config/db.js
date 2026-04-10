@@ -9,8 +9,8 @@ const poolConfig = {
   // Close idle clients after 30 seconds
   idleTimeoutMillis: 30000,
   
-  // Return an error after 2 seconds if connection could not be established
-  connectionTimeoutMillis: 2000,
+  // Return an error after 10 seconds if connection could not be established
+  connectionTimeoutMillis: 10000,
   
   // Cancel queries running longer than 30 seconds to prevent hanging
   statement_timeout: 30000,
@@ -35,27 +35,65 @@ function isValidDatabaseUrl(url) {
   }
 }
 
-const pool = isValidDatabaseUrl(process.env.DATABASE_URL)
-  ? new Pool({
+// Helper function to parse DATABASE_URL and handle special characters
+function parseDatabaseUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return {
+      user: decodeURIComponent(parsed.username),
+      password: decodeURIComponent(parsed.password),
+      host: parsed.hostname,
+      port: parseInt(parsed.port) || 5432,
+      database: parsed.pathname.substring(1), // Remove leading '/'
+      ssl: { rejectUnauthorized: false }
+    };
+  } catch (e) {
+    console.error('[DB] Error parsing DATABASE_URL:', e.message);
+    return null;
+  }
+}
+
+let pool;
+
+if (isValidDatabaseUrl(process.env.DATABASE_URL)) {
+  const parsedConfig = parseDatabaseUrl(process.env.DATABASE_URL);
+  
+  if (parsedConfig) {
+    // Use parsed configuration for better handling of special characters
+    pool = new Pool({
+      user: parsedConfig.user,
+      password: parsedConfig.password,
+      host: parsedConfig.host,
+      port: parsedConfig.port,
+      database: parsedConfig.database,
+      ssl: { 
+        rejectUnauthorized: false,
+        // Supabase-specific SSL settings
+        requestCert: true
+      },
+      ...poolConfig
+    });
+    console.log('[DB] Using DATABASE_URL connection string (parsed)');
+  } else {
+    // Fallback to direct connection string
+    pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
       ...poolConfig
-    })
-  : new Pool({
-      user: process.env.DB_USER || 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      database: process.env.DB_DATABASE || 'zonerush',
-      password: process.env.DB_PASSWORD,
-      port: parseInt(process.env.DB_PORT) || 5432,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-      ...poolConfig
     });
-
-// Log which configuration is being used
-if (isValidDatabaseUrl(process.env.DATABASE_URL)) {
-  console.log('[DB] Using DATABASE_URL connection string');
+    console.log('[DB] Using DATABASE_URL connection string (direct)');
+  }
 } else {
-  console.log('[DB] Using individual database parameters (DATABASE_URL is invalid or not set)');
+  pool = new Pool({
+    user: process.env.DB_USER || 'postgres',
+    host: process.env.DB_HOST || 'localhost',
+    database: process.env.DB_DATABASE || 'zonerush',
+    password: process.env.DB_PASSWORD,
+    port: parseInt(process.env.DB_PORT) || 5432,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    ...poolConfig
+  });
+  console.log('[DB] Using individual database parameters');
   if (process.env.DATABASE_URL) {
     console.warn('[DB] WARNING: DATABASE_URL appears to be malformed. Using fallback configuration.');
   }
