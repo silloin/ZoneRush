@@ -114,7 +114,8 @@ app.get('/manifest.webmanifest', (req, res) => {
   }
 });
 
-app.use(csrfProtection);
+// CSRF Protection Disabled - Not required for this application
+// app.use(csrfProtection);
 
 // Create HTTP server and attach Socket.io
 const server = http.createServer(app);

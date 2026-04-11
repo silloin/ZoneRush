@@ -3,14 +3,14 @@ import axios from 'axios';
 
 // Smart API URL detection: works for both localhost and production
 const getApiUrl = () => {
-  // If explicitly set in env, use it
+  // If explicitly set in env, use it (for production cross-origin)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   
-  // For production (same domain), use relative URL
+  // For production without explicit URL, use the Render backend URL
   if (import.meta.env.PROD) {
-    return '/api';
+    return 'https://zonerush-api.onrender.com/api';
   }
   
   // For development, use relative URL (Vite proxy will forward to localhost:5000)
@@ -28,16 +28,7 @@ const getCookie = (name) => {
   return null;
 };
 
-// Add CSRF token to all state-changing requests
-axios.interceptors.request.use((config) => {
-  const token = getCookie('csrf-token');
-  if (token && ['post', 'put', 'delete', 'patch'].includes(config.method.toLowerCase())) {
-    config.headers['x-csrf-token'] = token;
-  }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+// CSRF token interceptor removed - CSRF protection disabled
 
 export const AuthContext = createContext();
 
@@ -80,10 +71,6 @@ export const AuthProvider = ({ children }) => {
   const register = async (username, email, password) => {
     console.log('📝 Attempting registration with:', { username, email, baseURL: axios.defaults.baseURL });
     try {
-      // First, make a GET request to establish session and get CSRF token
-      await axios.get('/auth/csrf-token');
-      
-      // Now make the POST request with the CSRF token
       const res = await axios.post('/auth/register', { username, email, password });
       console.log('✅ Registration successful:', res.data);
       setUser(res.data.user);

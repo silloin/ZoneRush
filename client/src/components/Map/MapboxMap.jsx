@@ -398,10 +398,10 @@ const MapboxMap = () => {
     const startLocationTracking = () => {
 
     const isProduction = import.meta.env.MODE === 'production';
-    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'https://zonerush-api.onrender.com';
     
-    // In production, connect to the same host as the frontend
-    const socketUrl = isProduction ? window.location.origin : SOCKET_URL;
+    // In production, use the Render backend URL
+    const socketUrl = isProduction ? 'https://zonerush-api.onrender.com' : SOCKET_URL;
     socket.current = io(socketUrl);
     
     // Multiplayer events

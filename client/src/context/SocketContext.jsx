@@ -29,9 +29,9 @@ export const SocketProvider = ({ children }) => {
         return import.meta.env.VITE_SOCKET_URL;
       }
       
-      // For production (same domain), use relative URL
+      // For production, use the Render backend URL
       if (import.meta.env.PROD) {
-        return window.location.origin;
+        return 'https://zonerush-api.onrender.com';
       }
       
       // For development, use localhost
