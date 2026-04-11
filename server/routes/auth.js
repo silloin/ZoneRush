@@ -81,10 +81,16 @@ router.post('/register', authRateLimitMiddleware, async (req, res) => {
 
   try {
 
-    // Check if user exists
-    let user = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (user.rows.length > 0) {
-      return res.status(400).json({ msg: 'User already exists' });
+    // Check if email already exists
+    let existingEmail = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (existingEmail.rows.length > 0) {
+      return res.status(400).json({ msg: 'Email already registered' });
+    }
+
+    // Check if username already exists
+    let existingUsername = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    if (existingUsername.rows.length > 0) {
+      return res.status(400).json({ msg: 'Username already taken' });
     }
 
     // Encrypt password
@@ -144,6 +150,18 @@ router.post('/register', authRateLimitMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error('Registration error:', err.message);
+    
+    // Handle duplicate key errors gracefully
+    if (err.code === '23505') {
+      // PostgreSQL unique violation
+      if (err.detail && err.detail.includes('username')) {
+        return res.status(400).json({ msg: 'Username already taken' });
+      }
+      if (err.detail && err.detail.includes('email')) {
+        return res.status(400).json({ msg: 'Email already registered' });
+      }
+    }
+    
     console.error('Error details:', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }

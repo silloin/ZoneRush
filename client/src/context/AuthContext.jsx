@@ -114,6 +114,13 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await axios.post('/auth/register', { username, email, password });
       console.log('✅ Registration successful:', res.data);
+      
+      // Store token in localStorage as fallback for cross-origin requests
+      if (res.data.token) {
+        localStorage.setItem('token', res.data.token);
+        console.log('💾 Token stored in localStorage');
+      }
+      
       setUser(res.data.user);
     } catch (error) {
       console.error('❌ Registration failed:', error.response?.data || error.message);
