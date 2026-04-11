@@ -15,7 +15,7 @@ const Login = () => {
   useEffect(() => {
     if (!loading && user) {
       console.log('✅ User already logged in, redirecting to dashboard');
-      navigate('/');
+      navigate('/', { replace: true });
     }
   }, [user, loading, navigate]);
 
@@ -24,9 +24,16 @@ const Login = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
     try {
+      console.log('🔄 Starting login...');
       await login(email, password);
-      navigate('/');
+      console.log('✅ Login complete, redirecting to home...');
+      
+      // Small delay to ensure state updates propagate
+      setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 100);
     } catch (err) {
+      console.error('❌ Login error:', err);
       alert(err.response?.data?.msg || 'Login failed');
     }
   };

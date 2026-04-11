@@ -20,7 +20,7 @@ const Register = () => {
   useEffect(() => {
     if (!loading && user) {
       console.log('✅ User already logged in, redirecting to dashboard');
-      navigate('/');
+      navigate('/', { replace: true });
     }
   }, [user, loading, navigate]);
 
@@ -33,9 +33,16 @@ const Register = () => {
       return;
     }
     try {
+      console.log('🔄 Starting registration...');
       await register(username, email, password);
-      navigate('/');
+      console.log('✅ Registration complete, redirecting to home...');
+      
+      // Small delay to ensure state updates propagate
+      setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 100);
     } catch (err) {
+      console.error('❌ Registration error:', err);
       alert(err.response?.data?.msg || 'Registration failed');
     }
   };

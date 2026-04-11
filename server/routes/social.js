@@ -41,7 +41,7 @@ router.get('/feed', auth, async (req, res) => {
     const feedWithComments = await Promise.all(
       feed.rows.map(async (post) => {
         const commentsRes = await pool.query(
-          `SELECT c.id, c.user_id, c.post_id, c.comment_text, c.created_at, u.username 
+          `SELECT c.id, c.user_id, c.post_id, c.text as comment_text, c.created_at, u.username 
            FROM comments c 
            JOIN users u ON c.user_id = u.id 
            WHERE c.post_id = $1 
@@ -108,7 +108,7 @@ router.post('/comment/:postId', auth, async (req, res) => {
   
   try {
     const comment = await pool.query(
-      'INSERT INTO comments (user_id, post_id, comment_text, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
+      'INSERT INTO comments (user_id, post_id, text, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
       [req.user.id, postId, text]
     );
     res.json(comment.rows[0]);
@@ -125,7 +125,7 @@ router.get('/comments/:postId', async (req, res) => {
   try {
     const postId = parseInt(req.params.postId, 10);
     const comments = await pool.query(
-      'SELECT c.id, c.user_id, c.post_id, c.comment_text, c.created_at, u.username FROM comments c JOIN users u ON c.user_id = u.id WHERE c.post_id = $1 ORDER BY c.created_at DESC',
+      'SELECT c.id, c.user_id, c.post_id, c.text as comment_text, c.created_at, u.username FROM comments c JOIN users u ON c.user_id = u.id WHERE c.post_id = $1 ORDER BY c.created_at DESC',
       [postId]
     );
     res.json(comments.rows);
@@ -159,13 +159,13 @@ router.put('/comments/:commentId', auth, async (req, res) => {
     }
 
     const updatedComment = await pool.query(
-      'UPDATE comments SET comment_text = $1, created_at = NOW() WHERE id = $2 RETURNING id, user_id, post_id, comment_text, created_at',
+      'UPDATE comments SET text = $1, created_at = NOW() WHERE id = $2 RETURNING id, user_id, post_id, text as comment_text, created_at',
       [text, commentId]
     );
     
     // Get username for the updated comment
     const commentWithUser = await pool.query(
-      'SELECT c.id, c.user_id, c.post_id, c.comment_text, c.created_at, u.username FROM comments c JOIN users u ON c.user_id = u.id WHERE c.id = $1',
+      'SELECT c.id, c.user_id, c.post_id, c.text as comment_text, c.created_at, u.username FROM comments c JOIN users u ON c.user_id = u.id WHERE c.id = $1',
       [commentId]
     );
     
