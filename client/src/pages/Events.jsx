@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-import { Calendar, Users, Trophy, Flag, Clock, ChevronRight, Target, Award, Zap, Plus, X } from 'lucide-react';
+import { Calendar, Users, Trophy, Flag, Clock, ChevronRight, Target, Award, Zap, Plus, X, Edit2, Trash2 } from 'lucide-react';
 
 const Events = () => {
   const { user } = useContext(AuthContext);
@@ -9,7 +9,10 @@ const Events = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, active, upcoming, ended
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -52,6 +55,70 @@ const Events = () => {
         alert('Invalid event ID');
       } else {
         alert(err.response?.data?.msg || 'Failed to join event');
+      }
+    }
+  };
+
+  const handleEditEvent = (event) => {
+    setEditingEvent(event);
+    setFormData({
+      name: event.name,
+      description: event.description,
+      goal_type: event.goal_type || event.goaltype,
+      goal_value: event.goal_value || event.goalvalue,
+      start_date: event.start_date || event.startdate ? new Date(event.start_date || event.startdate).toISOString().slice(0, 16) : '',
+      end_date: event.end_date || event.enddate ? new Date(event.end_date || event.enddate).toISOString().slice(0, 16) : ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateEvent = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.name || !formData.description || !formData.goal_value || !formData.end_date) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      await axios.put(`/events/${editingEvent.id}`, formData);
+      
+      alert('✅ Event updated successfully!');
+      setShowEditModal(false);
+      setEditingEvent(null);
+      setFormData({
+        name: '',
+        description: '',
+        goal_type: 'distance',
+        goal_value: '',
+        start_date: '',
+        end_date: ''
+      });
+      fetchEvents();
+    } catch (err) {
+      console.error('Error updating event:', err);
+      alert(err.response?.data?.msg || 'Failed to update event');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId) => {
+    if (!window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const safeId = getSafeId(eventId);
+      await axios.delete(`/events/${safeId}`);
+      alert('✅ Event deleted successfully!');
+      fetchEvents();
+    } catch (err) {
+      if (err.message === 'Invalid ID') {
+        alert('Invalid event ID');
+      } else {
+        alert(err.response?.data?.msg || 'Failed to delete event');
       }
     }
   };
@@ -203,6 +270,8 @@ const Events = () => {
                   event={event} 
                   user={user} 
                   onJoin={joinEvent}
+                  onEdit={handleEditEvent}
+                  onDelete={handleDeleteEvent}
                   status="active"
                 />
               ))}
@@ -231,6 +300,8 @@ const Events = () => {
                   event={event} 
                   user={user} 
                   onJoin={joinEvent}
+                  onEdit={handleEditEvent}
+                  onDelete={handleDeleteEvent}
                   status="upcoming"
                 />
               ))}
@@ -255,6 +326,8 @@ const Events = () => {
                     event={event} 
                     user={user} 
                     onJoin={joinEvent}
+                    onEdit={handleEditEvent}
+                    onDelete={handleDeleteEvent}
                     status={status}
                   />
                 );
@@ -447,13 +520,167 @@ const Events = () => {
           </div>
         </div>
       )}
+
+      {/* Edit Event Modal */}
+      {showEditModal && editingEvent && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-6 flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-black flex items-center gap-2">
+                  <Edit2 className="text-blue-500" size={28} />
+                  Edit Challenge
+                </h2>
+                <p className="text-gray-400 text-sm mt-1">Update challenge details</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingEvent(null);
+                }}
+                className="text-gray-400 hover:text-white p-2 hover:bg-gray-700 rounded-lg transition"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleUpdateEvent} className="p-6 space-y-6">
+              {/* Event Name */}
+              <div>
+                <label className="block text-sm font-bold text-gray-300 mb-2">
+                  Event Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Summer Running Challenge 2026"
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-bold text-gray-300 mb-2">
+                  Description *
+                </label>
+                <textarea
+                  required
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Describe your challenge..."
+                  rows={4}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none"
+                />
+              </div>
+
+              {/* Goal Type & Value */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                    Goal Type *
+                  </label>
+                  <select
+                    value={formData.goal_type}
+                    onChange={(e) => setFormData({ ...formData, goal_type: e.target.value })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  >
+                    <option value="distance">Distance (km)</option>
+                    <option value="time">Time (minutes)</option>
+                    <option value="steps">Steps</option>
+                    <option value="calories">Calories</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                    Goal Value *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={formData.goal_value}
+                    onChange={(e) => setFormData({ ...formData, goal_value: e.target.value })}
+                    placeholder="e.g., 50"
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                    Start Date (Optional)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                    End Date *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={formData.end_date}
+                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingEvent(null);
+                  }}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-bold transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updating}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 text-white py-3 rounded-lg font-bold transition-all hover:shadow-lg hover:shadow-blue-500/50 flex items-center justify-center gap-2"
+                >
+                  {updating ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <Edit2 size={18} />
+                      Update Challenge
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 // Event Card Component
-const EventCard = ({ event, user, onJoin, status }) => {
+const EventCard = ({ event, user, onJoin, onEdit, onDelete, status }) => {
   const isParticipant = (event.participants || []).includes(user?.id);
+  const isCreator = Array.isArray(event.participants) && event.participants[0] === user?.id;
   const endDate = new Date(event.end_date || event.enddate);
   const startDate = new Date(event.start_date || event.startdate);
   const now = new Date();
@@ -506,7 +733,31 @@ const EventCard = ({ event, user, onJoin, status }) => {
       <div className="p-6">
         {/* Title & Type */}
         <div className="flex justify-between items-start mb-4">
-          <h3 className="text-xl font-black text-white leading-tight">{event.name}</h3>
+          <h3 className="text-xl font-black text-white leading-tight flex-1 mr-2">{event.name}</h3>
+          {isCreator && status !== 'ended' && (
+            <div className="flex space-x-1 flex-shrink-0">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(event);
+                }}
+                className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors"
+                title="Edit event"
+              >
+                <Edit2 size={16} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(event.id);
+                }}
+                className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                title="Delete event"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          )}
         </div>
         
         <p className="text-gray-400 mb-6 text-sm line-clamp-2">{event.description}</p>

@@ -5,6 +5,46 @@ const auth = require('../middleware/auth');
 const statsService = require('../services/statsService');
 const weatherService = require('../services/weatherService');
 const { redisClient, isRedisAvailable } = require('../middleware/rateLimiter');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'profiles');
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+// File filter - only allow images
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = /jpeg|jpg|png|gif|webp/;
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedTypes.test(file.mimetype);
+
+  if (mimetype && extname) {
+    return cb(null, true);
+  } else {
+    cb(new Error('Only image files are allowed (jpeg, jpg, png, gif, webp)'));
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: fileFilter
+});
 
 // @route   GET api/users/leaderboard
 // @desc    Get global or city leaderboard
@@ -30,6 +70,45 @@ router.put('/profile', auth, userController.updateProfile);
 // @desc    Update user profile photo URL
 // @access  Private
 router.put('/profile/photo', auth, userController.updateProfilePhoto);
+
+// @route   POST api/users/profile/photo/upload
+// @desc    Upload profile photo from device
+// @access  Private
+router.post('/profile/photo/upload', auth, upload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ msg: 'No file uploaded' });
+    }
+
+    // Create public URL for the uploaded file
+    const relativeUrl = `/uploads/profiles/${req.file.filename}`;
+    // Construct full URL using request protocol and host
+    const fullUrl = `${req.protocol}://${req.get('host')}${relativeUrl}`;
+
+    // Update user profile with new photo URL
+    const userId = parseInt(req.user.id, 10);
+    const pool = require('../config/db');
+    const result = await pool.query(
+      `UPDATE users 
+       SET profile_picture = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, profile_picture`,
+      [relativeUrl, userId]  // Store relative URL in database
+    );
+
+    res.json({
+      msg: 'Profile photo uploaded successfully',
+      profilePhotoUrl: fullUrl,  // Return full URL to frontend
+      user: {
+        ...result.rows[0],
+        profile_picture: fullUrl  // Include full URL in user object
+      }
+    });
+  } catch (err) {
+    console.error('Error uploading profile photo:', err.message);
+    res.status(500).json({ msg: 'Server Error', error: err.message });
+  }
+});
 
 // @route   GET api/users/stats/:userId
 // @desc    Get user statistics

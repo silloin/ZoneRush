@@ -69,7 +69,14 @@ exports.getProfile = async (req, res) => {
       return res.status(404).json({ msg: 'User not found' });
     }
     
-    res.json(result.rows[0]);
+    const userProfile = result.rows[0];
+    
+    // Convert relative profile_picture URL to full URL if it exists
+    if (userProfile.profile_picture && userProfile.profile_picture.startsWith('/uploads/')) {
+      userProfile.profile_picture = `${req.protocol}://${req.get('host')}${userProfile.profile_picture}`;
+    }
+    
+    res.json(userProfile);
   } catch (err) {
     console.error('Error fetching profile:', err.message);
     res.status(500).send('Server Error');
@@ -120,9 +127,16 @@ exports.updateProfile = async (req, res) => {
       [username || null, city || null, bio || null, fitness_level || null, userId]
     );
     
+    const updatedUser = result.rows[0];
+    
+    // Convert relative profile_picture URL to full URL if it exists
+    if (updatedUser.profile_picture && updatedUser.profile_picture.startsWith('/uploads/')) {
+      updatedUser.profile_picture = `${req.protocol}://${req.get('host')}${updatedUser.profile_picture}`;
+    }
+    
     res.json({
       msg: 'Profile updated successfully',
-      user: result.rows[0]
+      user: updatedUser
     });
   } catch (err) {
     console.error('Error updating profile:', err.message);

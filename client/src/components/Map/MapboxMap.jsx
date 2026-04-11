@@ -6,8 +6,10 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import ngeohash from 'ngeohash';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { Activity, Route, Map as MapIcon } from 'lucide-react';
+import { getSocketURL, getSocketOptions } from '../../services/socketConfig';
 import RunTracker from '../RunTracker';
 import IntervalTimer from '../IntervalTimer';
 import UserProfileModal from '../Chat/UserProfileModal';
@@ -19,13 +21,12 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_API_KEY;
 // Create arrow marker element for running
 const createArrowMarker = (rotation = 0) => {
   const el = document.createElement('div');
-  el.style.width = '30px';
-  el.style.height = '30px';
-  el.style.backgroundImage = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234285F4" stroke="white" stroke-width="2"><polygon points="12,2 22,20 12,17 2,20"/></svg>')`;
-  el.style.backgroundSize = 'contain';
-  el.style.backgroundRepeat = 'no-repeat';
-  el.style.backgroundPosition = 'center';
-  el.style.transform = `rotate(${rotation}deg)`;
+  el.style.width = '40px';
+  el.style.height = '40px';
+  el.style.display = 'flex';
+  el.style.alignItems = 'center';
+  el.style.justifyContent = 'center';
+  el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="#4285F4" stroke="white" stroke-width="1.5" style="transform: rotate(${rotation}deg); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"><polygon points="12,2 22,22 12,16 2,22"/></svg>`;
   el.style.cursor = 'pointer';
   return el;
 };
@@ -45,6 +46,8 @@ const createNormalMarker = () => {
 
 const MapboxMap = () => {
   const { user } = useContext(AuthContext);
+  const location = useLocation();
+  const navigate = useNavigate();
   const mapContainer = useRef(null);
   const map = useRef(null);
   const socket = useRef(null);
@@ -387,6 +390,28 @@ const MapboxMap = () => {
     return 'N';
   };
 
+  // Calculate heading/bearing between two points [lng, lat]
+  const calculateHeading = (from, to) => {
+    const [lng1, lat1] = from;
+    const [lng2, lat2] = to;
+    
+    const toRad = (deg) => deg * Math.PI / 180;
+    const toDeg = (rad) => rad * 180 / Math.PI;
+    
+    const dLng = toRad(lng2 - lng1);
+    const lat1Rad = toRad(lat1);
+    const lat2Rad = toRad(lat2);
+    
+    const y = Math.sin(dLng) * Math.cos(lat2Rad);
+    const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+              Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
+    
+    let bearing = toDeg(Math.atan2(y, x));
+    bearing = (bearing + 360) % 360; // Normalize to 0-360
+    
+    return bearing;
+  };
+
     const reconnectSocket = () => {
       if (socket.current) {
         socket.current.connect();
@@ -397,12 +422,8 @@ const MapboxMap = () => {
 
     const startLocationTracking = () => {
 
-    const isProduction = import.meta.env.MODE === 'production';
-    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'https://zonerush-api.onrender.com';
-    
-    // In production, use the Render backend URL
-    const socketUrl = isProduction ? 'https://zonerush-api.onrender.com' : SOCKET_URL;
-    socket.current = io(socketUrl);
+    const socketUrl = getSocketURL();
+    socket.current = io(socketUrl, getSocketOptions());
     
     // Multiplayer events
     socket.current.on('connect', () => {
@@ -455,6 +476,11 @@ const MapboxMap = () => {
     });
 
     socket.current.on('connect_error', (error) => {
+      // Suppress "Invalid namespace" errors - these are non-critical
+      if (error.message && error.message.includes('Invalid namespace')) {
+        console.warn('⚠️ Socket namespace warning (non-critical):', error.message);
+        return;
+      }
       console.error('Socket connection error:', error.message);
       setIsSocketConnected(false);
     });
@@ -602,7 +628,9 @@ const MapboxMap = () => {
           
           setCenter(coords);
           
-          if (isTrackingRef.current) {
+          // Only update liveRoute if RunTracker is NOT being used
+          // RunTracker will send route updates via onRouteUpdate callback
+          if (isTrackingRef.current && !showTracker) {
             setLiveRoute(prev => {
               const newRoute = [...prev, coords];
               if (map.current?.getSource('live-route')) {
@@ -618,6 +646,18 @@ const MapboxMap = () => {
             });
 
             // Send real-time update to others - match server protocol
+            socket.current?.emit('location-update', {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              speed: position.coords.speed,
+              heading: position.coords.heading,
+              accuracy: position.coords.accuracy,
+              timestamp: position.timestamp,
+              distance: runStats.distance,
+              pace: runStats.pace
+            });
+          } else if (isTrackingRef.current && showTracker) {
+            // When RunTracker is shown, just emit location update for other users
             socket.current?.emit('location-update', {
               lat: position.coords.latitude,
               lng: position.coords.longitude,
@@ -649,22 +689,48 @@ const MapboxMap = () => {
             userMarker.current.setLngLat(coords);
             
             // Update marker based on tracking state
-            if (isTrackingRef.current && userHeading.current !== null) {
-              // Show arrow marker when tracking with heading
-              const arrowEl = createArrowMarker(userHeading.current);
-              const lngLat = userMarker.current.getLngLat();
-              userMarker.current.remove();
-              userMarker.current = new mapboxgl.Marker(arrowEl)
-                .setLngLat(lngLat)
-                .addTo(map.current);
-            } else if (!isTrackingRef.current) {
-              // Show normal marker when not tracking
-              const normalEl = createNormalMarker();
-              const lngLat = userMarker.current.getLngLat();
-              userMarker.current.remove();
-              userMarker.current = new mapboxgl.Marker(normalEl)
-                .setLngLat(lngLat)
-                .addTo(map.current);
+            if (isTrackingRef.current) {
+              // Calculate heading from movement if device heading is not available
+              let displayHeading = userHeading.current;
+              
+              // If we have device heading, use it
+              if (heading !== null && heading !== undefined) {
+                displayHeading = heading;
+                console.log('📍 Using device heading:', heading.toFixed(1) + '°');
+              } else {
+                // Otherwise calculate from last two points
+                if (liveRoute.length >= 2) {
+                  const lastPoint = liveRoute[liveRoute.length - 2];
+                  const currentPoint = coords;
+                  const calculatedHeading = calculateHeading(
+                    [lastPoint[0], lastPoint[1]], // [lng, lat]
+                    [currentPoint[0], currentPoint[1]]
+                  );
+                  displayHeading = calculatedHeading;
+                  userHeading.current = calculatedHeading;
+                  console.log('📍 Calculated heading from movement:', calculatedHeading.toFixed(1) + '°');
+                } else {
+                  console.log('⚠️ Not enough route points to calculate heading, liveRoute.length:', liveRoute.length);
+                }
+              }
+              
+              // Update arrow rotation
+              if (displayHeading !== null && displayHeading !== undefined) {
+                const markerElement = userMarker.current.getElement();
+                if (markerElement) {
+                  const svgElement = markerElement.querySelector('svg');
+                  if (svgElement) {
+                    svgElement.style.transform = `rotate(${displayHeading}deg)`;
+                    console.log('🔄 Arrow rotated to:', displayHeading.toFixed(1) + '°');
+                  } else {
+                    console.warn('⚠️ SVG element not found in marker');
+                  }
+                } else {
+                  console.warn('⚠️ Marker element not found');
+                }
+              } else {
+                console.warn('⚠️ No heading available for rotation');
+              }
             }
           }
           
@@ -1021,6 +1087,24 @@ const MapboxMap = () => {
     }
   }, [isTracking, user]);
 
+  // Auto-start tracking if coming from home page "START RUN NOW" button
+  useEffect(() => {
+    if (location.state?.autoStartTracking && map.current && !isTracking) {
+      console.log('🏃 Auto-starting tracking from home page');
+      // Small delay to ensure map and marker are ready
+      const timer = setTimeout(() => {
+        startTracking();
+        setShowTracker(true); // Show the run tracker panel
+        
+        // Clear the autoStartTracking state to prevent re-triggering
+        navigate('/map', { replace: true, state: {} });
+      }, 1000);
+      
+      // Clean up the timeout on unmount
+      return () => clearTimeout(timer);
+    }
+  }, [location.state, map.current, isTracking]);
+
   const fetchTiles = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -1028,9 +1112,10 @@ const MapboxMap = () => {
         headers: { 'x-auth-token': token }
       });
       const tilesData = Array.isArray(res.data) ? res.data : [];
+      console.log('🗺️ Fetched tiles from server:', tilesData.length, 'tiles');
       setTiles(tilesData);
       renderTiles(tilesData);
-      console.log(`Tiles refreshed: ${tilesData.length} tiles loaded`);
+      console.log(`✅ Tiles refreshed: ${tilesData.length} tiles loaded`);
     } catch (err) {
       console.error('Fetch tiles error:', err.message);
     }
@@ -1077,6 +1162,7 @@ const MapboxMap = () => {
   };
 
   const startTracking = () => {
+    console.log('▶️ Starting tracking - changing to arrow marker');
     setIsTracking(true);
     isTrackingRef.current = true;
     setRunStats({
@@ -1095,6 +1181,9 @@ const MapboxMap = () => {
       userMarker.current = new mapboxgl.Marker(arrowEl)
         .setLngLat(lngLat)
         .addTo(map.current);
+      console.log('✅ Arrow marker created and added to map');
+    } else {
+      console.error('❌ userMarker.current is null - cannot create arrow marker');
     }
     
     if (socket.current) {
@@ -1107,6 +1196,7 @@ const MapboxMap = () => {
   };
 
   const stopTracking = async () => {
+    console.log('⏹️ Stopping tracking - changing to normal marker');
     setIsTracking(false);
     isTrackingRef.current = false;
     
@@ -1118,6 +1208,7 @@ const MapboxMap = () => {
       userMarker.current = new mapboxgl.Marker(normalEl)
         .setLngLat(lngLat)
         .addTo(map.current);
+      console.log('✅ Normal marker restored');
     }
     
     if (socket.current) {
@@ -1125,43 +1216,27 @@ const MapboxMap = () => {
         finalStats: runStats
       });
     }
-    // Save run to database only if we have enough points
-    if (liveRoute.length >= 2) {
-      try {
-        const token = localStorage.getItem('token');
-        // Map liveRoute ([lng, lat]) to the format server expects ([{lat, lng}])
-        const formattedRoute = liveRoute.map(point => ({
-          lat: point[1],
-          lng: point[0]
-        }));
-
-        await axios.post('/runs', {
-          ...runStats,
-          route_points: formattedRoute,
-          started_at: new Date(runStats.startTime).toISOString(),
-          completed_at: new Date().toISOString()
-        }, {
-          headers: { 'x-auth-token': token }
-        });
-        fetchTiles();
-      } catch (error) {
-        console.error('Error saving run:', error);
-      }
-    } else {
-      console.warn('Run too short to save');
-    }
+    
+    // Note: RunTracker handles saving the run to database
+    // This function only handles UI updates (marker, socket)
   };
 
   const renderTiles = (tilesData) => {
-    if (!map.current) return;
+    if (!map.current) {
+      console.warn('⚠️ Cannot render tiles: map not initialized');
+      return;
+    }
 
     if (!map.current.isStyleLoaded()) {
+      console.log('⏳ Waiting for map style to load before rendering tiles...');
       map.current.once('style.load', () => renderTiles(tilesData));
       return;
     }
 
     if (map.current.getLayer('tiles-layer')) map.current.removeLayer('tiles-layer');
     if (map.current.getSource('tiles')) map.current.removeSource('tiles');
+
+    console.log('🎨 Rendering', tilesData.length, 'tiles on map');
 
     const features = tilesData.map(tile => {
       const coords = ngeohash.decode(tile.geohash);
@@ -1182,6 +1257,8 @@ const MapboxMap = () => {
       };
     });
 
+    console.log('📊 Created', features.length, 'tile features');
+
     map.current.addSource('tiles', {
       type: 'geojson',
       data: { type: 'FeatureCollection', features }
@@ -1198,6 +1275,7 @@ const MapboxMap = () => {
       }
     });
 
+    console.log('✅ Tiles rendered on map successfully');
     fetchTerritories();
   };
 
@@ -1430,18 +1508,6 @@ const MapboxMap = () => {
 
             <button
               onClick={() => {
-                if (directionsControl.current && center[0] !== 0) {
-                  directionsControl.current.setOrigin(center);
-                }
-                setIsMenuOpen(false);
-              }}
-              className="bg-cyan-600 text-white px-3 py-3 rounded-lg font-bold shadow-lg hover:bg-cyan-700 transition text-sm"
-            >
-              📍 Location
-            </button>
-
-            <button
-              onClick={() => {
                 if (isTracking && !showTracker) {
                   setShowTracker(true);
                 } else if (showTracker) {
@@ -1473,12 +1539,7 @@ const MapboxMap = () => {
               🗺️ Style
             </button>
 
-            <button
-              onClick={() => setShowHeatmap(!showHeatmap)}
-              className={`${showHeatmap ? 'bg-orange-500 text-white' : 'bg-white text-gray-700'} px-3 py-3 rounded-lg font-bold shadow-lg transition text-sm`}
-            >
-              🔥 Heatmap
-            </button>
+      
 
             <button
               onClick={() => setShowDirections(!showDirections)}
@@ -1614,47 +1675,6 @@ const MapboxMap = () => {
             </button>
 
             <div className="border-t border-gray-700 pt-2"></div>
-
-            <button
-        //     <button 
-        //   onClick={showCurrentLocation}
-        //   disabled={locationLoading}
-        //   className="p-3 rounded-full shadow-lg transition bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-        //   title="Show My Location"
-        // >
-        //   {locationLoading ? (
-        //     <div className="animate-spin w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full"></div>
-        //   ) : (
-        //     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        //       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        //       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-        //     </svg>
-        //   )}
-        // </button>
-              onClick={() => {
-                if (directionsControl.current && center[0] !== 0) {
-                  directionsControl.current.setOrigin(center);
-                }
-              }}
-              className="bg-cyan-600 text-white px-3 py-2 rounded-lg font-bold shadow-lg hover:bg-cyan-700 transition text-sm"
-            >
-              📍 My Location
-            </button>
-            
-            <button
-              onClick={() => {
-                if (isTracking && !showTracker) {
-                  setShowTracker(true);
-                } else if (showTracker) {
-                  setShowTracker(false);
-                } else {
-                  setShowTracker(true);
-                }
-              }}
-              className="bg-blue-600 text-white px-3 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition text-sm"
-            >
-              {showTracker ? 'Hide Panel' : isTracking ? 'Show Panel' : 'Start Run'}
-            </button>
             
             <button
               onClick={() => setShowIntervals(!showIntervals)}
@@ -1671,13 +1691,6 @@ const MapboxMap = () => {
               title="Cycle: Dark → Satellite → Streets+Heatmap"
             >
               🗺️ Map Style
-            </button>
-            
-            <button
-              onClick={() => setShowHeatmap(!showHeatmap)}
-              className={`${showHeatmap ? 'bg-orange-500 text-white' : 'bg-gray-700 text-white'} px-3 py-2 rounded-lg font-bold shadow-lg hover:opacity-90 transition text-sm`}
-            >
-              🔥 Heatmap
             </button>
             
             <button
@@ -1724,12 +1737,33 @@ const MapboxMap = () => {
             setIsTracking={setIsTracking}
             runStats={runStats}
             setRunStats={setRunStats}
-            currentRoute={liveRoute}
+            onRouteUpdate={(route) => {
+              console.log('📥 Received route update from RunTracker:', route.length, 'points');
+              // Update liveRoute when RunTracker gets new GPS points
+              // Convert from [{lat, lng}] to [[lng, lat]] format
+              const convertedRoute = route.map(point => [point.lng, point.lat]);
+              console.log('🔄 Converted route format, updating liveRoute state');
+              setLiveRoute(convertedRoute);
+              
+              // Update the map route line
+              if (map.current?.getSource('live-route')) {
+                map.current.getSource('live-route').setData({
+                  type: 'Feature',
+                  geometry: {
+                    type: 'LineString',
+                    coordinates: convertedRoute
+                  }
+                });
+                console.log('🗺️ Updated live-route on map');
+              }
+            }}
             onRunComplete={() => {
+              console.log('🏁 Run completed, refreshing tiles...');
               setShowTracker(false);
               setIsRunActive(false);
               setIsTracking(false);
               setRunStats({ duration: 0, distance: 0, pace: 0, startTime: null });
+              setLiveRoute([]);
               if (map.current && map.current.getSource('live-route')) {
                 map.current.getSource('live-route').setData({
                   type: 'Feature',
@@ -1737,6 +1771,7 @@ const MapboxMap = () => {
                   geometry: { type: 'LineString', coordinates: [] }
                 });
               }
+              // Refresh tiles to show newly captured territory
               fetchTiles();
             }} 
           />
@@ -1770,6 +1805,9 @@ const MapboxMap = () => {
           setSelectedUser(null);
         }}
       />
+
+      {/* SOS Button Component */}
+      <SOSButton />
     </div>
   );
 };

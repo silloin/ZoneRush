@@ -14,7 +14,7 @@ import Profile from './pages/Profile';
 import RunHistory from './pages/RunHistory';
 import Sidebar from './components/Sidebar';
 import SocialFeed from './components/SocialFeed';
-import Achievements from './components/Achievements';
+import Achievements from './components/Achievements/Achievements';
 import ChatLayout from './components/Chat/ChatLayout';
 import './App.css';
 
@@ -43,6 +43,12 @@ const Layout = ({ children }) => {
       </div>
     </div>
   );
+};
+
+// Wrapper component to pass userId to Achievements
+const AchievementsWrapper = () => {
+  const { user } = useContext(AuthContext);
+  return <Achievements userId={user?.id} />;
 };
 
 function App() {
@@ -138,7 +144,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <Achievements />
+                    <AchievementsWrapper />
                   </Layout>
                 </ProtectedRoute>
               }

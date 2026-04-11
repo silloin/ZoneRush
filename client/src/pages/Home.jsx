@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
 import { motion } from 'framer-motion';
@@ -25,12 +25,18 @@ import {
 
 const Home = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [recentRuns, setRecentRuns] = useState([]);
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const safeRuns = Array.isArray(recentRuns) ? recentRuns : [];
+
+  // Handle start run - navigate to map and auto-start tracking
+  const handleStartRun = () => {
+    navigate('/map', { state: { autoStartTracking: true } });
+  };
 
   // Helper functions for weather display
   const getWeatherIcon = (condition) => {
@@ -157,13 +163,13 @@ const Home = () => {
           </h1>
           <p className="text-gray-400 mt-2 text-lg">Ready for your next territory conquest?</p>
         </div>
-        <Link 
-          to="/map" 
+        <button 
+          onClick={handleStartRun}
           className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:shadow-2xl transition-all flex items-center gap-3 transform hover:scale-105 active:scale-95"
         >
           <Play fill="white" size={24} />
           START RUN NOW
-        </Link>
+        </button>
       </motion.header>
 
       {/* Quick Stats Grid */}

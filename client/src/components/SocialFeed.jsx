@@ -91,11 +91,65 @@ const SocialFeed = () => {
   const handleComment = async (postId) => {
     if (!commentText[postId]?.trim()) return;
     try {
-      await SocialService.addComment(postId, commentText[postId]);
+      const res = await SocialService.addComment(postId, commentText[postId]);
       setCommentText({ ...commentText, [postId]: '' });
-      fetchFeed();
+      
+      // Update feed with new comment
+      setFeed(prev => prev.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            comments: post.comments + 1,
+            commentsList: [...(post.commentsList || []), res.data]
+          };
+        }
+        return post;
+      }));
     } catch (err) {
       console.error('Error commenting:', err);
+    }
+  };
+
+  const handleUpdateComment = async (commentId, text) => {
+    try {
+      const res = await SocialService.updateComment(commentId, text);
+      
+      // Update comment in feed
+      setFeed(prev => prev.map(post => {
+        if (post.commentsList) {
+          return {
+            ...post,
+            commentsList: post.commentsList.map(comment => 
+              comment.id === commentId ? res.data : comment
+            )
+          };
+        }
+        return post;
+      }));
+    } catch (err) {
+      console.error('Error updating comment:', err);
+      alert('Failed to update comment');
+    }
+  };
+
+  const handleDeleteComment = async (commentId, postId) => {
+    try {
+      await SocialService.deleteComment(commentId);
+      
+      // Remove comment from feed
+      setFeed(prev => prev.map(post => {
+        if (post.id === postId && post.commentsList) {
+          return {
+            ...post,
+            comments: Math.max(0, post.comments - 1),
+            commentsList: post.commentsList.filter(comment => comment.id !== commentId)
+          };
+        }
+        return post;
+      }));
+    } catch (err) {
+      console.error('Error deleting comment:', err);
+      alert('Failed to delete comment');
     }
   };
 
@@ -203,6 +257,8 @@ const SocialFeed = () => {
                 onComment={handleComment}
                 onDelete={handleDeletePost}
                 onUpdate={handleUpdatePost}
+                onUpdateComment={handleUpdateComment}
+                onDeleteComment={handleDeleteComment}
                 commentText={commentText}
                 setCommentText={setCommentText}
               />

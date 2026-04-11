@@ -29,6 +29,7 @@ router.get('/', auth, async (req, res) => {
         u.city,
         u.bio,
         u.fitness_level,
+        u.profile_picture,
         u.xp, 
         u.level, 
         u.streak,
@@ -44,7 +45,14 @@ router.get('/', auth, async (req, res) => {
       return res.status(404).json({ msg: 'User not found' });
     }
     
-    res.json(result.rows[0]);
+    const userData = result.rows[0];
+    
+    // Convert relative profile_picture URL to full URL if it exists
+    if (userData.profile_picture && userData.profile_picture.startsWith('/uploads/')) {
+      userData.profile_picture = `${req.protocol}://${req.get('host')}${userData.profile_picture}`;
+    }
+    
+    res.json(userData);
   } catch (err) {
     console.error('Error in auth middleware:', err.message);
     res.status(500).send('Server Error');

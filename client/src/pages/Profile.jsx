@@ -1,24 +1,26 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { User, MapPin, Award, Shield, Zap, Target, Edit2, Save, X, Camera, Phone, Mail, Trash2, Plus } from 'lucide-react';
+import { User, MapPin, Award, Shield, Zap, Target, Edit2, Save, X, Camera, Phone, Mail, Trash2, Plus, LogOut } from 'lucide-react';
 import SOSButton from '../components/SOSButton';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 
 const Profile = () => {
   const { t } = useTranslation();
-  const { user, updateProfile, updateProfilePhoto } = useContext(AuthContext);
+  const { user, logout, updateProfile, updateProfilePhoto, uploadProfilePhoto } = useContext(AuthContext);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     username: '',
     city: ''
   });
   const [photoUrl, setPhotoUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
   const [isUpdatingPhoto, setIsUpdatingPhoto] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const fileInputRef = React.useRef(null);
 
   // Emergency Contacts State
   const [emergencyContacts, setEmergencyContacts] = useState([]);
@@ -149,21 +151,57 @@ const Profile = () => {
   };
 
   const handlePhotoUpdate = async () => {
-    if (!photoUrl.trim()) return;
-    
     setLoading(true);
     setError('');
     setSuccess('');
     
     try {
-      await updateProfilePhoto(photoUrl);
-      setSuccess('Profile photo updated successfully! 📸');
+      // If a file is selected, upload it
+      if (selectedFile) {
+        const result = await uploadProfilePhoto(selectedFile);
+        console.log('✅ Photo uploaded successfully:', result.profilePhotoUrl);
+        console.log('🖼️ User object after upload:', user);
+        setSuccess('Profile photo uploaded successfully! 📸');
+      } else if (photoUrl.trim()) {
+        // Otherwise use URL
+        const result = await updateProfilePhoto(photoUrl);
+        console.log('✅ Photo URL updated successfully:', result.profilePhotoUrl);
+        setSuccess('Profile photo updated successfully! 📸');
+      } else {
+        setError('Please select a file or enter a URL');
+        return;
+      }
+      
       setPhotoUrl('');
+      setSelectedFile(null);
       setIsUpdatingPhoto(false);
     } catch (err) {
+      console.error('❌ Photo update error:', err);
       setError(err.response?.data?.msg || 'Failed to update photo');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        setError('Please select a valid image file (JPEG, PNG, GIF, WebP)');
+        return;
+      }
+      
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('File size must be less than 5MB');
+        return;
+      }
+      
+      setSelectedFile(file);
+      setPhotoUrl(''); // Clear URL if file is selected
+      setError('');
     }
   };
 
@@ -190,6 +228,17 @@ const Profile = () => {
         transition={{ duration: 0.5 }}
         className="max-w-4xl mx-auto"
       >
+        {/* Logout Button - Top Right */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={logout}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-500 rounded-lg transition border border-red-500/30"
+          >
+            <LogOut size={18} />
+            <span className="font-semibold">Logout</span>
+          </button>
+        </div>
+
         {/* Profile Header */}
         <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-4 sm:p-8 mb-6 sm:mb-8 flex flex-col md:flex-row items-center shadow-2xl border border-red-500/30 relative">
           {/* Profile Photo */}
@@ -200,6 +249,13 @@ const Profile = () => {
                   src={user.profile_picture} 
                   alt={user.username}
                   className="w-24 sm:w-32 h-24 sm:h-32 rounded-full object-cover border-4 border-orange-500/50 shadow-lg"
+                  onError={(e) => {
+                    console.error('❌ Image failed to load:', user.profile_picture);
+                    e.target.style.display = 'none';
+                  }}
+                  onLoad={() => {
+                    console.log('✅ Image loaded successfully:', user.profile_picture);
+                  }}
                 />
                 <button
                   onClick={() => setIsUpdatingPhoto(!isUpdatingPhoto)}
@@ -304,36 +360,80 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Photo URL Input Modal */}
+        {/* Photo Upload Modal */}
         {isUpdatingPhoto && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full">
               <h3 className="text-xl font-bold mb-4">Update Profile Photo</h3>
-              <input
-                type="url"
-                value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
-                placeholder="Paste image URL here..."
-                className="w-full bg-gray-700 px-4 py-2 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-600 mb-4"
-              />
+              
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4">
+                  <p className="text-red-400 text-sm">{error}</p>
+                </div>
+              )}
+              
+              {/* File Upload Option */}
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-gray-300 mb-2">
+                  Upload from Device
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  onChange={handleFileChange}
+                  className="w-full bg-gray-700 px-4 py-2 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-600 mb-2"
+                />
+                {selectedFile && (
+                  <p className="text-sm text-green-400 flex items-center gap-2">
+                    ✓ Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                  </p>
+                )}
+              </div>
+              
+              <div className="text-center text-gray-500 text-sm mb-4">— OR —</div>
+              
+              {/* URL Input Option */}
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-gray-300 mb-2">
+                  Image URL
+                </label>
+                <input
+                  type="url"
+                  value={photoUrl}
+                  onChange={(e) => {
+                    setPhotoUrl(e.target.value);
+                    setSelectedFile(null); // Clear file if URL is entered
+                  }}
+                  placeholder="Paste image URL here..."
+                  className="w-full bg-gray-700 px-4 py-2 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+              
               <div className="flex gap-3">
                 <button
                   onClick={handlePhotoUpdate}
-                  disabled={loading || !photoUrl.trim()}
+                  disabled={loading || (!selectedFile && !photoUrl.trim())}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 px-4 py-2 rounded-lg transition"
                 >
-                  {loading ? 'Updating...' : 'Update Photo'}
+                  {loading ? 'Updating...' : selectedFile ? 'Upload Photo' : 'Update Photo'}
                 </button>
                 <button
                   onClick={() => {
                     setIsUpdatingPhoto(false);
                     setPhotoUrl('');
+                    setSelectedFile(null);
+                    setError('');
                   }}
                   className="flex-1 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg transition"
                 >
                   Cancel
                 </button>
               </div>
+              
+              <p className="text-xs text-gray-500 mt-3 text-center">
+                Supported formats: JPEG, PNG, GIF, WebP (Max 5MB)
+              </p>
             </div>
           </div>
         )}

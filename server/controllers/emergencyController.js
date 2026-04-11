@@ -34,7 +34,15 @@ if (process.env.EMAIL_USER && emailPass) {
       pass: emailPass
     }
   });
-  console.log('✅ Email transporter initialized for SOS alerts');
+  
+  // Verify email transporter connection
+  emailTransporter.verify(function(error, success) {
+    if (error) {
+      console.log('❌ Email transporter verification failed:', error.message);
+    } else {
+      console.log('✅ Email transporter is ready to send messages');
+    }
+  });
 } else {
   console.log('⚠️  Email not configured - set EMAIL_USER and EMAIL_APP_PASSWORD in .env');
 }
@@ -191,9 +199,11 @@ exports.sendSOSAlert = async (req, res) => {
 
     // Send Email Alerts (if configured) in parallel
     if (emailTransporter) {
+      console.log(`📧 Sending email alerts to ${contactsResult.rows.filter(c => c.email).length} contacts...`);
       const emailTasks = contactsResult.rows.filter(contact => contact.email).map(async (contact) => {
         try {
-          await emailTransporter.sendMail({
+          console.log(`📤 Sending email to ${contact.contact_name} (${contact.email})...`);
+          const info = await emailTransporter.sendMail({
             from: `"SOS Alert - ${user.username}" <${process.env.EMAIL_USER}>`,
             to: contact.email,
             subject: `🚨 SOS EMERGENCY ALERT - ${user.username}`,
@@ -207,15 +217,18 @@ exports.sendSOSAlert = async (req, res) => {
               <p style="color: #6c757d; font-size: 12px;">This is an automated SOS alert from the Realtime Location Tracker system.</p>
             `
           });
-          emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'sent' });
+          console.log(`✅ Email sent to ${contact.contact_name}. Message ID: ${info.messageId}`);
+          emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'sent', messageId: info.messageId });
         } catch (err) {
-          console.error(`Failed to send email to ${contact.contact_name}:`, err.message);
+          console.error(`❌ Failed to send email to ${contact.contact_name} (${contact.email}):`, err.message);
+          console.error('Error details:', err);
           emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'failed', error: err.message });
           failedAlerts.push(contact.contact_name);
         }
       });
 
       await Promise.all(emailTasks);
+      console.log(`📊 Email results: ${emailResults.filter(e => e.status === 'sent').length} sent, ${emailResults.filter(e => e.status === 'failed').length} failed`);
     }
 
     // Send SMS via TextLocal (if configured) in parallel
@@ -238,7 +251,8 @@ exports.sendSOSAlert = async (req, res) => {
               sender: textLocalConfig.sender,
               message: smsMessage,
               format: 'json'
-            }
+            },
+            timeout: 10000 // 10 second timeout
           });
 
           if (response.data.status === 'success') {

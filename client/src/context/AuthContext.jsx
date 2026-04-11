@@ -123,8 +123,8 @@ export const AuthProvider = ({ children }) => {
   const updateProfilePhoto = async (profilePhotoUrl) => {
     try {
       const res = await axios.put('/users/profile/photo', { profilePhotoUrl });
-      // Update local user state
-      setUser(prevUser => ({ ...prevUser, profile_photo_url: res.data.profilePhotoUrl }));
+      // Update local user state - use profile_picture (aliased from profile_photo_url)
+      setUser(prevUser => ({ ...prevUser, profile_picture: res.data.profilePhotoUrl }));
       return res.data;
     } catch (error) {
       console.error('❌ Profile photo update failed:', error.response?.data || error.message);
@@ -132,8 +132,28 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const uploadProfilePhoto = async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('photo', file);
+      
+      const res = await axios.post('/users/profile/photo/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      // Update local user state - use profile_picture (aliased from profile_photo_url)
+      setUser(prevUser => ({ ...prevUser, profile_picture: res.data.profilePhotoUrl }));
+      return res.data;
+    } catch (error) {
+      console.error('❌ Profile photo upload failed:', error.response?.data || error.message);
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile, updateProfilePhoto }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile, updateProfilePhoto, uploadProfilePhoto }}>
       {children}
     </AuthContext.Provider>
   );

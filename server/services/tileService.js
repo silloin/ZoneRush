@@ -30,9 +30,11 @@ class TileService {
     const result = await pool.query(checkQuery, [geohash]);
     
     if (result.rows.length > 0) {
+      console.log(`  ℹ️  Tile already exists in DB: ${geohash}`);
       return result.rows[0];
     }
 
+    console.log(`  ✨ Creating new tile in DB: ${geohash}`);
     const geometry = this.createTileGeometry(geohash);
     const centerPoint = `POINT(${lng} ${lat})`;
     
@@ -68,12 +70,20 @@ class TileService {
       `;
       
       const result = await client.query(captureQuery, [tile.id, userId, runId]);
+      const isNew = result.rows[0].is_new_capture;
+      
+      if (isNew) {
+        console.log(`  ✅ New tile capture recorded for user ${userId}`);
+      } else {
+        console.log(`  🔄 Tile recaptured, incremented count for user ${userId}`);
+      }
+      
       await client.query('COMMIT');
       
       return { 
         captured: true, 
         tile, 
-        isNew: result.rows[0].is_new_capture 
+        isNew
       };
     } catch (err) {
       await client.query('ROLLBACK');
@@ -123,19 +133,26 @@ class TileService {
     const capturedTiles = [];
     const uniqueGeohashes = new Set();
 
+    console.log(`🗺️ Processing route for tile capture: ${routePoints.length} points`);
+
     for (const point of routePoints) {
       const geohash = this.generateGeohash(point.lat, point.lng);
       
       if (!uniqueGeohashes.has(geohash)) {
         uniqueGeohashes.add(geohash);
+        console.log(`📍 Capturing tile: ${geohash} at (${point.lat}, ${point.lng})`);
         const result = await this.captureTile(userId, point.lat, point.lng, runId);
         
         if (result.isNew) {
+          console.log(`✅ New tile captured: ${geohash}`);
           capturedTiles.push(result.tile);
+        } else {
+          console.log(`ℹ️  Tile already owned, incremented capture count: ${geohash}`);
         }
       }
     }
 
+    console.log(`🏆 Total new tiles captured: ${capturedTiles.length}`);
     return capturedTiles;
   }
 

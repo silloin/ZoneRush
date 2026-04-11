@@ -60,6 +60,23 @@ const SocialService = {
     return axios.post(`/social/comment/${postId}`, {
       text: sanitizeText(text)
     });
+  },
+
+  getComments: async (postId) => {
+    if (!isSafeId(postId)) throw new Error('Invalid post ID');
+    return axios.get(`/social/comments/${postId}`);
+  },
+
+  updateComment: async (commentId, text) => {
+    if (!isSafeId(commentId)) throw new Error('Invalid comment ID');
+    return axios.put(`/social/comments/${commentId}`, {
+      text: sanitizeText(text)
+    });
+  },
+
+  deleteComment: async (commentId) => {
+    if (!isSafeId(commentId)) throw new Error('Invalid comment ID');
+    return axios.delete(`/social/comments/${commentId}`);
   }
 };
 

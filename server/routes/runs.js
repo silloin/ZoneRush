@@ -268,9 +268,18 @@ router.post('/', authenticateToken, antiCheatMiddleware, async (req, res) => {
     
     await client.query('COMMIT');
     
+    console.log('✅ Run saved to database, ID:', run.id);
+    console.log('📍 Processing route points for tile capture:', route_points.length, 'points');
+    
     // Post-commit processing (run row now exists in DB)
     let capturedTiles = [];
-    try { capturedTiles = await tileService.processRouteForTiles(userId, route_points, run.id); } catch(e) { console.warn('tileService failed:', e.message); }
+    try {
+      capturedTiles = await tileService.processRouteForTiles(userId, route_points, run.id);
+      console.log('🏆 Tile capture complete:', capturedTiles.length, 'new tiles');
+    } catch(e) {
+      console.warn('❌ tileService failed:', e.message);
+      console.error(e);
+    }
     let segments = [];
     try { segments = await segmentService.detectSegments(lineString); } catch(e) { console.warn('segmentService failed:', e.message); }
     let unlockedAchievements = [];

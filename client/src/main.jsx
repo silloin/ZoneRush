@@ -7,7 +7,11 @@ import { BrowserRouter } from 'react-router-dom'
 
 const originalError = console.error;
 console.error = (...args) => {
+  // Suppress known non-critical errors
   if (args[0]?.includes?.('menu item')) return;
+  if (args[0]?.includes?.('Invalid namespace')) return;
+  if (args[0]?.includes?.('Watch error')) return; // GPS timeout warnings
+  if (typeof args[0] === 'string' && args[0].includes('GeolocationPositionError')) return;
   originalError(...args);
 };
 

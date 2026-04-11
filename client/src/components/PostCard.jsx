@@ -2,14 +2,34 @@ import React from 'react';
 import { Heart, MessageSquare, Share2, Edit2, Trash2, Clock, Send, UserPlus } from 'lucide-react';
 import SendFriendRequestButton from './Chat/SendFriendRequestButton';
 
-const PostCard = ({ post, currentUser, onLike, onComment, onDelete, onUpdate, commentText, setCommentText }) => {
+const PostCard = ({ post, currentUser, onLike, onComment, onDelete, onUpdate, commentText, setCommentText, onUpdateComment, onDeleteComment }) => {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editCaption, setEditCaption] = React.useState(post.caption);
+  const [editingCommentId, setEditingCommentId] = React.useState(null);
+  const [editCommentText, setEditCommentText] = React.useState('');
   const isOwner = currentUser && post.user_id === currentUser.id;
 
   const handleUpdate = async () => {
     await onUpdate(post.id, editCaption);
     setIsEditing(false);
+  };
+
+  const handleEditComment = (comment) => {
+    setEditingCommentId(comment.id);
+    setEditCommentText(comment.comment_text);
+  };
+
+  const handleSaveComment = async (commentId) => {
+    if (!editCommentText.trim()) return;
+    await onUpdateComment(commentId, editCommentText);
+    setEditingCommentId(null);
+    setEditCommentText('');
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (window.confirm('Delete this comment?')) {
+      await onDeleteComment(commentId, post.id);
+    }
   };
 
   return (
@@ -119,6 +139,85 @@ const PostCard = ({ post, currentUser, onLike, onComment, onDelete, onUpdate, co
           </button>
         </div>
       </div>
+
+      {/* Comments List */}
+      {post.commentsList && post.commentsList.length > 0 && (
+        <div className="mt-4 space-y-3 border-t border-gray-700/50 pt-4">
+          <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Comments ({post.commentsList.length})</h4>
+          {post.commentsList.map(comment => {
+            const isCommentOwner = currentUser && comment.user_id === currentUser.id;
+            
+            return (
+              <div key={comment.id} className="flex items-start space-x-3 group">
+                <div className="w-7 h-7 bg-gray-700 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-300">
+                  {comment.username?.[0]?.toUpperCase() ?? '?'}
+                </div>
+                <div className="flex-1">
+                  {editingCommentId === comment.id ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={editCommentText}
+                        onChange={(e) => setEditCommentText(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSaveComment(comment.id)}
+                        className="w-full bg-gray-900 border border-blue-500 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        autoFocus
+                      />
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleSaveComment(comment.id)}
+                          className="px-3 py-1 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingCommentId(null);
+                            setEditCommentText('');
+                          }}
+                          className="px-3 py-1 text-xs font-bold bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="text-sm">
+                          <span className="font-bold text-gray-200">{comment.username}</span>{' '}
+                          <span className="text-gray-300">{comment.comment_text}</span>
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(comment.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                      {isCommentOwner && (
+                        <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                          <button
+                            onClick={() => handleEditComment(comment)}
+                            className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-400/10 rounded-full transition-colors"
+                            title="Edit comment"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteComment(comment.id)}
+                            className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-full transition-colors"
+                            title="Delete comment"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

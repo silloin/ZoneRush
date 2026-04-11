@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { AuthContext } from './AuthContext';
+import { getSocketURL, getSocketOptions } from '../services/socketConfig';
 
 const SocketContext = createContext();
 
@@ -22,38 +23,16 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     if (!user) return;
 
-    // Smart URL detection: works for both localhost and production
-    const getSocketUrl = () => {
-      // If explicitly set, use it
-      if (import.meta.env.VITE_SOCKET_URL) {
-        return import.meta.env.VITE_SOCKET_URL;
-      }
-      
-      // For production, use the Render backend URL
-      if (import.meta.env.PROD) {
-        return 'https://zonerush-api.onrender.com';
-      }
-      
-      // For development, use localhost
-      return 'http://localhost:5000';
-    };
-
-    const SOCKET_URL = getSocketUrl();
+    const SOCKET_URL = getSocketURL();
     
-    const newSocket = io(SOCKET_URL, {
-      withCredentials: true,
-      transports: ['websocket', 'polling']
-    });
+    const newSocket = io(SOCKET_URL, getSocketOptions());
 
     newSocket.on('connect', () => {
       console.log('🔌 Socket connected:', newSocket.id);
       setIsConnected(true);
       
-      // Join user-specific room for private notifications
-      newSocket.emit('join-user-room', user.id);
-      
-      // Announce presence
-      newSocket.emit('user-join', {
+      // Authenticate user with socket server
+      newSocket.emit('authenticate', {
         userId: user.id,
         username: user.username
       });
@@ -65,6 +44,11 @@ export const SocketProvider = ({ children }) => {
     });
 
     newSocket.on('connect_error', (error) => {
+      // Suppress "Invalid namespace" errors - these are non-critical
+      if (error.message && error.message.includes('Invalid namespace')) {
+        console.warn('⚠️ Socket namespace warning (non-critical):', error.message);
+        return;
+      }
       console.error('Socket connection error:', error);
       setIsConnected(false);
     });

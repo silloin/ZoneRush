@@ -4,6 +4,7 @@ import axios from 'axios';
 import { AlertTriangle, MapPin, Phone, X, Send, Radio } from 'lucide-react';
 import io from 'socket.io-client';
 import { useTranslation } from 'react-i18next';
+import { getSocketURL, getSocketOptions } from '../services/socketConfig';
 
 const SOSButton = () => {
   const { t } = useTranslation();
@@ -99,7 +100,8 @@ const SOSButton = () => {
   };
 
   const startLiveTracking = (lat, lng, sosId) => {
-    const socket = io(import.meta.env.VITE_API_URL || window.location.origin);
+    const socketUrl = getSocketURL();
+    const socket = io(socketUrl, getSocketOptions());
     
     socket.on('connect', () => {
       socket.emit('authenticate', { userId: user.id });
@@ -107,7 +109,7 @@ const SOSButton = () => {
       setLiveTrackingActive(true);
     });
 
-    // Continue watching location
+    // Continue watching location with fallback
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         const newLat = position.coords.latitude;
@@ -123,8 +125,20 @@ const SOSButton = () => {
           heading: position.coords.heading
         });
       },
-      (error) => console.error('Watch error:', error),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      (error) => {
+        // Handle different geolocation errors gracefully
+        if (error.code === 3) {
+          // Timeout - not critical, will retry automatically
+          console.warn('Location watch timeout (will retry)');
+        } else if (error.code === 1) {
+          // Permission denied
+          console.error('Location permission denied');
+        } else if (error.code === 2) {
+          // Position unavailable
+          console.error('Location position unavailable');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
     );
 
     // Store watchId for cleanup

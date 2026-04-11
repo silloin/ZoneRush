@@ -36,7 +36,27 @@ router.get('/feed', auth, async (req, res) => {
        ORDER BY p.created_at DESC LIMIT 50`,
       [req.user.id]
     );
-    res.json(feed.rows);
+    
+    // Fetch comments for each post
+    const feedWithComments = await Promise.all(
+      feed.rows.map(async (post) => {
+        const commentsRes = await pool.query(
+          `SELECT c.id, c.user_id, c.post_id, c.comment_text, c.created_at, u.username 
+           FROM comments c 
+           JOIN users u ON c.user_id = u.id 
+           WHERE c.post_id = $1 
+           ORDER BY c.created_at ASC 
+           LIMIT 10`,
+          [post.id]
+        );
+        return {
+          ...post,
+          commentsList: commentsRes.rows
+        };
+      })
+    );
+    
+    res.json(feedWithComments);
   } catch (err) {
     console.error('GET /social/feed error:', err.message);
     res.status(500).json({ msg: 'Server Error', error: err.message });
@@ -80,15 +100,21 @@ router.delete('/like/:postId', auth, async (req, res) => {
 // @access  Private
 router.post('/comment/:postId', auth, async (req, res) => {
   const { text } = req.body;
+  const postId = parseInt(req.params.postId, 10);
+  
+  if (!text || isNaN(postId)) {
+    return res.status(400).json({ msg: 'Text and valid postId required' });
+  }
+  
   try {
     const comment = await pool.query(
-      'INSERT INTO comments (user_id, post_id, text, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
-      [req.user.id, req.params.postId, text]
+      'INSERT INTO comments (user_id, post_id, comment_text, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
+      [req.user.id, postId, text]
     );
     res.json(comment.rows[0]);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('POST /social/comment error:', err.message);
+    res.status(500).json({ msg: 'Server Error', error: err.message });
   }
 });
 
@@ -97,14 +123,82 @@ router.post('/comment/:postId', auth, async (req, res) => {
 // @access  Public
 router.get('/comments/:postId', async (req, res) => {
   try {
+    const postId = parseInt(req.params.postId, 10);
     const comments = await pool.query(
-      'SELECT c.*, u.username FROM comments c JOIN users u ON c.user_id = u.id WHERE c.post_id = $1 ORDER BY c.created_at DESC',
-      [req.params.postId]
+      'SELECT c.id, c.user_id, c.post_id, c.comment_text, c.created_at, u.username FROM comments c JOIN users u ON c.user_id = u.id WHERE c.post_id = $1 ORDER BY c.created_at DESC',
+      [postId]
     );
     res.json(comments.rows);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('GET /social/comments error:', err.message);
+    res.status(500).json({ msg: 'Server Error', error: err.message });
+  }
+});
+
+// @route   PUT api/social/comments/:commentId
+// @desc    Update a comment
+// @access  Private
+router.put('/comments/:commentId', auth, async (req, res) => {
+  const { text } = req.body;
+  const commentId = parseInt(req.params.commentId, 10);
+  
+  if (!text || isNaN(commentId)) {
+    return res.status(400).json({ msg: 'Text and valid commentId required' });
+  }
+  
+  try {
+    // Check if comment exists and belongs to user
+    const comment = await pool.query('SELECT * FROM comments WHERE id = $1', [commentId]);
+    
+    if (comment.rows.length === 0) {
+      return res.status(404).json({ msg: 'Comment not found' });
+    }
+    
+    if (comment.rows[0].user_id !== req.user.id) {
+      return res.status(401).json({ msg: 'User not authorized' });
+    }
+
+    const updatedComment = await pool.query(
+      'UPDATE comments SET comment_text = $1, created_at = NOW() WHERE id = $2 RETURNING id, user_id, post_id, comment_text, created_at',
+      [text, commentId]
+    );
+    
+    // Get username for the updated comment
+    const commentWithUser = await pool.query(
+      'SELECT c.id, c.user_id, c.post_id, c.comment_text, c.created_at, u.username FROM comments c JOIN users u ON c.user_id = u.id WHERE c.id = $1',
+      [commentId]
+    );
+    
+    res.json(commentWithUser.rows[0]);
+  } catch (err) {
+    console.error('PUT /social/comments error:', err.message);
+    res.status(500).json({ msg: 'Server Error', error: err.message });
+  }
+});
+
+// @route   DELETE api/social/comments/:commentId
+// @desc    Delete a comment
+// @access  Private
+router.delete('/comments/:commentId', auth, async (req, res) => {
+  try {
+    const commentId = parseInt(req.params.commentId, 10);
+    
+    // Check if comment exists and belongs to user
+    const comment = await pool.query('SELECT * FROM comments WHERE id = $1', [commentId]);
+    
+    if (comment.rows.length === 0) {
+      return res.status(404).json({ msg: 'Comment not found' });
+    }
+    
+    if (comment.rows[0].user_id !== req.user.id) {
+      return res.status(401).json({ msg: 'User not authorized' });
+    }
+
+    await pool.query('DELETE FROM comments WHERE id = $1', [commentId]);
+    res.json({ msg: 'Comment removed', commentId });
+  } catch (err) {
+    console.error('DELETE /social/comments error:', err.message);
+    res.status(500).json({ msg: 'Server Error', error: err.message });
   }
 });
 
