@@ -213,12 +213,16 @@ app.use((req, res, next) => {
 // Define Routes
 // Serve static files from the React frontend (built and copied to server/public)
 const publicPath = path.resolve(__dirname, 'public');
+const hasPublicFolder = fs.existsSync(publicPath);
 
-if (process.env.NODE_ENV === 'development' && !fs.existsSync(publicPath)) {
+if (process.env.NODE_ENV === 'development' && !hasPublicFolder) {
   console.warn('Static public folder missing at:', publicPath);
 }
 
-app.use(express.static(publicPath));
+// Only serve static files if public folder exists
+if (hasPublicFolder) {
+  app.use(express.static(publicPath));
+}
 
 app.get('/api', (req, res) => {
   res.send('API is running 🚀');
@@ -254,18 +258,20 @@ app.use('/api/notifications', notificationsRoutes);
 // Emergency SOS System Routes
 app.use('/api/emergency', emergencyRoutes);
 
-// For any other request, serve the index.html from the frontend
+// For any other request, serve the index.html from the frontend (if available)
 app.get('/{*splat}', (req, res) => {
   const indexPath = path.resolve(publicPath, 'index.html');
-  if (fs.existsSync(indexPath)) {
+  
+  // Only serve frontend if public folder exists
+  if (hasPublicFolder && fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    console.error('CRITICAL: index.html is missing at:', indexPath);
-    res.status(404).json({
-      msg: 'Frontend not found!',
-      error: `File missing at ${indexPath}`,
-      currentDir: __dirname,
-      dirContents: fs.existsSync(publicPath) ? fs.readdirSync(publicPath) : 'public folder missing'
+    // In production without frontend, return API info
+    res.status(200).json({
+      msg: 'ZoneRush API is running 🚀',
+      frontend: 'https://zonerush.vercel.app',
+      api: 'https://zonerush-api.onrender.com/api',
+      note: 'Frontend is deployed separately on Vercel'
     });
   }
 });
