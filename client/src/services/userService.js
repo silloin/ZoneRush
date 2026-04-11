@@ -8,11 +8,26 @@ const isSafeId = (id) => {
 const UserService = {
   // Friend Requests
   getReceivedRequests: async () => {
-    return axios.get('/friend-requests/received');
+    try {
+      return await axios.get('/friend-requests/received');
+    } catch (error) {
+      // Silently handle 401 - user not logged in
+      if (error.response?.status === 401) {
+        return { data: [] };
+      }
+      throw error;
+    }
   },
 
   getFriendsList: async () => {
-    return axios.get('/friend-requests/list');
+    try {
+      return await axios.get('/friend-requests/list');
+    } catch (error) {
+      if (error.response?.status === 401) {
+        return { data: [] };
+      }
+      throw error;
+    }
   },
 
   acceptFriendRequest: async (requestId) => {

@@ -20,6 +20,25 @@ const getApiUrl = () => {
 axios.defaults.baseURL = getApiUrl();
 axios.defaults.withCredentials = true;
 
+// Add global response interceptor to handle 401 errors silently
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Don't log 401 errors to console (expected when not authenticated)
+    if (error.response?.status === 401) {
+      // Silently reject - user needs to login
+      return Promise.reject(error);
+    }
+    
+    // Log all other errors
+    if (error.response?.status && error.response?.status !== 401) {
+      console.error(`API Error ${error.response?.status}:`, error.response?.data?.msg || error.message);
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 // Helper to get cookie value
 const getCookie = (name) => {
   const value = `; ${document.cookie}`;
