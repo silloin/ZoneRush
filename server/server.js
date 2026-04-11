@@ -211,19 +211,14 @@ app.use((req, res, next) => {
 });
 
 // Define Routes
-// NOTE: In production (Render), static files are served by Vercel
-// Only serve static files in development mode
+// Serve static files from the React frontend (built and copied to server/public)
 const publicPath = path.resolve(__dirname, 'public');
 
-if (process.env.NODE_ENV === 'development') {
-  if (!fs.existsSync(publicPath)) {
-    console.warn('Static public folder missing at:', publicPath);
-  }
-  app.use(express.static(publicPath));
-} else if (process.env.NODE_ENV === 'production') {
-  // In production, only serve API - frontend is on Vercel
-  console.log('📱 Production mode: Frontend served by Vercel, this process serves API only');
+if (process.env.NODE_ENV === 'development' && !fs.existsSync(publicPath)) {
+  console.warn('Static public folder missing at:', publicPath);
 }
+
+app.use(express.static(publicPath));
 
 app.get('/api', (req, res) => {
   res.send('API is running 🚀');

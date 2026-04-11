@@ -49,6 +49,13 @@ const Profile = () => {
 
   const handleAddContact = async (e) => {
     e.preventDefault();
+    
+    // Client-side validation
+    if (!newContact.contactName || !newContact.phoneNumber || !newContact.email) {
+      setError('Please fill in all required fields: Name, Phone, and Email');
+      return;
+    }
+    
     setLoading(true);
     try {
       await axios.post('/emergency/contacts', newContact);
@@ -65,6 +72,13 @@ const Profile = () => {
 
   const handleUpdateContact = async (e) => {
     e.preventDefault();
+    
+    // Client-side validation
+    if (!newContact.contactName || !newContact.phoneNumber || !newContact.email) {
+      setError('Please fill in all required fields: Name, Phone, and Email');
+      return;
+    }
+    
     setLoading(true);
     try {
       await axios.put(`/emergency/contacts/${editingContactId}`, newContact);
@@ -180,10 +194,10 @@ const Profile = () => {
         <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-4 sm:p-8 mb-6 sm:mb-8 flex flex-col md:flex-row items-center shadow-2xl border border-red-500/30 relative">
           {/* Profile Photo */}
           <div className="relative mb-4 sm:mb-0 md:mr-8">
-            {user?.profile_photo_url ? (
+            {user?.profile_picture ? (
               <div className="relative">
                 <img 
-                  src={user.profile_photo_url} 
+                  src={user.profile_picture} 
                   alt={user.username}
                   className="w-24 sm:w-32 h-24 sm:h-32 rounded-full object-cover border-4 border-orange-500/50 shadow-lg"
                 />
@@ -412,12 +426,13 @@ const Profile = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{t('profile.email_optional')}</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Email *</label>
                   <input 
                     placeholder="Email Address"
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm text-white focus:ring-2 focus:ring-blue-600 outline-none"
                     value={newContact.email}
                     onChange={(e) => setNewContact({...newContact, email: e.target.value})}
+                    required
                   />
                 </div>
                 <div className="space-y-1">

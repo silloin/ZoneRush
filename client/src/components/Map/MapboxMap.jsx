@@ -11,9 +11,37 @@ import { Activity, Route, Map as MapIcon } from 'lucide-react';
 import RunTracker from '../RunTracker';
 import IntervalTimer from '../IntervalTimer';
 import UserProfileModal from '../Chat/UserProfileModal';
+import SOSButton from '../SOSButton';
 import './Map.css';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_API_KEY;
+
+// Create arrow marker element for running
+const createArrowMarker = (rotation = 0) => {
+  const el = document.createElement('div');
+  el.style.width = '30px';
+  el.style.height = '30px';
+  el.style.backgroundImage = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234285F4" stroke="white" stroke-width="2"><polygon points="12,2 22,20 12,17 2,20"/></svg>')`;
+  el.style.backgroundSize = 'contain';
+  el.style.backgroundRepeat = 'no-repeat';
+  el.style.backgroundPosition = 'center';
+  el.style.transform = `rotate(${rotation}deg)`;
+  el.style.cursor = 'pointer';
+  return el;
+};
+
+// Create normal marker element for stopped
+const createNormalMarker = () => {
+  const el = document.createElement('div');
+  el.style.width = '30px';
+  el.style.height = '30px';
+  el.style.backgroundColor = '#4285F4';
+  el.style.borderRadius = '50%';
+  el.style.border = '3px solid white';
+  el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+  el.style.cursor = 'pointer';
+  return el;
+};
 
 const MapboxMap = () => {
   const { user } = useContext(AuthContext);
@@ -42,16 +70,24 @@ const MapboxMap = () => {
   const [destinationInput, setDestinationInput] = useState('');
   const [routeGeoJSON, setRouteGeoJSON] = useState(null);
 
-  // Calculate route using Mapbox Directions API
-  const calculateRoute = async () => {
+  const [showDirectionsPanel, setShowDirectionsPanel] = useState(false);
+  const [directionsData, setDirectionsData] = useState(null);
+  const [selectedMode, setSelectedMode] = useState('driving');
+
+  // Toggle directions panel
+  const toggleDirectionsPanel = () => {
+    setShowDirectionsPanel(!showDirectionsPanel);
+  };
+
+  // Calculate route with directions data
+  const calculateRoute = async (mode = selectedMode) => {
     if (!originInput.trim() || !destinationInput.trim()) return;
     
     try {
-      // Geocode origin
+      // Geocode origin and destination (same as before)
       const originRes = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(originInput)}.json?access_token=${mapboxgl.accessToken}&limit=1`);
       const originData = await originRes.json();
       
-      // Geocode destination
       const destRes = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(destinationInput)}.json?access_token=${mapboxgl.accessToken}&limit=1`);
       const destData = await destRes.json();
       
@@ -63,13 +99,23 @@ const MapboxMap = () => {
       const origin = originData.features[0].center;
       const destination = destData.features[0].center;
       
-      // Get directions
-      const directionsRes = await fetch(`https://api.mapbox.com/directions/v5/mapbox/walking/${origin[0]},${origin[1]};${destination[0]},${destination[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`);
+      // Get directions with steps
+      const directionsRes = await fetch(`https://api.mapbox.com/directions/v5/mapbox/${mode}/${origin[0]},${origin[1]};${destination[0]},${destination[1]}?geometries=geojson&steps=true&access_token=${mapboxgl.accessToken}`);
       const directionsData = await directionsRes.json();
       
       if (directionsData.routes && directionsData.routes.length > 0) {
         const route = directionsData.routes[0];
         const routeGeometry = route.geometry;
+        
+        setDirectionsData({
+          distance: (route.distance / 1000).toFixed(2), // km
+          duration: Math.round(route.duration / 60), // minutes
+          steps: route.legs[0].steps.map(step => ({
+            instruction: step.maneuver.instruction,
+            distance: (step.distance / 1000).toFixed(2),
+            duration: Math.round(step.duration / 60)
+          }))
+        });
         
         setRouteGeoJSON({
           type: 'Feature',
@@ -77,9 +123,8 @@ const MapboxMap = () => {
           geometry: routeGeometry
         });
         
-        // Draw route on map
+        // Draw route on map (same as before)
         if (map.current) {
-          // Remove existing route
           if (map.current.getLayer('custom-route-line')) {
             map.current.removeLayer('custom-route-line');
           }
@@ -87,7 +132,6 @@ const MapboxMap = () => {
             map.current.removeSource('custom-route');
           }
           
-          // Add route source and layer
           map.current.addSource('custom-route', {
             type: 'geojson',
             data: {
@@ -112,7 +156,6 @@ const MapboxMap = () => {
             }
           });
           
-          // Fit bounds to route
           const coordinates = routeGeometry.coordinates;
           const bounds = coordinates.reduce((bounds, coord) => {
             return bounds.extend(coord);
@@ -123,6 +166,8 @@ const MapboxMap = () => {
             duration: 1000
           });
         }
+        
+        setShowDirectionsPanel(true); // Auto-show panel when route is calculated
       }
     } catch (error) {
       console.error('Error calculating route:', error);
@@ -130,18 +175,62 @@ const MapboxMap = () => {
     }
   };
   
-  const clearRoute = () => {
-    if (map.current) {
-      if (map.current.getLayer('custom-route-line')) {
-        map.current.removeLayer('custom-route-line');
+  // Show current location
+  const showCurrentLocation = () => {
+    if (currentLocation && map.current) {
+      map.current.flyTo({
+        center: currentLocation,
+        zoom: 16,
+        duration: 1000
+      });
+      
+      // Add or update location marker
+      if (userMarker.current) {
+        userMarker.current.setLngLat(currentLocation);
+      } else {
+        userMarker.current = new mapboxgl.Marker({ color: '#3b82f6' })
+          .setLngLat(currentLocation)
+          .addTo(map.current);
       }
-      if (map.current.getSource('custom-route')) {
-        map.current.removeSource('custom-route');
-      }
+      
+      alert(`📍 Current Location: ${currentLocation[1].toFixed(6)}, ${currentLocation[0].toFixed(6)}`);
+    } else {
+      // Try to get fresh location
+      setLocationLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const coords = [position.coords.longitude, position.coords.latitude];
+          setCurrentLocation(coords);
+          setLocationLoading(false);
+          
+          if (map.current) {
+            map.current.flyTo({
+              center: coords,
+              zoom: 16,
+              duration: 1000
+            });
+            
+            if (userMarker.current) {
+              userMarker.current.setLngLat(coords);
+            } else {
+              userMarker.current = new mapboxgl.Marker({ color: '#3b82f6' })
+                .setLngLat(coords)
+                .addTo(map.current);
+            }
+          }
+          
+          alert(`📍 Current Location: ${coords[1].toFixed(6)}, ${coords[0].toFixed(6)}`);
+        },
+        (error) => {
+          setLocationLoading(false);
+          alert('Unable to get your location. Please enable location services.');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000
+        }
+      );
     }
-    setRouteGeoJSON(null);
-    setOriginInput('');
-    setDestinationInput('');
   };
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
@@ -163,21 +252,35 @@ const MapboxMap = () => {
   });
 
 
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(null);
+
   useEffect(() => {
     if (map.current) return;
 
+    setLocationLoading(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const coords = [position.coords.longitude, position.coords.latitude];
         setCenter(coords);
+        setCurrentLocation(coords);
         initializeMap(coords);
+        setLocationLoading(false);
       },
-      () => {
+      (error) => {
+        console.warn('GPS error:', error);
+        setLocationLoading(false);
+        setLocationError('GPS unavailable. Using default location.');
         const fallback = [55.2708, 25.2048];
         setCenter(fallback);
+        setCurrentLocation(fallback);
         initializeMap(fallback);
       },
-      { enableHighAccuracy: true }
+      {
+        enableHighAccuracy: true,
+        timeout: 10000, // 10 second timeout
+        maximumAge: 300000 // Accept cached location up to 5 minutes old
+      }
     );
   }, []);
 
@@ -485,7 +588,9 @@ const MapboxMap = () => {
       socket.current.emit('authenticate', { userId: user.id });
     }
 
-    userMarker.current = new mapboxgl.Marker({ color: '#4285F4' })
+    // Create initial marker (normal marker when not tracking)
+    const markerEl = createNormalMarker();
+    userMarker.current = new mapboxgl.Marker(markerEl)
       .setLngLat(center)
       .addTo(map.current);
 
@@ -542,8 +647,24 @@ const MapboxMap = () => {
           
           if (userMarker.current) {
             userMarker.current.setLngLat(coords);
-            if (userHeading.current) {
-              userMarker.current.setRotation(userHeading.current);
+            
+            // Update marker based on tracking state
+            if (isTrackingRef.current && userHeading.current !== null) {
+              // Show arrow marker when tracking with heading
+              const arrowEl = createArrowMarker(userHeading.current);
+              const lngLat = userMarker.current.getLngLat();
+              userMarker.current.remove();
+              userMarker.current = new mapboxgl.Marker(arrowEl)
+                .setLngLat(lngLat)
+                .addTo(map.current);
+            } else if (!isTrackingRef.current) {
+              // Show normal marker when not tracking
+              const normalEl = createNormalMarker();
+              const lngLat = userMarker.current.getLngLat();
+              userMarker.current.remove();
+              userMarker.current = new mapboxgl.Marker(normalEl)
+                .setLngLat(lngLat)
+                .addTo(map.current);
             }
           }
           
@@ -614,6 +735,9 @@ const MapboxMap = () => {
   // Toggle heatmap visibility
   useEffect(() => {
     if (!map.current) return;
+    
+    // Check if map style is loaded before accessing layers
+    if (!map.current.isStyleLoaded()) return;
     
     // Check if style is loaded and layer exists
     const hasLayer = map.current.getLayer('heatmap-layer');
@@ -779,6 +903,69 @@ const MapboxMap = () => {
           }
         };
 
+        // Add double-click handler to mode selection area using MutationObserver
+        const waitForDirectionsContainer = () => {
+          const directionsContainer = document.querySelector('.mapboxgl-ctrl-directions');
+          if (directionsContainer) {
+            console.log('Directions container found, adding double-click handler');
+            
+            // Add double-click handler with capture phase to intercept before Mapbox
+            directionsContainer.addEventListener('dblclick', (e) => {
+              console.log('Double-click detected on directions container!');
+              console.log('Current showDirectionsPanel state:', showDirectionsPanel);
+              e.preventDefault();
+              e.stopPropagation();
+              
+              // Hide the custom turn-by-turn panel
+              console.log('Setting showDirectionsPanel to false');
+              setShowDirectionsPanel(false);
+              
+              // Also hide MapboxDirections' built-in instructions panel
+              const instructionsPanel = document.querySelector('.mapbox-directions-instructions');
+              if (instructionsPanel) {
+                console.log('Hiding Mapbox instructions panel');
+                instructionsPanel.style.display = 'none';
+              }
+              
+              // Verify the state changed
+              setTimeout(() => {
+                console.log('After setState, showDirectionsPanel should be false');
+              }, 100);
+            }, true); // true = capture phase
+
+            // Add tooltip
+            directionsContainer.title = 'Double-click to hide turn-by-turn panel';
+            directionsContainer.style.cursor = 'pointer';
+            return true;
+          }
+          return false;
+        };
+
+        // Try immediately first
+        if (!waitForDirectionsContainer()) {
+          // If not found, use MutationObserver to wait for it
+          const observer = new MutationObserver((mutations, obs) => {
+            if (waitForDirectionsContainer()) {
+              obs.disconnect();
+              console.log('Double-click handler added via MutationObserver');
+            }
+          });
+
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true
+          });
+
+          // Store observer for cleanup
+          directions._mutationObserver = observer;
+          
+          // Timeout after 5 seconds
+          setTimeout(() => {
+            observer.disconnect();
+            console.log('MutationObserver timeout - directions container not found');
+          }, 5000);
+        }
+
         map.current.addControl(directions, 'top-left');
         directionsControl.current = directions;
 
@@ -793,6 +980,11 @@ const MapboxMap = () => {
       }
     } else {
       if (directionsControl.current) {
+        // Disconnect mutation observer
+        if (directionsControl.current._mutationObserver) {
+          directionsControl.current._mutationObserver.disconnect();
+        }
+
         try {
           map.current.removeControl(directionsControl.current);
         } catch (e) {
@@ -894,6 +1086,17 @@ const MapboxMap = () => {
       startTime: Date.now()
     });
     setLiveRoute([]);
+    
+    // Change marker to arrow
+    if (userMarker.current) {
+      const lngLat = userMarker.current.getLngLat();
+      const arrowEl = createArrowMarker(userHeading.current || 0);
+      userMarker.current.remove();
+      userMarker.current = new mapboxgl.Marker(arrowEl)
+        .setLngLat(lngLat)
+        .addTo(map.current);
+    }
+    
     if (socket.current) {
       socket.current.emit('start-tracking', {
         runId: `run-${Date.now()}`,
@@ -906,6 +1109,17 @@ const MapboxMap = () => {
   const stopTracking = async () => {
     setIsTracking(false);
     isTrackingRef.current = false;
+    
+    // Change marker back to normal
+    if (userMarker.current) {
+      const lngLat = userMarker.current.getLngLat();
+      const normalEl = createNormalMarker();
+      userMarker.current.remove();
+      userMarker.current = new mapboxgl.Marker(normalEl)
+        .setLngLat(lngLat)
+        .addTo(map.current);
+    }
+    
     if (socket.current) {
       socket.current.emit('stop-tracking', {
         finalStats: runStats
@@ -1056,6 +1270,7 @@ const MapboxMap = () => {
       
       {/* Map UI Controls - Moved to Bottom Right */}
       <div className="absolute bottom-20 left-4 flex flex-col space-y-2 z-10">
+        
         <button 
           onClick={toggleStyle}
           className="p-3 rounded-full shadow-lg transition bg-white text-gray-700"
@@ -1065,18 +1280,23 @@ const MapboxMap = () => {
         </button>
         <button 
           onClick={() => {
-            // If in mode 2 (Streets+Heatmap), don't allow turning off heatmap
-            // Otherwise toggle normally
-            if (mapStyleMode === 2) {
-              // Already forced on, do nothing
-              return;
+            const newShowHeatmap = !showHeatmap;
+            setShowHeatmap(newShowHeatmap);
+            
+            if (map.current) {
+              if (newShowHeatmap) {
+                map.current.setLayoutProperty('heatmap-layer', 'visibility', 'visible');
+                fetchHeatmapData();
+              } else {
+                map.current.setLayoutProperty('heatmap-layer', 'visibility', 'none');
+              }
             }
-            setShowHeatmap(!showHeatmap);
           }}
           className={`p-3 rounded-full shadow-lg transition ${showHeatmap ? 'bg-orange-500 text-white' : 'bg-white text-gray-700'} ${mapStyleMode === 2 ? 'opacity-50 cursor-not-allowed' : ''}`}
           title={mapStyleMode === 2 ? "Heatmap auto-enabled in this mode" : "Toggle Heatmap"}
+          disabled={mapStyleMode === 2}
         >
-          <Activity size={20} />
+          🔥
         </button>
         <button 
           onClick={() => setShowDirections(!showDirections)}
@@ -1100,6 +1320,8 @@ const MapboxMap = () => {
         <span>{onlineUsers.length + 1} Runners Online</span>
       </div>
 
+      
+
       {/* Manual Refresh Button */}
       <div className="absolute bottom-44 right-4 z-10">
         <button
@@ -1117,40 +1339,49 @@ const MapboxMap = () => {
         </button>
       </div>
 
-      {/* --- Mobile Directions Button - Top Left --- */}
-      <div className="absolute top-4 left-4 z-40 md:hidden">
-        {!showDirections ? (
-          <button
-            onClick={() => setShowDirections(true)}
-            className="bg-white text-black p-3 rounded-full shadow-lg hover:bg-gray-200 transition flex items-center justify-center"
-            aria-label="Show directions"
-            title="Search for directions"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </button>
-        ) : (
-          <button
-            onClick={() => {
-              setShowDirections(false);
-              if (directionsControl.current && map.current) {
-                try {
-                  map.current.removeControl(directionsControl.current);
-                } catch (e) {}
-                directionsControl.current = null;
-              }
-            }}
-            className="bg-red-500 text-white p-3 rounded-full shadow-lg hover:bg-red-600 transition flex items-center justify-center"
-            aria-label="Close directions"
-            title="Close directions"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        )}
-      </div>
+      {/* Collapsible Directions Panel */}
+      {showDirectionsPanel && directionsData && (
+        <div
+          className="absolute bottom-0 left-0 right-0 bg-white shadow-lg z-30 max-h-96 overflow-hidden md:max-w-md md:left-4 md:bottom-4 md:top-auto md:right-auto cursor-pointer"
+          onDoubleClick={() => setShowDirectionsPanel(false)}
+          title="Double-click to hide directions panel"
+        >
+          <div className="p-4 border-b">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-bold text-lg">Directions</h3>
+              <button
+                onClick={toggleDirectionsPanel}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex space-x-4 text-sm">
+              <span>📏 {directionsData.distance} km</span>
+              <span>⏱️ {directionsData.duration} min</span>
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            {directionsData.steps.map((step, index) => (
+              <div key={index} className="p-3 border-b border-gray-100 hover:bg-gray-50">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-600">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-800">{step.instruction}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {step.distance} km • {step.duration} min
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      
 
       {/* --- Mobile Menu Button - Always Visible on Mobile --- */}
       <div className="absolute top-4 right-4 z-50 md:hidden">
@@ -1385,6 +1616,21 @@ const MapboxMap = () => {
             <div className="border-t border-gray-700 pt-2"></div>
 
             <button
+        //     <button 
+        //   onClick={showCurrentLocation}
+        //   disabled={locationLoading}
+        //   className="p-3 rounded-full shadow-lg transition bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+        //   title="Show My Location"
+        // >
+        //   {locationLoading ? (
+        //     <div className="animate-spin w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full"></div>
+        //   ) : (
+        //     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        //       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        //       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        //     </svg>
+        //   )}
+        // </button>
               onClick={() => {
                 if (directionsControl.current && center[0] !== 0) {
                   directionsControl.current.setOrigin(center);

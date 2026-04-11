@@ -18,7 +18,7 @@ const SOSButton = () => {
   const [liveTrackingActive, setLiveTrackingActive] = useState(false);
   const [showContactsForm, setShowContactsForm] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [newContact, setNewContact] = useState({ name: '', phone: '', type: 'friend' });
+  const [newContact, setNewContact] = useState({ name: '', phone: '', email: '', type: 'friend' });
 
   const getLocationAndSend = () => {
     setShowSOSModal(true);
@@ -160,8 +160,8 @@ const SOSButton = () => {
   };
 
   const addEmergencyContact = async () => {
-    if (!newContact.name || !newContact.phone) {
-      alert('Please fill in name and phone number');
+    if (!newContact.name || !newContact.phone || !newContact.email) {
+      alert('Please fill in name, phone number, and email');
       return;
     }
 
@@ -172,6 +172,7 @@ const SOSButton = () => {
         {
           contactName: newContact.name,
           phoneNumber: newContact.phone,
+          email: newContact.email,
           contactType: newContact.type,
           priority: 1
         },
@@ -182,7 +183,7 @@ const SOSButton = () => {
 
       alert('✅ Emergency contact added! You can now send SOS alerts.');
       setShowContactsForm(false);
-      setNewContact({ name: '', phone: '', type: 'friend' });
+      setNewContact({ name: '', phone: '', email: '', type: 'friend' });
       setErrorMsg('');
     } catch (err) {
       console.error('Error adding contact:', err);
@@ -284,6 +285,17 @@ const SOSButton = () => {
                       value={newContact.phone}
                       onChange={(e) => setNewContact({...newContact, phone: e.target.value})}
                       placeholder={t('sos.placeholder_phone')}
+                      className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition shadow-inner"
+                    />
+                  </div>
+                  
+                  <div className="group">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1 group-focus-within:text-blue-500 transition">{t('sos.email')}</label>
+                    <input
+                      type="email"
+                      value={newContact.email}
+                      onChange={(e) => setNewContact({...newContact, email: e.target.value})}
+                      placeholder={t('sos.placeholder_email')}
                       className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition shadow-inner"
                     />
                   </div>

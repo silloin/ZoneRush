@@ -12,12 +12,14 @@ i18n
           sos: {
             name: 'Name',
             phone: 'Phone Number',
+            email: 'Email',
             relationship: 'Relationship',
             save: 'Save Contact',
             cancel: 'Cancel',
             message: 'Emergency Message (Optional)',
             placeholder_name: 'e.g. Govind Kumar',
-            placeholder_phone: 'e.g. 7836928539',
+            placeholder_phone: 'e.g. +1 234 567 8900',
+            placeholder_email: 'e.g. contact@example.com',
             placeholder_message: 'Describe your emergency...'
           },
           profile: {

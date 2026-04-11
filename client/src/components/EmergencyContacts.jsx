@@ -30,8 +30,8 @@ const EmergencyContacts = () => {
   };
 
   const handleAddContact = async () => {
-    if (!formData.contactName || !formData.phoneNumber) {
-      alert('Name and phone number are required');
+    if (!formData.contactName || !formData.phoneNumber || !formData.email) {
+      alert('Name, phone number, and email are required');
       return;
     }
 
@@ -133,10 +133,11 @@ const EmergencyContacts = () => {
             />
             <input
               type="email"
-              placeholder="Email (optional)"
+              placeholder="Email *"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="bg-gray-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+              required
             />
             <input
               type="number"

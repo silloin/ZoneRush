@@ -100,97 +100,102 @@ const NotificationBell = ({ onOpenFriends }) => {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50">
-          {/* Header */}
-          <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-            <h3 className="font-semibold text-white">Notifications</h3>
-            {totalUnread > 0 && (
-              <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">
-                {totalUnread} new
-              </span>
-            )}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="p-2 border-b border-gray-700 flex gap-2">
-            <button
-              onClick={handleOpenFriends}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-white transition"
-            >
-              <UserPlus size={16} />
-              Friend Requests
-              {pendingRequests > 0 && (
-                <span className="bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                  {pendingRequests}
+        <div className="fixed inset-0 z-50 md:absolute md:inset-auto md:right-0 md:mt-2 md:w-80">
+          {/* Backdrop for mobile */}
+          <div 
+            className="absolute inset-0 bg-black bg-opacity-50 md:hidden" 
+            onClick={() => setIsOpen(false)}
+          />
+          
+          {/* Dropdown Content */}
+          <div className="absolute right-4 top-16 w-80 max-w-[calc(100vw-2rem)] bg-gray-800 rounded-lg shadow-xl border border-gray-700 md:relative md:right-auto md:top-auto md:mt-0 md:w-full">
+            {/* Header */}
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+              <h3 className="font-semibold text-white">Notifications</h3>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+              {totalUnread > 0 && (
+                <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">
+                  {totalUnread} new
                 </span>
               )}
-            </button>
-          </div>
+            </div>
 
-          {/* Notifications List */}
-          <div className="max-h-64 overflow-y-auto">
-            {localNotifications.length === 0 && pendingRequests === 0 ? (
-              <div className="p-4 text-center text-gray-400 text-sm">
-                No new notifications
-              </div>
-            ) : (
-              <>
-                {/* Friend Request Notification */}
+            {/* Quick Actions */}
+            <div className="p-2 border-b border-gray-700 flex gap-2">
+              <button
+                onClick={handleOpenFriends}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-white transition"
+              >
+                <UserPlus size={16} />
+                Friend Requests
                 {pendingRequests > 0 && (
-                  <div
-                    onClick={handleOpenFriends}
-                    className="p-3 border-b border-gray-700 hover:bg-gray-700 cursor-pointer flex items-start gap-3"
-                  >
-                    <div className="mt-1">{getNotificationIcon('friend_request')}</div>
-                    <div className="flex-1">
-                      <p className="text-sm text-white">
-                        You have {pendingRequests} pending friend request{pendingRequests > 1 ? 's' : ''}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">Click to view</p>
-                    </div>
-                  </div>
+                  <span className="bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {pendingRequests}
+                  </span>
                 )}
+              </button>
+            </div>
 
-                {/* Other Notifications */}
-                {localNotifications.map((notif, index) => (
-                  <div
-                    key={index}
-                    className="p-3 border-b border-gray-700 hover:bg-gray-700 flex items-start gap-3 group"
-                  >
-                    <div className="mt-1">{getNotificationIcon(notif.type)}</div>
-                    <div className="flex-1">
-                      <p className="text-sm text-white font-medium">
-                        {notif.title || 'New Notification'}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {notif.content || notif.message || ''}
-                      </p>
-                      {notif.senderUsername && (
-                        <p className="text-xs text-blue-400 mt-1">
-                          From: {notif.senderUsername}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => handleDismissNotification(index)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-600 rounded transition"
+            {/* Notifications List */}
+            <div className="max-h-64 overflow-y-auto">
+              {localNotifications.length === 0 && pendingRequests === 0 ? (
+                <div className="p-4 text-center text-gray-400 text-sm">
+                  No new notifications
+                </div>
+              ) : (
+                <>
+                  {/* Friend Request Notification */}
+                  {pendingRequests > 0 && (
+                    <div
+                      onClick={handleOpenFriends}
+                      className="p-3 border-b border-gray-700 hover:bg-gray-700 cursor-pointer flex items-start gap-3"
                     >
-                      <X size={14} className="text-gray-400" />
-                    </button>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
+                      <div className="mt-1">{getNotificationIcon('friend_request')}</div>
+                      <div className="flex-1">
+                        <p className="text-sm text-white">
+                          You have {pendingRequests} pending friend request{pendingRequests > 1 ? 's' : ''}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">Click to view</p>
+                      </div>
+                    </div>
+                  )}
 
-          {/* Footer */}
-          <div className="p-2 border-t border-gray-700">
-            <button
-              onClick={() => setIsOpen(false)}
-              className="w-full text-center text-xs text-gray-400 hover:text-white py-1 transition"
-            >
-              Close
-            </button>
+                  {/* Other Notifications */}
+                  {localNotifications.map((notif, index) => (
+                    <div
+                      key={index}
+                      className="p-3 border-b border-gray-700 hover:bg-gray-700 flex items-start gap-3 group"
+                    >
+                      <div className="mt-1">{getNotificationIcon(notif.type)}</div>
+                      <div className="flex-1">
+                        <p className="text-sm text-white font-medium">
+                          {notif.title || 'New Notification'}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {notif.content || notif.message || ''}
+                        </p>
+                        {notif.senderUsername && (
+                          <p className="text-xs text-blue-400 mt-1">
+                            From: {notif.senderUsername}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleDismissNotification(index)}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-600 rounded transition"
+                      >
+                        <X size={14} className="text-gray-400" />
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

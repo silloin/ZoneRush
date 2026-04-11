@@ -65,8 +65,8 @@ exports.addEmergencyContact = async (req, res) => {
   try {
     const { contactName, contactType, phoneNumber, email, priority } = req.body;
     
-    if (!contactName || !phoneNumber) {
-      return res.status(400).json({ msg: 'Name and phone number are required' });
+    if (!contactName || !phoneNumber || !email) {
+      return res.status(400).json({ msg: 'Name, phone number, and email are required' });
     }
     
     const result = await pool.query(
@@ -188,50 +188,49 @@ exports.sendSOSAlert = async (req, res) => {
     const pushResults = [];
     const emailResults = [];
     const smsResults = [];
-    
-    // Send Email Alerts (if configured)
+
+    // Send Email Alerts (if configured) in parallel
     if (emailTransporter) {
-      for (const contact of contactsResult.rows) {
-        if (contact.email) {
-          try {
-            await emailTransporter.sendMail({
-              from: `"SOS Alert - ${user.username}" <${process.env.EMAIL_USER}>`,
-              to: contact.email,
-              subject: `🚨 SOS EMERGENCY ALERT - ${user.username}`,
-              html: `
-                <h1 style="color: #dc3545;">🚨 SOS EMERGENCY ALERT</h1>
-                <p><strong>${user.username}</strong> needs emergency assistance!</p>
-                <p><strong>📍 Live Location:</strong> <a href="${googleMapsLink}">View on Google Maps</a></p>
-                <p><strong>Coordinates:</strong> ${latitude}, ${longitude}</p>
-                <p><strong>Message:</strong> ${message || 'No additional message provided.'}</p>
-                <hr/>
-                <p style="color: #6c757d; font-size: 12px;">This is an automated SOS alert from the Realtime Location Tracker system.</p>
-              `
-            });
-            emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'sent' });
-          } catch (err) {
-            console.error(`Failed to send email to ${contact.contact_name}:`, err.message);
-            emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'failed', error: err.message });
-          }
+      const emailTasks = contactsResult.rows.filter(contact => contact.email).map(async (contact) => {
+        try {
+          await emailTransporter.sendMail({
+            from: `"SOS Alert - ${user.username}" <${process.env.EMAIL_USER}>`,
+            to: contact.email,
+            subject: `🚨 SOS EMERGENCY ALERT - ${user.username}`,
+            html: `
+              <h1 style="color: #dc3545;">🚨 SOS EMERGENCY ALERT</h1>
+              <p><strong>${user.username}</strong> needs emergency assistance!</p>
+              <p><strong>📍 Live Location:</strong> <a href="${googleMapsLink}">View on Google Maps</a></p>
+              <p><strong>Coordinates:</strong> ${latitude}, ${longitude}</p>
+              <p><strong>Message:</strong> ${message || 'No additional message provided.'}</p>
+              <hr/>
+              <p style="color: #6c757d; font-size: 12px;">This is an automated SOS alert from the Realtime Location Tracker system.</p>
+            `
+          });
+          emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'sent' });
+        } catch (err) {
+          console.error(`Failed to send email to ${contact.contact_name}:`, err.message);
+          emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'failed', error: err.message });
+          failedAlerts.push(contact.contact_name);
         }
-      }
+      });
+
+      await Promise.all(emailTasks);
     }
-    
-    // Send SMS via TextLocal (if configured)
+
+    // Send SMS via TextLocal (if configured) in parallel
     if (textLocalConfig.enabled) {
       console.log('📱 Sending SMS via TextLocal...');
-      for (const contact of contactsResult.rows) {
+      const smsTasks = contactsResult.rows.map(async (contact) => {
         try {
-          // Format phone number for TextLocal (should be in format: 91XXXXXXXXXX for India)
           let formattedPhone = contact.phone_number.replace(/\D/g, ''); // Remove non-digits
-          
-          // Add country code if not present (default to India +91)
+
           if (!formattedPhone.startsWith('91') && formattedPhone.length === 10) {
             formattedPhone = '91' + formattedPhone;
           }
-          
+
           const smsMessage = `🚨 SOS ALERT! ${user.username} needs help!\n📍 Location: ${googleMapsLink}\nPlease respond immediately!`;
-          
+
           const response = await axios.get('https://api.textlocal.in/send/', {
             params: {
               apikey: textLocalConfig.apiKey,
@@ -241,7 +240,7 @@ exports.sendSOSAlert = async (req, res) => {
               format: 'json'
             }
           });
-          
+
           if (response.data.status === 'success') {
             console.log(`✅ SMS sent to ${contact.contact_name} (${formattedPhone})`);
             smsResults.push({ contact: contact.contact_name, phone: formattedPhone, status: 'sent', messageId: response.data.id });
@@ -254,9 +253,11 @@ exports.sendSOSAlert = async (req, res) => {
           smsResults.push({ contact: contact.contact_name, phone: contact.phone_number, status: 'failed', error: err.message });
           failedAlerts.push(contact.contact_name);
         }
-      }
+      });
+
+      await Promise.all(smsTasks);
     }
-    
+
     // Send Push Notifications (Firebase)
     if (firebasePush.isConfigured) {
       const pushResult = await firebasePush.sendSOSPushAlert(
@@ -264,15 +265,15 @@ exports.sendSOSAlert = async (req, res) => {
         { latitude, longitude },
         contactsResult.rows
       );
-      
+
       if (pushResult.success) {
         pushResults.push(...pushResult.results);
       }
     }
-    
-    // Send SMS via Twilio (if configured and TextLocal not used)
+
+    // Send SMS via Twilio (if configured and TextLocal not used) in parallel
     if (twilioClient && !textLocalConfig.enabled) {
-      for (const contact of contactsResult.rows) {
+      const twilioTasks = contactsResult.rows.map(async (contact) => {
         try {
           await twilioClient.messages.create({
             body: fullMessage,
@@ -284,7 +285,9 @@ exports.sendSOSAlert = async (req, res) => {
           console.error(`Failed to send SMS to ${contact.contact_name}:`, err.message);
           failedAlerts.push(contact.contact_name);
         }
-      }
+      });
+
+      await Promise.all(twilioTasks);
     }
     
     // Generate WhatsApp links (always available as backup)

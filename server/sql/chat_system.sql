@@ -37,13 +37,48 @@ CREATE INDEX IF NOT EXISTS idx_messages_unread ON messages(receiver_id, is_read)
 -- GLOBAL MESSAGES TABLE (Public Chat)
 -- ============================================
 -- Note: global_messages table is created in setup_database.sql
--- Add sender_id column if it doesn't exist (for compatibility)
+-- Ensure proper column structure for sender_id
+
+-- First, check if the table exists and has user_id instead of sender_id
+DO $$
+BEGIN
+    -- If the table has user_id column, rename it to sender_id
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'global_messages' AND column_name = 'user_id'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'global_messages' AND column_name = 'sender_id'
+    ) THEN
+        ALTER TABLE global_messages RENAME COLUMN user_id TO sender_id;
+        RAISE NOTICE 'Renamed user_id to sender_id in global_messages table';
+    END IF;
+END $$;
+
+-- Add sender_id column if it doesn't exist (for new installations)
 ALTER TABLE global_messages ADD COLUMN IF NOT EXISTS sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
+
+-- Add other columns
 ALTER TABLE global_messages ADD COLUMN IF NOT EXISTS edited BOOLEAN DEFAULT FALSE;
 ALTER TABLE global_messages ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT FALSE;
 
--- Migrate user_id to sender_id if sender_id doesn't have data
-UPDATE global_messages SET sender_id = user_id WHERE sender_id IS NULL AND user_id IS NOT NULL;
+-- Migrate any remaining user_id data to sender_id (safety check)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'global_messages' AND column_name = 'user_id'
+    ) AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'global_messages' AND column_name = 'sender_id'
+    ) THEN
+        UPDATE global_messages SET sender_id = user_id WHERE sender_id IS NULL AND user_id IS NOT NULL;
+        RAISE NOTICE 'Migrated user_id data to sender_id in global_messages table';
+    END IF;
+END $$;
+
+-- Drop the old user_id column if it still exists
+ALTER TABLE global_messages DROP COLUMN IF EXISTS user_id;
 
 -- Index for retrieving recent global messages
 CREATE INDEX IF NOT EXISTS idx_global_messages_created ON global_messages(created_at DESC);

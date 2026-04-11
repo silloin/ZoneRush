@@ -53,9 +53,9 @@ const UserProfileModal = ({ userId, username, isOpen, onClose }) => {
           
           <div className="flex items-center space-x-4">
             <div className="w-20 h-20 rounded-full bg-white bg-opacity-20 flex items-center justify-center text-3xl font-bold border-4 border-white border-opacity-30">
-              {userProfile?.profile_photo_url ? (
+              {userProfile?.profile_picture ? (
                 <img 
-                  src={userProfile.profile_photo_url} 
+                  src={userProfile.profile_picture} 
                   alt={username}
                   className="w-full h-full rounded-full object-cover"
                 />

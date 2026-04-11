@@ -9,7 +9,7 @@ async function addMyEmergencyContact() {
        (user_id, contact_name, contact_type, phone_number, priority)
        VALUES ($1, $2, $3, $4, 1)
        RETURNING *`,
-      [1, 'Emergency Contact', 'custom', '7836928538']
+      [1, 'Emergency Contact', 'custom', '+1 234 567 8900']
     );
     
     console.log('✅ Emergency contact added successfully!');

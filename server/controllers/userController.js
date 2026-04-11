@@ -110,10 +110,10 @@ exports.updateProfile = async (req, res) => {
 
     const result = await pool.query(
       `UPDATE users SET
-         username      = COALESCE($1, username),
-         city          = COALESCE($2, city),
-         bio           = COALESCE($3, bio),
-         fitness_level = COALESCE($4, fitness_level),
+         username      = COALESCE(NULLIF($1, ''), username),
+         city          = COALESCE(NULLIF($2, ''), city),
+         bio           = COALESCE(NULLIF($3, ''), bio),
+         fitness_level = COALESCE(NULLIF($4, ''), fitness_level),
          updated_at    = NOW()
        WHERE id = $5
        RETURNING id, username, city, bio, fitness_level, profile_picture, level, xp`,
@@ -159,15 +159,15 @@ exports.updateProfilePhoto = async (req, res) => {
 
     const result = await pool.query(
       `UPDATE users 
-       SET profile_photo_url = $1, updated_at = NOW()
+       SET profile_picture = $1, updated_at = NOW()
        WHERE id = $2
-       RETURNING id, profile_photo_url`,
+       RETURNING id, profile_picture`,
       [safeUrl, userId]
     );
     
     res.json({
       msg: 'Profile photo updated successfully',
-      profilePhotoUrl: result.rows[0].profile_photo_url
+      profilePhotoUrl: result.rows[0].profile_picture
     });
   } catch (err) {
     console.error('Error updating profile photo:', err.message);

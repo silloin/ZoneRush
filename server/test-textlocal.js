@@ -23,7 +23,7 @@ async function testTextLocal() {
   }
 
   // Test with a sample number (replace with your test number)
-  const testNumber = '917836928539'; // Replace with actual test number
+  const testNumber = '1234567890'; // Replace with actual test number
   
   console.log(`📤 Sending test SMS to: ${testNumber}\n`);
 

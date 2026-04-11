@@ -25,7 +25,10 @@ router.get('/', auth, async (req, res) => {
       SELECT 
         u.id, 
         u.username, 
-        u.email, 
+        u.email,
+        u.city,
+        u.bio,
+        u.fitness_level,
         u.xp, 
         u.level, 
         u.streak,
