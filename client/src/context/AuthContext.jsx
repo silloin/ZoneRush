@@ -20,6 +20,21 @@ const getApiUrl = () => {
 axios.defaults.baseURL = getApiUrl();
 axios.defaults.withCredentials = true;
 
+// Add request interceptor to include token from localStorage as fallback
+axios.interceptors.request.use(
+  (config) => {
+    // Try to get token from localStorage (fallback for cross-origin)
+    const token = localStorage.getItem('token');
+    if (token && !config.headers['x-auth-token']) {
+      config.headers['x-auth-token'] = token;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Add global response interceptor to handle 401 errors silently
 axios.interceptors.response.use(
   (response) => response,
@@ -80,6 +95,13 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await axios.post('/auth/login', { email, password });
       console.log('✅ Login successful:', res.data);
+      
+      // Store token in localStorage as fallback for cross-origin requests
+      if (res.data.token) {
+        localStorage.setItem('token', res.data.token);
+        console.log('💾 Token stored in localStorage');
+      }
+      
       setUser(res.data.user);
     } catch (error) {
       console.error('❌ Login failed:', error.response?.data || error.message);

@@ -131,7 +131,9 @@ router.post('/register', authRateLimitMiddleware, async (req, res) => {
       // Don't fail registration if email fails
     }
 
+    // Also return token in response for localStorage fallback
     res.json({ 
+      token,
       user: {
         id: newUser.rows[0].id,
         username: newUser.rows[0].username,
@@ -193,7 +195,9 @@ router.post('/login', authRateLimitMiddleware, async (req, res) => {
       domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined
     });
 
+    // Also return token in response for localStorage fallback
     res.json({ 
+      token,
       user: {
         id: user.rows[0].id,
         username: user.rows[0].username,
