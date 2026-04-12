@@ -259,6 +259,32 @@ app.use('/api/notifications', notificationsRoutes);
 // Emergency SOS System Routes
 app.use('/api/emergency', emergencyRoutes);
 
+// ============================================
+// HEALTH CHECK ENDPOINTS (Production monitoring)
+// ============================================
+
+// Simple health check for load balancers
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    service: 'ZoneRush API'
+  });
+});
+
+// Detailed health check for monitoring
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    port: process.env.PORT || 1000,
+    api: 'running',
+    version: '1.0.0'
+  });
+});
+
 // For any other request, serve the index.html from the frontend (if available)
 app.get('/{*splat}', (req, res) => {
   const indexPath = path.resolve(publicPath, 'index.html');

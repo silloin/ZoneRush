@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useMemo } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
@@ -18,21 +18,32 @@ import Achievements from './components/Achievements/Achievements';
 import ChatLayout from './components/Chat/ChatLayout';
 import './App.css';
 
-const ProtectedRoute = ({ children }) => {
+// Optimized ProtectedRoute with React.memo to prevent unnecessary re-renders
+const ProtectedRoute = React.memo(({ children }) => {
   const { user, loading } = useContext(AuthContext);
 
-  console.log('🛡️ ProtectedRoute check:', { user: !!user, loading });
+  // Memoize the result to prevent re-renders
+  const result = useMemo(() => {
+    if (loading) {
+      return (
+        <div className="h-screen w-screen bg-gray-900 flex items-center justify-center text-white text-2xl font-bold">
+          🏃 Loading...
+        </div>
+      );
+    }
 
-  if (loading) return <div className="h-screen w-screen bg-gray-900 flex items-center justify-center text-white text-2xl font-bold">RunTerra...</div>;
+    if (!user) {
+      console.warn('❌ No user found, redirecting to login');
+      return <Navigate to="/login" replace />;
+    }
 
-  if (!user) {
-    console.log('❌ No user found, redirecting to login');
-    return <Navigate to="/login" />;
-  }
+    return children;
+  }, [user, loading, children]);
 
-  console.log('✅ User authenticated, rendering protected content');
-  return children;
-};
+  return result;
+});
+
+ProtectedRoute.displayName = 'ProtectedRoute';
 
 const Layout = ({ children }) => {
   return (

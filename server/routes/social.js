@@ -271,25 +271,45 @@ router.put('/comments/:commentId', auth, async (req, res) => {
 // @desc    Delete a comment
 // @access  Private
 router.delete('/comments/:commentId', auth, async (req, res) => {
+  const commentId = parseInt(req.params.commentId, 10);
+  
+  // Validate commentId
+  if (isNaN(commentId) || commentId <= 0) {
+    return res.status(400).json({ msg: 'Invalid comment ID' });
+  }
+  
   try {
-    const commentId = parseInt(req.params.commentId, 10);
-    
     // Check if comment exists and belongs to user
-    const comment = await pool.query('SELECT * FROM comments WHERE id = $1', [commentId]);
+    const comment = await pool.query('SELECT user_id FROM comments WHERE id = $1', [commentId]);
     
     if (comment.rows.length === 0) {
       return res.status(404).json({ msg: 'Comment not found' });
     }
     
     if (comment.rows[0].user_id !== req.user.id) {
-      return res.status(401).json({ msg: 'User not authorized' });
+      return res.status(403).json({ msg: 'Not authorized to delete this comment' });
     }
 
-    await pool.query('DELETE FROM comments WHERE id = $1', [commentId]);
-    res.json({ msg: 'Comment removed', commentId });
+    const result = await pool.query('DELETE FROM comments WHERE id = $1 RETURNING id', [commentId]);
+    
+    console.log(`✅ Comment ${commentId} deleted by user ${req.user.id}`);
+    
+    res.json({ 
+      msg: 'Comment deleted successfully',
+      deletedCommentId: result.rows[0]?.id 
+    });
   } catch (err) {
-    console.error('DELETE /social/comments error:', err.message);
-    res.status(500).json({ msg: 'Server Error', error: err.message });
+    console.error('❌ DELETE /social/comments error:', {
+      error: err.message,
+      code: err.code,
+      commentId,
+      userId: req.user.id
+    });
+    res.status(500).json({ 
+      msg: 'Server Error',
+      error: err.message,
+      errorCode: err.code
+    });
   }
 });
 
@@ -325,23 +345,50 @@ router.put('/posts/:postId', auth, async (req, res) => {
 // @desc    Delete a post
 // @access  Private
 router.delete('/posts/:postId', auth, async (req, res) => {
+  const postId = parseInt(req.params.postId, 10);
+  
+  // Validate postId
+  if (isNaN(postId) || postId <= 0) {
+    return res.status(400).json({ msg: 'Invalid post ID' });
+  }
+  
   try {
     // Check if post exists and belongs to user
-    const post = await pool.query('SELECT * FROM posts WHERE id = $1', [req.params.postId]);
+    const post = await pool.query('SELECT user_id FROM posts WHERE id = $1', [postId]);
     
     if (post.rows.length === 0) {
       return res.status(404).json({ msg: 'Post not found' });
     }
     
     if (post.rows[0].user_id !== req.user.id) {
-      return res.status(401).json({ msg: 'User not authorized' });
+      return res.status(403).json({ msg: 'Not authorized to delete this post' });
     }
 
-    await pool.query('DELETE FROM posts WHERE id = $1', [req.params.postId]);
-    res.json({ msg: 'Post removed' });
+    // Delete associated comments and likes first
+    await pool.query('DELETE FROM comments WHERE post_id = $1', [postId]);
+    await pool.query('DELETE FROM likes WHERE post_id = $1', [postId]);
+    
+    // Delete the post
+    const result = await pool.query('DELETE FROM posts WHERE id = $1 RETURNING id', [postId]);
+    
+    console.log(`✅ Post ${postId} deleted by user ${req.user.id}`);
+    
+    res.json({ 
+      msg: 'Post deleted successfully',
+      deletedPostId: result.rows[0]?.id 
+    });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('❌ DELETE /social/posts error:', {
+      error: err.message,
+      code: err.code,
+      postId,
+      userId: req.user.id
+    });
+    res.status(500).json({ 
+      msg: 'Server Error',
+      error: err.message,
+      errorCode: err.code
+    });
   }
 });
 
