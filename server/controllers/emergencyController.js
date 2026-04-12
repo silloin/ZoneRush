@@ -38,7 +38,7 @@ if (process.env.EMAIL_USER && emailPass) {
   // Verify email transporter connection
   emailTransporter.verify(function(error, success) {
     if (error) {
-      console.log('❌ Email transporter verification failed:', error.message);
+      console.warn(`⚠️  Email transporter verification failed (App will continue natively): ${error.message}`);
     } else {
       console.log('✅ Email transporter is ready to send messages');
     }
@@ -330,11 +330,24 @@ exports.sendSOSAlert = async (req, res) => {
     });
     
     // Log SOS alert in database
-    await pool.query(
-      `INSERT INTO sos_alerts (user_id, location, message)
-       VALUES ($1, ST_SetSRID(ST_MakePoint($3, $2), 4326), $4)`,
-      [req.user.id, latitude, longitude, message || null]
-    );
+    try {
+      await pool.query(
+        `INSERT INTO sos_alerts (user_id, latitude, longitude, location, message)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [req.user.id, latitude, longitude, `Lat: ${latitude}, Lng: ${longitude}`, message || null]
+      );
+    } catch (dbError) {
+      // If location column doesn't exist, try without it
+      if (dbError.message.includes('column') || dbError.message.includes('does not exist')) {
+        await pool.query(
+          `INSERT INTO sos_alerts (user_id, latitude, longitude, message)
+           VALUES ($1, $2, $3, $4)`,
+          [req.user.id, latitude, longitude, message || null]
+        );
+      } else {
+        throw dbError;
+      }
+    }
     
     return res.json({
       msg: 'SOS Alert sent successfully!',

@@ -281,7 +281,12 @@ const RunTracker = ({
     console.log('📍 Route points:', route);
     
     if (route.length < 2) {
-      alert("Cannot save run: A run must have at least 2 points. Try moving around a bit more!");
+      if (window.confirm("A run must have at least 2 GPS points to be saved. Would you like to cancel and discard this session instead?")) {
+        setIsTracking(false);
+        setGpsStatus('idle');
+        setRoute([]);
+        if (onRunComplete) onRunComplete();
+      }
       return;
     }
 

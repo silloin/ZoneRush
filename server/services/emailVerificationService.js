@@ -88,7 +88,7 @@ class EmailVerificationService {
     // Verify connection
     this.transporter.verify((error, success) => {
       if (error) {
-        console.error('❌ Email transporter error:', error);
+        console.warn(`⚠️  Email transporter verification failed (App will continue natively): ${error.message}`);
       } else {
         console.log('✅ Email service configured successfully');
       }
