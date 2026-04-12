@@ -26,9 +26,13 @@ if (textLocalConfig.enabled) {
 // Initialize Nodemailer for email alerts
 let emailTransporter;
 const emailPass = process.env.EMAIL_APP_PASSWORD || process.env.EMAIL_PASS;
+const emailService = process.env.EMAIL_SERVICE || 'gmail';
 if (process.env.EMAIL_USER && emailPass) {
+  // Support multiple service names for Gmail
+  const service = (emailService === 'mail' || emailService === 'google') ? 'gmail' : emailService;
+  
   emailTransporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    service: service,
     port: 587,
     secure: false,
     auth: {

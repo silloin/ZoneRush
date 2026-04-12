@@ -27,7 +27,7 @@ class EmailVerificationService {
     }
 
     // Configure transporter based on service
-    if (emailService === 'gmail') {
+    if (emailService === 'gmail' || emailService === 'mail' || emailService === 'google') {
       this.transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
