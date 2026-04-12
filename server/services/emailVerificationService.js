@@ -87,15 +87,16 @@ class EmailVerificationService {
 
     // Verify connection with timeout (non-blocking)
     const verifyTimeout = setTimeout(() => {
-      console.warn('⚠️  Email verification timeout - continuing without email');
-    }, 5000);
+      console.warn('⚠️  Email verification timeout - emails may not work, but app continues');
+    }, 10000);
     
     this.transporter.verify((error, success) => {
       clearTimeout(verifyTimeout);
       if (error) {
-        console.warn(`⚠️  Email service verification failed (app will continue): ${error.message}`);
+        console.warn(`⚠️  Email verification failed: ${error.message}`);
+        console.log('📧 Emails will attempt to send on-demand (SOS alerts, etc.)');
       } else {
-        console.log('✅ Email service configured successfully');
+        console.log('✅ Email service configured and verified successfully');
       }
     });
   }

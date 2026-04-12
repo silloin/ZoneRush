@@ -43,15 +43,16 @@ if (process.env.EMAIL_USER && emailPass) {
   
   // Verify email transporter connection with timeout (non-blocking)
   const verifyTimeout = setTimeout(() => {
-    console.warn('⚠️  Email verification timeout - continuing without email');
-  }, 5000);
+    console.warn('⚠️  Email verification timeout - will attempt on-demand');
+  }, 10000);
   
   emailTransporter.verify(function(error, success) {
     clearTimeout(verifyTimeout);
     if (error) {
-      console.warn(`⚠️  Email service verification failed (app will continue): ${error.message}`);
+      console.warn(`⚠️  Email verification failed: ${error.message}`);
+      console.log('📧 SOS emails will attempt to send when triggered');
     } else {
-      console.log('✅ Email service is ready for SOS alerts');
+      console.log('✅ Email service verified and ready for SOS alerts');
     }
   });
 } else {
