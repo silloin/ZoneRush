@@ -6,6 +6,7 @@
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const pool = require('../config/db');
+const emailFallbackService = require('./emailFallbackService');
 
 class EmailVerificationService {
   constructor() {
@@ -196,13 +197,19 @@ class EmailVerificationService {
         expiresAt: verification.expires_at
       };
     } catch (error) {
-      console.warn('⚠️  Email send failed (non-fatal):', error.message);
-      // Return success anyway - email is optional
-      return {
-        success: true,
-        messageId: 'email-failed',
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-      };
+      console.warn('Gmail email failed, trying fallback service:', error.message);
+      // Try fallback service
+      try {
+        return await emailFallbackService.sendVerificationEmail(userId, email, username);
+      } catch (fallbackError) {
+        console.warn('Fallback email also failed:', fallbackError.message);
+        return {
+          success: true,
+          messageId: 'all-email-failed',
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          note: 'All email services failed - app continues without email'
+        };
+      }
     }
   }
 

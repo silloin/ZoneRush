@@ -3,6 +3,7 @@ const twilio = require('twilio');
 const firebasePush = require('../utils/firebasePush');
 const nodemailer = require('nodemailer');
 const axios = require('axios');
+const emailFallbackService = require('../services/emailFallbackService');
 
 // Initialize Twilio (if credentials exist)
 let twilioClient;
@@ -251,8 +252,20 @@ exports.sendSOSAlert = async (req, res) => {
               console.log(`✅ Email sent to ${contact.contact_name}. Message ID: ${info.messageId}`);
               emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'sent', messageId: info.messageId });
             } catch (err) {
-              console.warn(`⚠️  Email failed for ${contact.contact_name} (non-critical):`, err.message);
-              emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'failed', error: err.message });
+              console.warn(`Gmail email failed for ${contact.contact_name}, trying fallback:`, err.message);
+              // Try fallback email service
+              try {
+                const fallbackResult = await emailFallbackService.sendSOSEmail(contact, user, location);
+                if (fallbackResult.success) {
+                  console.log(`Fallback email sent to ${contact.contact_name}`);
+                  emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'sent-fallback', messageId: fallbackResult.messageId });
+                } else {
+                  emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'failed', error: 'All email services failed' });
+                }
+              } catch (fallbackErr) {
+                console.warn(`Fallback email also failed for ${contact.contact_name}:`, fallbackErr.message);
+                emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'failed', error: 'All email services failed' });
+              }
             }
           }
           console.log(`📊 Email results: ${emailResults.filter(e => e.status === 'sent').length} sent, ${emailResults.filter(e => e.status === 'failed').length} failed`);
