@@ -184,18 +184,40 @@ router.get('/comments/:postId', async (req, res) => {
   try {
     const postId = parseInt(req.params.postId, 10);
     
-    // Query both schemas in a single query using UNION
-    const result = await pool.query(
-      `SELECT c.id, c.user_id, COALESCE(c.post_id, c.run_id) as post_id, 
-              COALESCE(c.text, c.comment_text) as text, 
-              COALESCE(c.comment_text, c.text) as comment_text, 
-              c.created_at, u.username 
-       FROM comments c 
-       JOIN users u ON c.user_id = u.id 
-       WHERE c.post_id = $1 OR c.run_id = $1 
-       ORDER BY c.created_at DESC`,
-      [postId]
-    );
+    let result = null;
+    
+    // Try new schema first (with post_id and text columns)
+    try {
+      result = await pool.query(
+        `SELECT c.id, c.user_id, COALESCE(c.post_id, c.run_id) as post_id, 
+                COALESCE(c.text, c.comment_text) as text, 
+                c.created_at, u.username 
+         FROM comments c 
+         JOIN users u ON c.user_id = u.id 
+         WHERE (c.post_id = $1 OR c.run_id = $1) 
+         ORDER BY c.created_at DESC`,
+        [postId]
+      );
+    } catch (newSchemaErr) {
+      // Fall back to old schema (run_id and comment_text only)
+      console.log('Trying old schema for comments...', newSchemaErr.message);
+      try {
+        result = await pool.query(
+          `SELECT c.id, c.user_id, c.run_id as post_id, 
+                  c.comment_text as text, 
+                  c.created_at, u.username 
+           FROM comments c 
+           JOIN users u ON c.user_id = u.id 
+           WHERE c.run_id = $1 
+           ORDER BY c.created_at DESC`,
+          [postId]
+        );
+      } catch (oldSchemaErr) {
+        // If both fail, return empty array
+        console.log('Both schemas failed for comments:', oldSchemaErr.message);
+        result = { rows: [] };
+      }
+    }
     
     res.json(result.rows);
   } catch (err) {
