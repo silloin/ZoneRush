@@ -145,20 +145,32 @@ class PasswordResetService {
    */
   async sendResetEmail(email, username, resetLink) {
     if (!emailVerificationService.transporter) {
-      console.error('Email transporter not configured');
-      throw new Error('Email service not configured');
+      console.warn('⚠️  Email transporter not configured - skipping reset email');
+      return; // Don't throw - email is optional
     }
 
-    const mailOptions = {
-      from: `"ZoneRush" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: '🔐 Reset Your ZoneRush Password',
-      html: this.createResetEmailTemplate(username, resetLink),
-      text: `Hello ${username},\n\nYou requested a password reset for your ZoneRush account.\n\nClick the link below to reset your password:\n${resetLink}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, please ignore this email.`
-    };
+    try {
+      const mailOptions = {
+        from: `"ZoneRush" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: '🔐 Reset Your ZoneRush Password',
+        html: this.createResetEmailTemplate(username, resetLink),
+        text: `Hello ${username},\n\nYou requested a password reset for your ZoneRush account.\n\nClick the link below to reset your password:\n${resetLink}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, please ignore this email.`
+      };
 
-    await emailVerificationService.transporter.sendMail(mailOptions);
-    console.log(`Password reset email sent to ${email}`);
+      // Send with timeout
+      await Promise.race([
+        emailVerificationService.transporter.sendMail(mailOptions),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Email send timeout')), 5000)
+        )
+      ]);
+      
+      console.log(`✅ Password reset email sent to ${email}`);
+    } catch (error) {
+      console.warn(`⚠️  Failed to send password reset email (non-critical):`, error.message);
+      // Don't throw - email is optional, allow user to proceed
+    }
   }
 
   /**

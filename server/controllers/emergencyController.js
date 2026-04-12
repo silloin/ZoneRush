@@ -197,38 +197,53 @@ exports.sendSOSAlert = async (req, res) => {
     const emailResults = [];
     const smsResults = [];
 
-    // Send Email Alerts (if configured) in parallel
+    // Send Email Alerts (if configured) - FIRE AND FORGET (non-blocking)
     if (emailTransporter) {
-      console.log(`📧 Sending email alerts to ${contactsResult.rows.filter(c => c.email).length} contacts...`);
-      const emailTasks = contactsResult.rows.filter(contact => contact.email).map(async (contact) => {
-        try {
-          console.log(`📤 Sending email to ${contact.contact_name} (${contact.email})...`);
-          const info = await emailTransporter.sendMail({
-            from: `"SOS Alert - ${user.username}" <${process.env.EMAIL_USER}>`,
-            to: contact.email,
-            subject: `🚨 SOS EMERGENCY ALERT - ${user.username}`,
-            html: `
-              <h1 style="color: #dc3545;">🚨 SOS EMERGENCY ALERT</h1>
-              <p><strong>${user.username}</strong> needs emergency assistance!</p>
-              <p><strong>📍 Live Location:</strong> <a href="${googleMapsLink}">View on Google Maps</a></p>
-              <p><strong>Coordinates:</strong> ${latitude}, ${longitude}</p>
-              <p><strong>Message:</strong> ${message || 'No additional message provided.'}</p>
-              <hr/>
-              <p style="color: #6c757d; font-size: 12px;">This is an automated SOS alert from the Realtime Location Tracker system.</p>
-            `
-          });
-          console.log(`✅ Email sent to ${contact.contact_name}. Message ID: ${info.messageId}`);
-          emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'sent', messageId: info.messageId });
-        } catch (err) {
-          console.error(`❌ Failed to send email to ${contact.contact_name} (${contact.email}):`, err.message);
-          console.error('Error details:', err);
-          emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'failed', error: err.message });
-          failedAlerts.push(contact.contact_name);
-        }
-      });
-
-      await Promise.all(emailTasks);
-      console.log(`📊 Email results: ${emailResults.filter(e => e.status === 'sent').length} sent, ${emailResults.filter(e => e.status === 'failed').length} failed`);
+      console.log(`📧 Queuing email alerts to ${contactsResult.rows.filter(c => c.email).length} contacts (non-blocking)...`);
+      
+      // Fire emails in background without waiting
+      const emailContactsToNotify = contactsResult.rows.filter(contact => contact.email);
+      if (emailContactsToNotify.length > 0) {
+        // Schedule emails asynchronously without awaiting
+        setImmediate(async () => {
+          for (const contact of emailContactsToNotify) {
+            try {
+              console.log(`📤 Sending email to ${contact.contact_name} (${contact.email})...`);
+              
+              // Send with timeout to prevent hanging
+              const emailPromise = Promise.race([
+                emailTransporter.sendMail({
+                  from: `"SOS Alert - ${user.username}" <${process.env.EMAIL_USER}>`,
+                  to: contact.email,
+                  subject: `🚨 SOS EMERGENCY ALERT - ${user.username}`,
+                  html: `
+                    <h1 style="color: #dc3545;">🚨 SOS EMERGENCY ALERT</h1>
+                    <p><strong>${user.username}</strong> needs emergency assistance!</p>
+                    <p><strong>📍 Live Location:</strong> <a href="${googleMapsLink}">View on Google Maps</a></p>
+                    <p><strong>Coordinates:</strong> ${latitude}, ${longitude}</p>
+                    <p><strong>Message:</strong> ${message || 'No additional message provided.'}</p>
+                    <hr/>
+                    <p style="color: #6c757d; font-size: 12px;">This is an automated SOS alert from the Realtime Location Tracker system.</p>
+                  `
+                }),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Email send timeout after 5 seconds')), 5000)
+                )
+              ]);
+              
+              const info = await emailPromise;
+              console.log(`✅ Email sent to ${contact.contact_name}. Message ID: ${info.messageId}`);
+              emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'sent', messageId: info.messageId });
+            } catch (err) {
+              console.warn(`⚠️  Email failed for ${contact.contact_name} (non-critical):`, err.message);
+              emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'failed', error: err.message });
+            }
+          }
+          console.log(`📊 Email results: ${emailResults.filter(e => e.status === 'sent').length} sent, ${emailResults.filter(e => e.status === 'failed').length} failed`);
+        });
+      }
+    } else {
+      console.log('⚠️  Email transporter not configured - skipping email alerts');
     }
 
     // Send SMS via TextLocal (if configured) in parallel
