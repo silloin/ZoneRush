@@ -28,19 +28,26 @@ let emailTransporter;
 const emailPass = process.env.EMAIL_APP_PASSWORD || process.env.EMAIL_PASS;
 if (process.env.EMAIL_USER && emailPass) {
   emailTransporter = nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE || 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
     auth: {
       user: process.env.EMAIL_USER,
       pass: emailPass
     }
   });
   
-  // Verify email transporter connection
+  // Verify email transporter connection with timeout (non-blocking)
+  const verifyTimeout = setTimeout(() => {
+    console.warn('⚠️  Email verification timeout - continuing without email');
+  }, 5000);
+  
   emailTransporter.verify(function(error, success) {
+    clearTimeout(verifyTimeout);
     if (error) {
-      console.warn(`⚠️  Email transporter verification failed (App will continue natively): ${error.message}`);
+      console.warn(`⚠️  Email service verification failed (app will continue): ${error.message}`);
     } else {
-      console.log('✅ Email transporter is ready to send messages');
+      console.log('✅ Email service is ready for SOS alerts');
     }
   });
 } else {
@@ -330,24 +337,11 @@ exports.sendSOSAlert = async (req, res) => {
     });
     
     // Log SOS alert in database
-    try {
-      await pool.query(
-        `INSERT INTO sos_alerts (user_id, latitude, longitude, location, message)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [req.user.id, latitude, longitude, `Lat: ${latitude}, Lng: ${longitude}`, message || null]
-      );
-    } catch (dbError) {
-      // If location column doesn't exist, try without it
-      if (dbError.message.includes('column') || dbError.message.includes('does not exist')) {
-        await pool.query(
-          `INSERT INTO sos_alerts (user_id, latitude, longitude, message)
-           VALUES ($1, $2, $3, $4)`,
-          [req.user.id, latitude, longitude, message || null]
-        );
-      } else {
-        throw dbError;
-      }
-    }
+    await pool.query(
+      `INSERT INTO sos_alerts (user_id, latitude, longitude, message)
+       VALUES ($1, $2, $3, $4)`,
+      [req.user.id, latitude, longitude, message || null]
+    );
     
     return res.json({
       msg: 'SOS Alert sent successfully!',

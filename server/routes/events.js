@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
 // @access  Private
 router.post('/', auth, async (req, res) => {
   try {
-    const { name, description, goal_type, goal_value, start_date, end_date, start_location, end_location } = req.body;
+    const { name, description, goal_type, goal_value, start_date, end_date } = req.body;
     const creatorId = req.user.id;
 
     // Validation
@@ -32,49 +32,22 @@ router.post('/', auth, async (req, res) => {
     // Use current time if start_date not provided
     const startDate = start_date || new Date().toISOString();
 
-    // First, try to insert with location columns
-    let newEvent;
-    try {
-      newEvent = await pool.query(
-        `INSERT INTO events (name, description, goal_type, goal_value, start_date, end_date, participants, status, start_location, end_location)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING *`,
-        [
-          name,
-          description,
-          goal_type,
-          goal_value,
-          startDate,
-          end_date,
-          JSON.stringify([creatorId]), // Creator is automatically a participant
-          'active',
-          start_location || null,
-          end_location || null
-        ]
-      );
-    } catch (locationErr) {
-      // If location columns don't exist, try without them
-      if (locationErr.message.includes('column') || locationErr.message.includes('does not exist')) {
-        console.warn('Location columns not found, creating event without them');
-        newEvent = await pool.query(
-          `INSERT INTO events (name, description, goal_type, goal_value, start_date, end_date, participants, status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           RETURNING *`,
-          [
-            name,
-            description,
-            goal_type,
-            goal_value,
-            startDate,
-            end_date,
-            JSON.stringify([creatorId]),
-            'active'
-          ]
-        );
-      } else {
-        throw locationErr;
-      }
-    }
+    // Create event with creator as first participant
+    const newEvent = await pool.query(
+      `INSERT INTO events (name, description, goal_type, goal_value, start_date, end_date, participants, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [
+        name,
+        description,
+        goal_type,
+        goal_value,
+        startDate,
+        end_date,
+        JSON.stringify([creatorId]), // Creator is automatically a participant
+        'active'
+      ]
+    );
 
     res.json({
       msg: 'Event created successfully!',
@@ -140,7 +113,7 @@ router.post('/join/:eventId', auth, async (req, res) => {
 router.put('/:eventId', auth, async (req, res) => {
   try {
     const { eventId } = req.params;
-    const { name, description, goal_type, goal_value, start_date, end_date, status, start_location, end_location } = req.body;
+    const { name, description, goal_type, goal_value, start_date, end_date, status } = req.body;
     const userId = req.user.id;
 
     // Check if event exists
@@ -203,16 +176,6 @@ router.put('/:eventId', auth, async (req, res) => {
     if (status !== undefined) {
       updates.push(`status = $${paramCount}`);
       values.push(status);
-      paramCount++;
-    }
-    if (start_location !== undefined) {
-      updates.push(`start_location = $${paramCount}`);
-      values.push(start_location);
-      paramCount++;
-    }
-    if (end_location !== undefined) {
-      updates.push(`end_location = $${paramCount}`);
-      values.push(end_location);
       paramCount++;
     }
 

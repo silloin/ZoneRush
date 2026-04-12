@@ -131,19 +131,21 @@ const io = new Server(server, {
 });
 
 // Setup Redis adapter for horizontal scalability (optional)
-const subClient = redisClient.duplicate();
-subClient.connect()
-  .then(() => {
-    if (isRedisAvailable()) {
-      io.adapter(createAdapter(redisClient, subClient));
-      console.log('✅ Socket.io Redis adapter connected');
-    } else {
+if (isRedisAvailable()) {
+  const subClient = redisClient.duplicate();
+  subClient.connect()
+    .then(() => {
+      if (isRedisAvailable()) {
+        io.adapter(createAdapter(redisClient, subClient));
+        console.log('✅ Socket.io Redis adapter connected');
+      }
+    })
+    .catch(err => {
       console.log('⚠️ Redis not available - Socket.io running in single-server mode');
-    }
-  })
-  .catch(err => {
-    console.log('⚠️ Redis not available - Socket.io running in single-server mode');
-  });
+    });
+} else {
+  console.log('⚠️ Redis not configured - Socket.io running in single-server mode');
+}
 
 // Test the database connection
 pool.query('SELECT NOW()', (err, res) => {

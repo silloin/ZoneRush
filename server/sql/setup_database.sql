@@ -190,6 +190,8 @@ CREATE TABLE IF NOT EXISTS captured_tiles (
     tile_id INTEGER REFERENCES tiles(id) ON DELETE CASCADE,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     run_id INTEGER REFERENCES runs(id) ON DELETE SET NULL,
+    capture_count INTEGER DEFAULT 1,
+    first_captured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     captured_at TIMESTAMPTZ DEFAULT NOW(),
     last_captured_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(tile_id, user_id)
@@ -197,6 +199,12 @@ CREATE TABLE IF NOT EXISTS captured_tiles (
 
 -- Ensure last_captured_at column exists (for existing tables)
 ALTER TABLE captured_tiles ADD COLUMN IF NOT EXISTS last_captured_at TIMESTAMPTZ DEFAULT NOW();
+
+-- Ensure capture_count column exists (for existing tables)
+ALTER TABLE captured_tiles ADD COLUMN IF NOT EXISTS capture_count INTEGER DEFAULT 1;
+
+-- Ensure first_captured_at column exists (for existing tables)
+ALTER TABLE captured_tiles ADD COLUMN IF NOT EXISTS first_captured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 -- Create email_verifications table
 CREATE TABLE IF NOT EXISTS email_verifications (

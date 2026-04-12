@@ -14,7 +14,6 @@ import RunTracker from '../RunTracker';
 import IntervalTimer from '../IntervalTimer';
 import UserProfileModal from '../Chat/UserProfileModal';
 import './Map.css';
-
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_API_KEY;
 
 // Create arrow marker element for running
