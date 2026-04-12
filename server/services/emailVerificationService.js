@@ -1,118 +1,20 @@
 /**
  * Email Verification Service for ZoneRush
- * Handles sending verification emails and token management
+ * Handles sending verification emails and token management using Resend API
  */
 
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const pool = require('../config/db');
-const emailFallbackService = require('./emailFallbackService');
+const { sendVerificationEmail } = require('../utils/sendEmail');
 
 class EmailVerificationService {
   constructor() {
-    this.transporter = null;
-    this.initializeTransporter();
-  }
-
-  /**
-   * Initialize email transporter based on configuration
-   */
-  initializeTransporter() {
-    const emailService = process.env.EMAIL_SERVICE || 'gmail';
-    const emailUser = process.env.EMAIL_USER;
-    const emailPass = process.env.EMAIL_APP_PASSWORD; // Use App Password, NOT regular password
-
-    if (!emailUser || !emailPass) {
-      console.warn('⚠️  Email service not configured. Set EMAIL_USER and EMAIL_APP_PASSWORD in .env');
-      return;
-    }
-
-    // Configure transporter based on service
-    if (emailService === 'gmail' || emailService === 'mail' || emailService === 'google') {
-      this.transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: emailUser,
-          pass: emailPass
-        },
-        // Force IPv4 and disable IPv6 to avoid ENETUNREACH errors on Render
-        family: 4, // Force IPv4 only
-        tls: {
-          rejectUnauthorized: false
-        },
-        // Additional connection settings for Render compatibility
-        connectionTimeout: 30000,
-        greetingTimeout: 15000,
-        socketTimeout: 15000,
-        // Add pool configuration for better reliability
-        pool: true,
-        maxConnections: 1,
-        maxMessages: 5
-      });
-    } else if (emailService === 'ethereal') {
-      // Ethereal Email - Free testing service (emails don't actually send, but you can view them)
-      console.log('📧 Using Ethereal Email for testing...');
-      nodemailer.createTestAccount((err, account) => {
-        if (err) {
-          console.error('❌ Failed to create Ethereal test account:', err);
-          return;
-        }
-        this.transporter = nodemailer.createTransport({
-          host: 'smtp.ethereal.email',
-          port: 587,
-          secure: false,
-          auth: {
-            user: account.user,
-            pass: account.pass
-          }
-        });
-        console.log('✅ Ethereal Email configured! Preview emails at: https://ethereal.email');
-      });
-    } else if (emailService === 'sendgrid') {
-      this.transporter = nodemailer.createTransport({
-        host: 'smtp.sendgrid.net',
-        port: 587,
-        auth: {
-          user: 'apikey',
-          pass: process.env.SENDGRID_API_KEY
-        }
-      });
-    } else if (emailService === 'mailgun') {
-      this.transporter = nodemailer.createTransport({
-        host: 'smtp.mailgun.org',
-        port: 587,
-        auth: {
-          user: process.env.MAILGUN_USER,
-          pass: process.env.MAILGUN_PASSWORD
-        }
-      });
+    // Check Resend configuration
+    if (process.env.RESEND_API_KEY) {
+      console.log(' Resend email service configured for verification emails');
     } else {
-      // Custom SMTP
-      this.transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-          user: emailUser,
-          pass: emailPass
-        }
-      });
+      console.warn(' RESEND_API_KEY not configured - email verification disabled');
     }
-
-    // Verify connection with timeout (non-blocking)
-    const verifyTimeout = setTimeout(() => {
-      console.warn('Email verification timeout - will attempt on-demand');
-    }, 30000);
-    
-    this.transporter.verify((error, success) => {
-      clearTimeout(verifyTimeout);
-      if (error) {
-        console.warn(`⚠️  Email verification failed: ${error.message}`);
-        console.log('📧 Emails will attempt to send on-demand (SOS alerts, etc.)');
-      } else {
-        console.log('✅ Email service configured and verified successfully');
-      }
-    });
   }
 
   /**
@@ -155,13 +57,15 @@ class EmailVerificationService {
    * Send verification email
    */
   async sendVerificationEmail(userId, email, username) {
-    if (!this.transporter) {
-      console.warn('⚠️  Email transporter not initialized - skipping email send');
-      // Still create verification record, just don't send email
+    // Check if email is disabled
+    if (process.env.DISABLE_EMAIL === 'true') {
+      console.log('Email disabled - skipping verification email');
+      // Still create verification record
+      const verification = await this.createVerificationRecord(userId, email);
       return {
         success: true,
         messageId: 'email-disabled',
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
+        expiresAt: verification.expires_at
       };
     }
 
@@ -173,43 +77,25 @@ class EmailVerificationService {
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
       const verificationLink = `${frontendUrl}/verify-email?token=${verification.token}`;
 
-      // Create email content
-      const mailOptions = {
-        from: `"ZoneRush" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: '🏃‍♂️ Verify Your ZoneRush Account',
-        html: this.createVerificationEmailTemplate(username, verificationLink),
-        text: `Welcome to ZoneRush!\n\nPlease verify your email by clicking this link:\n${verificationLink}\n\nThis link expires in 24 hours.\n\nIf you didn't create an account, please ignore this email.`
-      };
-
-      // Send email with timeout
-      const info = await Promise.race([
-        this.transporter.sendMail(mailOptions),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Email send timeout')), 15000)
-        )
-      ]);
-      console.log('✅ Verification email sent:', info.messageId);
+      // Send email using Resend
+      const result = await sendVerificationEmail(email, username, verificationLink);
+      console.log(' Verification email sent:', result.id);
 
       return {
         success: true,
-        messageId: info.messageId,
+        messageId: result.id,
         expiresAt: verification.expires_at
       };
     } catch (error) {
-      console.warn('Gmail email failed, trying fallback service:', error.message);
-      // Try fallback service
-      try {
-        return await emailFallbackService.sendVerificationEmail(userId, email, username);
-      } catch (fallbackError) {
-        console.warn('Fallback email also failed:', fallbackError.message);
-        return {
-          success: true,
-          messageId: 'all-email-failed',
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-          note: 'All email services failed - app continues without email'
-        };
-      }
+      console.warn(' Verification email failed (non-fatal):', error.message);
+      // Still create verification record and continue
+      const verification = await this.createVerificationRecord(userId, email);
+      return {
+        success: true,
+        messageId: 'email-failed',
+        expiresAt: verification.expires_at,
+        note: 'Email failed but verification record created'
+      };
     }
   }
 
