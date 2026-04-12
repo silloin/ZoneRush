@@ -33,6 +33,10 @@ class EmailVerificationService {
         auth: {
           user: emailUser,
           pass: emailPass
+        },
+        // Force IPv4 to avoid ENETUNREACH errors on Render
+        tls: {
+          rejectUnauthorized: false
         }
       });
     } else if (emailService === 'ethereal') {

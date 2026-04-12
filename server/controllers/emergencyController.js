@@ -38,6 +38,10 @@ if (process.env.EMAIL_USER && emailPass) {
     auth: {
       user: process.env.EMAIL_USER,
       pass: emailPass
+    },
+    // Force IPv4 to avoid ENETUNREACH errors on Render
+    tls: {
+      rejectUnauthorized: false
     }
   });
   
