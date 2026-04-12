@@ -8,9 +8,9 @@ const getApiUrl = () => {
     return import.meta.env.VITE_API_URL;
   }
   
-  // For production without explicit URL, use the Render backend URL
+  // For production without explicit URL, use environment variable or fallback to Render backend URL
   if (import.meta.env.PROD) {
-    return 'https://zonerush-api.onrender.com/api';
+    return import.meta.env.VITE_API_URL || 'https://zonerush-api.onrender.com/api';
   }
   
   // For development, use relative URL (Vite proxy will forward to localhost:5000)

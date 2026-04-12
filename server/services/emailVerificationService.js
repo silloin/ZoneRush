@@ -37,7 +37,11 @@ class EmailVerificationService {
         // Force IPv4 to avoid ENETUNREACH errors on Render
         tls: {
           rejectUnauthorized: false
-        }
+        },
+        // Additional connection settings for Render compatibility
+        connectionTimeout: 30000,
+        greetingTimeout: 10000,
+        socketTimeout: 10000
       });
     } else if (emailService === 'ethereal') {
       // Ethereal Email - Free testing service (emails don't actually send, but you can view them)
@@ -91,8 +95,8 @@ class EmailVerificationService {
 
     // Verify connection with timeout (non-blocking)
     const verifyTimeout = setTimeout(() => {
-      console.warn('⚠️  Email verification timeout - emails may not work, but app continues');
-    }, 10000);
+      console.warn('Email verification timeout - will attempt on-demand');
+    }, 30000);
     
     this.transporter.verify((error, success) => {
       clearTimeout(verifyTimeout);

@@ -36,6 +36,7 @@ const messagesRoutes = require('./routes/messages');
 const globalChatRoutes = require('./routes/globalChat');
 const notificationsRoutes = require('./routes/notifications');
 const emergencyRoutes = require('./routes/emergency');
+const emailTestRoutes = require('./routes/emailTest');
 const multiplayerSocketHandlers = require('./multiplayerSocketHandlers');
 const sosSocketHandlers = require('./sosSocketHandlers');
 
@@ -260,6 +261,9 @@ app.use('/api/notifications', notificationsRoutes);
 
 // Emergency SOS System Routes
 app.use('/api/emergency', emergencyRoutes);
+
+// Email Test Routes (for debugging)
+app.use('/api/email-test', emailTestRoutes);
 
 // ============================================
 // HEALTH CHECK ENDPOINTS (Production monitoring)

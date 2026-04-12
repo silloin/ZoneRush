@@ -16,12 +16,12 @@ export const getSocketURL = () => {
   
   // 2. Check if API URL is set (use same host for socket)
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    return import.meta.env.VITE_API_URL.replace('/api', '');
   }
   
-  // 3. Production build without explicit socket URL
+  // 3. Production build - use environment variable or fallback to Render backend URL
   if (import.meta.env.PROD) {
-    return window.location.origin; // Same origin as frontend
+    return import.meta.env.VITE_SOCKET_URL || 'https://zonerush-api.onrender.com';
   }
   
   // 4. Local development - use localhost backend

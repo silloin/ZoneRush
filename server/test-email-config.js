@@ -18,13 +18,20 @@ async function testEmail() {
     return;
   }
 
-  // Create transporter
+  // Create transporter with Render-compatible settings
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: emailUser,
       pass: emailPass
-    }
+    },
+    // Force IPv4 and add timeouts for Render compatibility
+    tls: {
+      rejectUnauthorized: false
+    },
+    connectionTimeout: 30000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000
   });
 
   try {
