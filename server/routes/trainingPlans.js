@@ -90,11 +90,25 @@ router.put('/workout/:workoutId', auth, async (req, res) => {
     
     console.log('Completing workout:', workoutId, 'for user:', req.user.id);
     
-    // Get current active plan
-    const planResult = await pool.query(
-      'SELECT * FROM training_plans WHERE user_id = $1 AND is_active = true ORDER BY start_date DESC LIMIT 1', 
-      [req.user.id]
-    );
+    // Get current active plan - with fallback if is_active column doesn't exist
+    let planResult;
+    try {
+      planResult = await pool.query(
+        `SELECT * FROM training_plans WHERE user_id = $1 AND is_active = true ORDER BY start_date DESC LIMIT 1`, 
+        [req.user.id]
+      );
+    } catch (err) {
+      if (err.message.includes('is_active')) {
+        console.log('Column is_active does not exist yet, trying without it...');
+        // Fallback: query without is_active column
+        planResult = await pool.query(
+          `SELECT * FROM training_plans WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`, 
+          [req.user.id]
+        );
+      } else {
+        throw err;
+      }
+    }
     
     if (planResult.rows.length === 0) {
       return res.status(404).json({ msg: 'Training plan not found' });
@@ -180,8 +194,8 @@ router.put('/workout/:workoutId', auth, async (req, res) => {
     console.log('Workout completed successfully');
     res.json(updatedPlan.rows[0]);
   } catch (err) {
-    console.error('Error completing workout:', err.message);
-    res.status(500).json({ error: 'Server Error', details: err.message });
+    console.error(err.message);
+    res.status(500).send('Server Error');
   }
 });
 
@@ -214,3 +228,4 @@ function generateWorkouts(planType) {
 }
 
 module.exports = router;
+module.exports.generateWorkouts = generateWorkouts;
