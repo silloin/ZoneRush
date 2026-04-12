@@ -1,8 +1,9 @@
 const pool = require('../config/db');
 const twilio = require('twilio');
 const firebasePush = require('../utils/firebasePush');
+const nodemailer = require('nodemailer');
 const axios = require('axios');
-const { sendSOSEmail } = require('../utils/sendEmail');
+const emailFallbackService = require('../services/emailFallbackService');
 
 // Initialize Twilio (if credentials exist)
 let twilioClient;
@@ -18,16 +19,72 @@ const textLocalConfig = {
 };
 
 if (textLocalConfig.enabled) {
-  console.log(' TextLocal SMS initialized for SOS alerts');
+  console.log('✅ TextLocal SMS initialized for SOS alerts');
 } else {
-  console.log(' TextLocal SMS not configured - set TEXTLOCAL_API_KEY in .env');
+  console.log('⚠️  TextLocal SMS not configured - set TEXTLOCAL_API_KEY in .env');
 }
 
-// Check Resend email configuration
-if (process.env.RESEND_API_KEY) {
-  console.log(' Resend email service initialized for SOS alerts');
+// Initialize Nodemailer for email alerts
+let emailTransporter;
+const emailPass = process.env.EMAIL_APP_PASSWORD || process.env.EMAIL_PASS;
+const emailService = process.env.EMAIL_SERVICE || 'gmail';
+if (process.env.EMAIL_USER && emailPass) {
+  // Support multiple email services
+  let transportConfig;
+  
+  if (emailService === 'resend') {
+    transportConfig = {
+      host: 'smtp.resend.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: 'resend',
+        pass: process.env.RESEND_API_KEY
+      }
+    };
+  } else if (emailService === 'mail' || emailService === 'google' || emailService === 'gmail') {
+    transportConfig = {
+      service: 'gmail',
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: emailPass
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    };
+  } else {
+    transportConfig = {
+      service: emailService,
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: emailPass
+      }
+    };
+  }
+  
+  emailTransporter = nodemailer.createTransport(transportConfig);
+  
+  // Verify email transporter connection with timeout (non-blocking)
+  const verifyTimeout = setTimeout(() => {
+    console.warn('⚠️  Email verification timeout - will attempt on-demand');
+  }, 10000);
+  
+  emailTransporter.verify(function(error, success) {
+    clearTimeout(verifyTimeout);
+    if (error) {
+      console.warn(`⚠️  Email verification failed: ${error.message}`);
+      console.log('📧 SOS emails will attempt to send when triggered');
+    } else {
+      console.log('✅ Email service verified and ready for SOS alerts');
+    }
+  });
 } else {
-  console.log(' Resend not configured - set RESEND_API_KEY in .env');
+  console.log('⚠️  Email not configured - set EMAIL_USER and EMAIL_APP_PASSWORD in .env');
 }
 
 // @route   GET api/emergency/contacts
@@ -180,9 +237,9 @@ exports.sendSOSAlert = async (req, res) => {
     const emailResults = [];
     const smsResults = [];
 
-    // Send Email Alerts using Resend (if configured) - FIRE AND FORGET (non-blocking)
-    if (process.env.RESEND_API_KEY && process.env.DISABLE_EMAIL !== 'true') {
-      console.log(` Queuing email alerts to ${contactsResult.rows.filter(c => c.email).length} contacts (non-blocking)...`);
+    // Send Email Alerts (if configured) - FIRE AND FORGET (non-blocking)
+    if (emailTransporter) {
+      console.log(`📧 Queuing email alerts to ${contactsResult.rows.filter(c => c.email).length} contacts (non-blocking)...`);
       
       // Fire emails in background without waiting
       const emailContactsToNotify = contactsResult.rows.filter(contact => contact.email);
@@ -191,27 +248,54 @@ exports.sendSOSAlert = async (req, res) => {
         setImmediate(async () => {
           for (const contact of emailContactsToNotify) {
             try {
-              console.log(` Sending email to ${contact.contact_name} (${contact.email})...`);
+              console.log(`📤 Sending email to ${contact.contact_name} (${contact.email})...`);
               
-              const result = await sendSOSEmail(
-                contact.email,
-                user,
-                { lat: latitude, lng: longitude },
-                message
-              );
+              // Send with timeout to prevent hanging
+              const emailPromise = Promise.race([
+                emailTransporter.sendMail({
+                  from: `"SOS Alert - ${user.username}" <${process.env.EMAIL_USER}>`,
+                  to: contact.email,
+                  subject: `🚨 SOS EMERGENCY ALERT - ${user.username}`,
+                  html: `
+                    <h1 style="color: #dc3545;">🚨 SOS EMERGENCY ALERT</h1>
+                    <p><strong>${user.username}</strong> needs emergency assistance!</p>
+                    <p><strong>📍 Live Location:</strong> <a href="${googleMapsLink}">View on Google Maps</a></p>
+                    <p><strong>Coordinates:</strong> ${latitude}, ${longitude}</p>
+                    <p><strong>Message:</strong> ${message || 'No additional message provided.'}</p>
+                    <hr/>
+                    <p style="color: #6c757d; font-size: 12px;">This is an automated SOS alert from the Realtime Location Tracker system.</p>
+                  `
+                }),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Email send timeout after 5 seconds')), 5000)
+                )
+              ]);
               
-              console.log(` Email sent to ${contact.contact_name}. ID: ${result.id}`);
-              emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'sent', messageId: result.id });
+              const info = await emailPromise;
+              console.log(`✅ Email sent to ${contact.contact_name}. Message ID: ${info.messageId}`);
+              emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'sent', messageId: info.messageId });
             } catch (err) {
-              console.warn(` Email failed for ${contact.contact_name}:`, err.message);
-              emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'failed', error: err.message });
+              console.warn(`Gmail email failed for ${contact.contact_name}, trying fallback:`, err.message);
+              // Try fallback email service
+              try {
+                const fallbackResult = await emailFallbackService.sendSOSEmail(contact, user, location);
+                if (fallbackResult.success) {
+                  console.log(`Fallback email sent to ${contact.contact_name}`);
+                  emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'sent-fallback', messageId: fallbackResult.messageId });
+                } else {
+                  emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'failed', error: 'All email services failed' });
+                }
+              } catch (fallbackErr) {
+                console.warn(`Fallback email also failed for ${contact.contact_name}:`, fallbackErr.message);
+                emailResults.push({ contact: contact.contact_name, email: contact.email, status: 'failed', error: 'All email services failed' });
+              }
             }
           }
-          console.log(` Email results: ${emailResults.filter(e => e.status === 'sent').length} sent, ${emailResults.filter(e => e.status === 'failed').length} failed`);
+          console.log(`📊 Email results: ${emailResults.filter(e => e.status === 'sent').length} sent, ${emailResults.filter(e => e.status === 'failed').length} failed`);
         });
       }
     } else {
-      console.log(' Resend not configured or disabled - skipping email alerts');
+      console.log('⚠️  Email transporter not configured - skipping email alerts');
     }
 
     // Send SMS via TextLocal (if configured) in parallel

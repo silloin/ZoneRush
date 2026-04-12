@@ -1,63 +1,96 @@
 const express = require('express');
-const { sendEmail } = require('../utils/sendEmail');
+const nodemailer = require('nodemailer');
 const router = express.Router();
 
 // Test email endpoint for debugging
 router.post('/test-email', async (req, res) => {
   try {
-    console.log('Testing Resend email configuration...');
+    console.log('Testing email configuration...');
     
-    if (!process.env.RESEND_API_KEY) {
+    const emailUser = process.env.EMAIL_USER;
+    const emailPass = process.env.EMAIL_APP_PASSWORD;
+    
+    if (!emailUser || !emailPass) {
       return res.status(400).json({
         success: false,
-        error: 'Resend API key not configured',
+        error: 'Email credentials not configured',
         config: {
-          RESEND_API_KEY: !!process.env.RESEND_API_KEY,
-          DISABLE_EMAIL: process.env.DISABLE_EMAIL === 'true'
+          EMAIL_USER: !!emailUser,
+          EMAIL_APP_PASSWORD: !!emailPass
         }
       });
     }
 
-    const testEmail = req.body.email || process.env.RESEND_FROM_EMAIL || 'test@example.com';
+    // Create transporter with Render-compatible settings
+    let transportConfig;
+    const emailService = process.env.EMAIL_SERVICE || 'gmail';
     
-    // Send test email using Resend
-    const result = await sendEmail({
-      to: testEmail,
-      subject: 'Email Test - ZoneRush Backend',
+    if (emailService === 'resend') {
+      transportConfig = {
+        host: 'smtp.resend.com',
+        port: 587,
+        secure: false,
+        auth: {
+          user: 'resend',
+          pass: process.env.RESEND_API_KEY
+        }
+      };
+    } else {
+      transportConfig = {
+        service: 'gmail',
+        auth: {
+          user: emailUser,
+          pass: emailPass
+        },
+        tls: {
+          rejectUnauthorized: false
+        },
+        connectionTimeout: 30000,
+        greetingTimeout: 10000,
+        socketTimeout: 10000
+      };
+    }
+    
+    const transporter = nodemailer.createTransport(transportConfig);
+
+    // Test connection
+    await transporter.verify();
+    
+    // Send test email
+    const info = await transporter.sendMail({
+      from: `"ZoneRush Test" <${emailUser}>`,
+      to: emailUser,
+      subject: 'Email Test - Render Environment',
+      text: 'This is a test email from your ZoneRush deployment on Render.',
       html: `
-        <h2>Resend Email Test Successful! </h2>
-        <p>This email was sent from your ZoneRush backend using Resend API.</p>
+        <h2>Email Test Successful!</h2>
+        <p>This email was sent from your ZoneRush backend deployed on Render.</p>
         <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
         <p><strong>Environment:</strong> ${process.env.NODE_ENV || 'unknown'}</p>
-        <p><strong>Backend URL:</strong> ${process.env.RENDER_EXTERNAL_URL || 'localhost'}</p>
-        <p><strong>Email Service:</strong> Resend API</p>
-        <hr>
-        <p style="color: #6c757d; font-size: 12px;">
-          If you receive this email, your Resend configuration is working correctly!
-        </p>
+        <p><strong>Service:</strong> ${process.env.EMAIL_SERVICE || 'gmail'}</p>
       `
     });
 
     res.json({
       success: true,
-      message: 'Test email sent successfully via Resend',
-      messageId: result.id,
+      message: 'Test email sent successfully',
+      messageId: info.messageId,
       config: {
-        RESEND_API_KEY: !!process.env.RESEND_API_KEY,
-        DISABLE_EMAIL: process.env.DISABLE_EMAIL === 'true',
-        RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
+        EMAIL_USER: emailUser,
+        EMAIL_SERVICE: process.env.EMAIL_SERVICE || 'gmail'
       }
     });
 
   } catch (error) {
-    console.error('Resend email test failed:', error);
+    console.error('Email test failed:', error);
     res.status(500).json({
       success: false,
       error: error.message,
       details: error.code || 'Unknown error',
       config: {
-        RESEND_API_KEY: !!process.env.RESEND_API_KEY,
-        DISABLE_EMAIL: process.env.DISABLE_EMAIL === 'true'
+        EMAIL_USER: !!process.env.EMAIL_USER,
+        EMAIL_APP_PASSWORD: !!process.env.EMAIL_APP_PASSWORD,
+        EMAIL_SERVICE: process.env.EMAIL_SERVICE || 'gmail'
       }
     });
   }
@@ -66,11 +99,10 @@ router.post('/test-email', async (req, res) => {
 // Check email configuration
 router.get('/config', (req, res) => {
   res.json({
-    RESEND_API_KEY: process.env.RESEND_API_KEY ? 'configured' : 'missing',
-    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
-    DISABLE_EMAIL: process.env.DISABLE_EMAIL === 'true' ? 'disabled' : 'enabled',
-    NODE_ENV: process.env.NODE_ENV || 'development',
-    emailService: 'Resend API'
+    EMAIL_USER: process.env.EMAIL_USER ? 'configured' : 'missing',
+    EMAIL_APP_PASSWORD: process.env.EMAIL_APP_PASSWORD ? 'configured' : 'missing',
+    EMAIL_SERVICE: process.env.EMAIL_SERVICE || 'gmail',
+    NODE_ENV: process.env.NODE_ENV || 'development'
   });
 });
 
