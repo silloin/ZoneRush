@@ -34,6 +34,6 @@ export const getSocketURL = () => {
 export const getSocketOptions = () => ({
   transports: ['websocket', 'polling'],
   withCredentials: true,
-  timeout: 10000,
+  timeout: 60000, // 60 seconds instead of 10s to account for Render cold starts
   forceNew: true
 });

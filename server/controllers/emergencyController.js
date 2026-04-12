@@ -331,9 +331,9 @@ exports.sendSOSAlert = async (req, res) => {
     
     // Log SOS alert in database
     await pool.query(
-      `INSERT INTO sos_alerts (user_id, latitude, longitude, message, contacts_notified)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [req.user.id, latitude, longitude, message || null, JSON.stringify([...sentAlerts, ...pushResults.map(p => p.contact), ...emailResults.map(e => e.contact), ...smsResults.map(s => s.contact)])]
+      `INSERT INTO sos_alerts (user_id, location, message)
+       VALUES ($1, ST_SetSRID(ST_MakePoint($3, $2), 4326), $4)`,
+      [req.user.id, latitude, longitude, message || null]
     );
     
     return res.json({

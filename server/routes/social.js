@@ -28,7 +28,7 @@ router.get('/feed', auth, async (req, res) => {
     const feed = await pool.query(
       `SELECT p.*, u.username, r.distance, r.duration, 
        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes,
-       (SELECT COUNT(*) FROM comments WHERE (post_id = p.id OR run_id = p.id)) as comments,
+       (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comments,
        EXISTS (SELECT 1 FROM likes WHERE post_id = p.id AND user_id = $1) as is_liked
        FROM posts p 
        JOIN users u ON p.user_id = u.id 
