@@ -132,8 +132,14 @@ export const AuthProvider = ({ children }) => {
     try {
       await axios.post('/auth/logout');
       setUser(null);
+      // Clear localStorage token to properly logout
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
     } catch (error) {
       console.error('❌ Logout failed:', error);
+      // Even if logout fails, clear localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
     }
   };
 

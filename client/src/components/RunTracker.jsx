@@ -20,6 +20,7 @@ const RunTracker = ({
   const [gpsStatus, setGpsStatus] = useState('idle'); // idle, searching, active, error
   const [isMinimized, setIsMinimized] = useState(false); // Minimized state
   const [isSaving, setIsSaving] = useState(false); // Track saving state
+  const [arrowRotation, setArrowRotation] = useState(0); // Track arrow rotation for accurate rendering
   const watchId = useRef(null);
   const timerId = useRef(null);
   const setRunStatsRef = useRef(setRunStats);
@@ -72,9 +73,9 @@ const RunTracker = ({
           
           setGpsStatus('active');
           
-          // Increased accuracy filter to 200m to accept more GPS readings
-          // Mobile GPS accuracy varies widely (50-200m is normal)
-          if (accuracy > 200) {
+          // Changed accuracy filter to 150m for better GPS readings
+          // Mobile GPS accuracy varies widely (50-150m is normal)
+          if (accuracy > 150) {
             console.warn('⚠️ GPS accuracy too low:', accuracy, 'meters');
             return;
           }
@@ -340,7 +341,7 @@ const RunTracker = ({
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg shadow-xl text-white">
+    <div className="fixed md:relative bottom-4 left-4 right-4 md:bottom-auto md:left-auto md:right-auto z-40 bg-gray-800 rounded-lg shadow-xl text-white">
       {/* Header with minimize button */}
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
         <h3 className="text-lg font-bold flex items-center gap-2">
@@ -409,7 +410,7 @@ const RunTracker = ({
             <div className="flex flex-col items-center p-4 bg-gradient-to-br from-gray-700 to-gray-800 rounded border border-orange-500/20">
               <MapIcon className="mb-2 text-orange-400" />
               <span className="text-sm text-gray-400">Tiles Captured</span>
-              <span className="text-2xl font-bold">{route.length > 0 ? new Set(route.map(p => ngeohash.encode(p.lat, p.lng, 7))).size : 0}</span>
+              <span className="text-2xl font-bold">{route.length > 0 ? new Set(route.filter(p => p.lat && p.lng).map(p => ngeohash.encode(p.lat, p.lng, 6))).size : 0}</span>
             </div>
           </div>
 

@@ -69,7 +69,8 @@ class AchievementService {
 
   // Get all achievements
   async getAllAchievements() {
-    const query = 'SELECT * FROM achievements';
+    // Add DISTINCT to prevent duplicate achievements
+    const query = 'SELECT DISTINCT ON (id) * FROM achievements ORDER BY id';
     const result = await pool.query(query);
     return result.rows;
   }

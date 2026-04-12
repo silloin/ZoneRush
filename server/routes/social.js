@@ -28,7 +28,7 @@ router.get('/feed', auth, async (req, res) => {
     const feed = await pool.query(
       `SELECT p.*, u.username, r.distance, r.duration, 
        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes,
-       (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comments,
+       (SELECT COUNT(*) FROM comments WHERE (post_id = p.id OR run_id = p.id)) as comments,
        EXISTS (SELECT 1 FROM likes WHERE post_id = p.id AND user_id = $1) as is_liked
        FROM posts p 
        JOIN users u ON p.user_id = u.id 
@@ -40,15 +40,33 @@ router.get('/feed', auth, async (req, res) => {
     // Fetch comments for each post
     const feedWithComments = await Promise.all(
       feed.rows.map(async (post) => {
-        const commentsRes = await pool.query(
-          `SELECT c.id, c.user_id, c.post_id, c.text as comment_text, c.created_at, u.username 
-           FROM comments c 
-           JOIN users u ON c.user_id = u.id 
-           WHERE c.post_id = $1 
-           ORDER BY c.created_at ASC 
-           LIMIT 10`,
-          [post.id]
-        );
+        let commentsRes = null;
+        
+        try {
+          // Try new schema first (post_id, text columns)
+          commentsRes = await pool.query(
+            `SELECT c.id, c.user_id, c.post_id, c.text as comment_text, c.text, c.created_at, u.username 
+             FROM comments c 
+             JOIN users u ON c.user_id = u.id 
+             WHERE c.post_id = $1 
+             ORDER BY c.created_at ASC 
+             LIMIT 10`,
+            [post.id]
+          );
+        } catch (err) {
+          // Try old schema (run_id, comment_text columns)
+          console.log('Trying old schema for feed comments...');
+          commentsRes = await pool.query(
+            `SELECT c.id, c.user_id, c.run_id as post_id, c.comment_text as comment_text, c.comment_text as text, c.created_at, u.username 
+             FROM comments c 
+             JOIN users u ON c.user_id = u.id 
+             WHERE c.run_id = $1 
+             ORDER BY c.created_at ASC 
+             LIMIT 10`,
+            [post.id]
+          );
+        }
+        
         return {
           ...post,
           commentsList: commentsRes.rows
@@ -107,14 +125,55 @@ router.post('/comment/:postId', auth, async (req, res) => {
   }
   
   try {
-    const comment = await pool.query(
-      'INSERT INTO comments (user_id, post_id, text, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
-      [req.user.id, postId, text]
-    );
-    res.json(comment.rows[0]);
+    // First, ensure the comments table has the correct columns
+    // Try inserting with post_id and text columns (new schema)
+    let comment = null;
+    let commentId = null;
+    
+    try {
+      const result = await pool.query(
+        `INSERT INTO comments (user_id, post_id, text, created_at) 
+         VALUES ($1, $2, $3, NOW()) 
+         RETURNING id, user_id, post_id, text, created_at`,
+        [req.user.id, postId, text]
+      );
+      comment = result.rows[0];
+      commentId = comment.id;
+    } catch (err) {
+      // If that fails, try with run_id and comment_text (old schema)
+      console.log('Trying old schema for comments...');
+      const result = await pool.query(
+        `INSERT INTO comments (user_id, run_id, comment_text, created_at) 
+         VALUES ($1, $2, $3, NOW()) 
+         RETURNING id, user_id, run_id as post_id, comment_text as text, created_at`,
+        [req.user.id, postId, text]
+      );
+      comment = result.rows[0];
+      commentId = comment.id;
+    }
+    
+    // Fetch the username for the response
+    const userRes = await pool.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
+    const username = userRes.rows[0]?.username || 'Unknown';
+    
+    // Return comment with full data
+    res.json({
+      id: comment.id,
+      user_id: comment.user_id,
+      post_id: comment.post_id,
+      text: comment.text,
+      comment_text: comment.text,
+      created_at: comment.created_at,
+      username: username
+    });
   } catch (err) {
     console.error('POST /social/comment error:', err.message);
-    res.status(500).json({ msg: 'Server Error', error: err.message });
+    console.error('Post ID:', postId, 'User:', req.user.id, 'Text:', text);
+    res.status(500).json({ 
+      msg: 'Server Error', 
+      error: err.message,
+      details: 'Failed to add comment. Please check the database schema.'
+    });
   }
 });
 
@@ -124,11 +183,21 @@ router.post('/comment/:postId', auth, async (req, res) => {
 router.get('/comments/:postId', async (req, res) => {
   try {
     const postId = parseInt(req.params.postId, 10);
-    const comments = await pool.query(
-      'SELECT c.id, c.user_id, c.post_id, c.text as comment_text, c.created_at, u.username FROM comments c JOIN users u ON c.user_id = u.id WHERE c.post_id = $1 ORDER BY c.created_at DESC',
+    
+    // Query both schemas in a single query using UNION
+    const result = await pool.query(
+      `SELECT c.id, c.user_id, COALESCE(c.post_id, c.run_id) as post_id, 
+              COALESCE(c.text, c.comment_text) as text, 
+              COALESCE(c.comment_text, c.text) as comment_text, 
+              c.created_at, u.username 
+       FROM comments c 
+       JOIN users u ON c.user_id = u.id 
+       WHERE c.post_id = $1 OR c.run_id = $1 
+       ORDER BY c.created_at DESC`,
       [postId]
     );
-    res.json(comments.rows);
+    
+    res.json(result.rows);
   } catch (err) {
     console.error('GET /social/comments error:', err.message);
     res.status(500).json({ msg: 'Server Error', error: err.message });

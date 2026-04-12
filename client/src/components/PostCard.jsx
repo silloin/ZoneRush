@@ -2,7 +2,7 @@ import React from 'react';
 import { Heart, MessageSquare, Share2, Edit2, Trash2, Clock, Send, UserPlus } from 'lucide-react';
 import SendFriendRequestButton from './Chat/SendFriendRequestButton';
 
-const PostCard = ({ post, currentUser, onLike, onComment, onDelete, onUpdate, commentText, setCommentText, onUpdateComment, onDeleteComment }) => {
+const PostCard = ({ post, currentUser, onLike, onComment, onDelete, onUpdate, commentText, setCommentText, onUpdateComment, onDeleteComment, isLikePending }) => {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editCaption, setEditCaption] = React.useState(post.caption);
   const [editingCommentId, setEditingCommentId] = React.useState(null);
@@ -16,7 +16,7 @@ const PostCard = ({ post, currentUser, onLike, onComment, onDelete, onUpdate, co
 
   const handleEditComment = (comment) => {
     setEditingCommentId(comment.id);
-    setEditCommentText(comment.comment_text);
+    setEditCommentText(comment.text || comment.comment_text || '');
   };
 
   const handleSaveComment = async (commentId) => {
@@ -106,7 +106,8 @@ const PostCard = ({ post, currentUser, onLike, onComment, onDelete, onUpdate, co
       <div className="flex items-center space-x-6 py-3 border-t border-gray-700/50">
         <button
           onClick={() => onLike(post.id, post.is_liked)}
-          className={`flex items-center space-x-1.5 transition-all ${post.is_liked ? 'text-rose-500 font-bold' : 'text-gray-400 hover:text-rose-500'}`}
+          disabled={isLikePending}
+          className={`flex items-center space-x-1.5 transition-all ${isLikePending ? 'opacity-50 cursor-not-allowed' : ''} ${post.is_liked ? 'text-rose-500 font-bold' : 'text-gray-400 hover:text-rose-500'}`}
         >
           <Heart size={18} fill={post.is_liked ? 'currentColor' : 'none'} />
           <span className="text-sm">{post.likes || 0}</span>
@@ -185,9 +186,9 @@ const PostCard = ({ post, currentUser, onLike, onComment, onDelete, onUpdate, co
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <p className="text-sm">
-                          <span className="font-bold text-gray-200">{comment.username}</span>{' '}
-                          <span className="text-gray-300">{comment.comment_text}</span>
+                          <span className="font-bold text-blue-400">{comment.username || 'User'}</span>
                         </p>
+                        <p className="text-gray-300 text-sm mt-1">{comment.text || comment.comment_text || '(empty comment)'}</p>
                         <p className="text-xs text-gray-500 mt-1">
                           {new Date(comment.created_at).toLocaleString()}
                         </p>

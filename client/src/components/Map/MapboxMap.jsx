@@ -13,7 +13,6 @@ import { getSocketURL, getSocketOptions } from '../../services/socketConfig';
 import RunTracker from '../RunTracker';
 import IntervalTimer from '../IntervalTimer';
 import UserProfileModal from '../Chat/UserProfileModal';
-import SOSButton from '../SOSButton';
 import './Map.css';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_API_KEY;
@@ -1331,7 +1330,13 @@ const MapboxMap = () => {
     return () => {
       if (socket.current) socket.current.disconnect();
       if (watchId.current) navigator.geolocation.clearWatch(watchId.current);
-      if (map.current) map.current.remove();
+      if (map.current) {
+        try {
+          map.current.remove();
+        } catch (e) {
+          console.warn('Error removing map:', e);
+        }
+      }
     };
   }, []);
 
@@ -1805,9 +1810,6 @@ const MapboxMap = () => {
           setSelectedUser(null);
         }}
       />
-
-      {/* SOS Button Component */}
-      <SOSButton />
     </div>
   );
 };

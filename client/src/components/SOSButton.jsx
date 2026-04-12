@@ -10,7 +10,7 @@ const SOSButton = () => {
   const { t } = useTranslation();
   const { user } = useContext(AuthContext);
   const [showSOSModal, setShowSOSModal] = useState(false);
-  const [location, setLocation] = useState(null);
+  const [gpsLocation, setGpsLocation] = useState(null);
   const [sending, setSending] = useState(false);
   const [customMessage, setCustomMessage] = useState('');
   const [alertSent, setAlertSent] = useState(false);
@@ -28,7 +28,7 @@ const SOSButton = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setLocation({
+          setGpsLocation({
             latitude: position.coords.latitude,
             longitude: position.coords.longitude
           });
@@ -44,7 +44,7 @@ const SOSButton = () => {
   };
 
   const sendSOSAlert = async () => {
-    if (!location) {
+    if (!gpsLocation) {
       alert('Waiting for location...');
       return;
     }
@@ -54,8 +54,8 @@ const SOSButton = () => {
       const res = await axios.post(
         '/emergency/send-sos',
         {
-          latitude: location.latitude,
-          longitude: location.longitude,
+          latitude: gpsLocation.latitude,
+          longitude: gpsLocation.longitude,
           message: customMessage || null
         }
       );
@@ -79,7 +79,7 @@ const SOSButton = () => {
       }
       
       // Start live tracking via Socket.IO
-      startLiveTracking(location.latitude, location.longitude, alertId);
+      startLiveTracking(gpsLocation.latitude, gpsLocation.longitude, alertId);
     } catch (err) {
       console.error('SOS Alert failed:', err);
       
@@ -114,7 +114,7 @@ const SOSButton = () => {
       (position) => {
         const newLat = position.coords.latitude;
         const newLng = position.coords.longitude;
-        setLocation({ latitude: newLat, longitude: newLng });
+        setGpsLocation({ latitude: newLat, longitude: newLng });
         
         // Send update to socket
         socket.emit('sos-location-update', {
@@ -352,14 +352,14 @@ const SOSButton = () => {
             {!alertSent ? (
               <>
                 {/* Location Status */}
-                {location ? (
+                {gpsLocation ? (
                   <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4 mb-6">
                     <div className="flex items-center justify-center gap-2 text-green-400 mb-1">
                       <MapPin size={18} />
                       <span className="font-bold text-sm">Location Locked</span>
                     </div>
                     <p className="text-[10px] text-gray-500 text-center font-mono tracking-tighter">
-                      {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                      {gpsLocation.latitude.toFixed(6)}, {gpsLocation.longitude.toFixed(6)}
                     </p>
                   </div>
                 ) : (
@@ -388,7 +388,7 @@ const SOSButton = () => {
                 {/* Send Button */}
                 <button
                   onClick={sendSOSAlert}
-                  disabled={!location || sending}
+                  disabled={!gpsLocation || sending}
                   className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed text-white font-black py-5 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-red-600/20 active:scale-95 text-lg"
                 >
                   {sending ? (

@@ -10,6 +10,8 @@ const Events = () => {
   const [filter, setFilter] = useState('all'); // all, active, upcoming, ended
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
+  const [viewingEvent, setViewingEvent] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [creating, setCreating] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -19,7 +21,9 @@ const Events = () => {
     goal_type: 'distance',
     goal_value: '',
     start_date: '',
-    end_date: ''
+    end_date: '',
+    start_location: '',
+    end_location: ''
   });
 
   useEffect(() => {
@@ -67,9 +71,30 @@ const Events = () => {
       goal_type: event.goal_type || event.goaltype,
       goal_value: event.goal_value || event.goalvalue,
       start_date: event.start_date || event.startdate ? new Date(event.start_date || event.startdate).toISOString().slice(0, 16) : '',
-      end_date: event.end_date || event.enddate ? new Date(event.end_date || event.enddate).toISOString().slice(0, 16) : ''
+      end_date: event.end_date || event.enddate ? new Date(event.end_date || event.enddate).toISOString().slice(0, 16) : '',
+      start_location: event.start_location || '',
+      end_location: event.end_location || ''
     });
     setShowEditModal(true);
+  };
+
+  const handleViewParticipants = async (event) => {
+    setViewingEvent(event);
+    
+    // Fetch participant details
+    try {
+      const participantIds = event.participants || [];
+      if (participantIds.length > 0) {
+        const usersRes = await axios.get('/users');
+        const allUsers = Array.isArray(usersRes.data) ? usersRes.data : [];
+        const participants = allUsers.filter(u => participantIds.includes(u.id));
+        setViewingEvent({ ...event, participantDetails: participants });
+      }
+    } catch (err) {
+      console.error('Error fetching participants:', err);
+    }
+    
+    setShowParticipantsModal(true);
   };
 
   const handleUpdateEvent = async (e) => {
@@ -272,6 +297,7 @@ const Events = () => {
                   onJoin={joinEvent}
                   onEdit={handleEditEvent}
                   onDelete={handleDeleteEvent}
+                  onViewParticipants={handleViewParticipants}
                   status="active"
                 />
               ))}
@@ -302,6 +328,7 @@ const Events = () => {
                   onJoin={joinEvent}
                   onEdit={handleEditEvent}
                   onDelete={handleDeleteEvent}
+                  onViewParticipants={handleViewParticipants}
                   status="upcoming"
                 />
               ))}
@@ -328,6 +355,7 @@ const Events = () => {
                     onJoin={joinEvent}
                     onEdit={handleEditEvent}
                     onDelete={handleDeleteEvent}
+                    onViewParticipants={handleViewParticipants}
                     status={status}
                   />
                 );
@@ -456,12 +484,23 @@ const Events = () => {
                   <label className="block text-sm font-bold text-gray-300 mb-2">
                     Start Date (Optional)
                   </label>
-                  <input
-                    type="datetime-local"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="datetime-local"
+                      value={formData.start_date}
+                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                      className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    />
+                    {formData.start_date && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, start_date: '' })}
+                        className="px-4 py-3 bg-gray-600 hover:bg-gray-500 text-white rounded-lg font-bold transition"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">Defaults to now if not set</p>
                 </div>
 
@@ -469,12 +508,52 @@ const Events = () => {
                   <label className="block text-sm font-bold text-gray-300 mb-2">
                     End Date *
                   </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="datetime-local"
+                      required
+                      value={formData.end_date}
+                      onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                      className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    />
+                    {formData.end_date && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, end_date: '' })}
+                        className="px-4 py-3 bg-gray-600 hover:bg-gray-500 text-white rounded-lg font-bold transition"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Locations */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                    Start Location
+                  </label>
                   <input
-                    type="datetime-local"
-                    required
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    type="text"
+                    value={formData.start_location}
+                    onChange={(e) => setFormData({ ...formData, start_location: e.target.value })}
+                    placeholder="e.g., Central Park, NY"
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                    End Location
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.end_location}
+                    onChange={(e) => setFormData({ ...formData, end_location: e.target.value })}
+                    placeholder="e.g., Times Square, NY"
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   />
                 </div>
               </div>
@@ -617,24 +696,75 @@ const Events = () => {
                   <label className="block text-sm font-bold text-gray-300 mb-2">
                     Start Date (Optional)
                   </label>
-                  <input
-                    type="datetime-local"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="datetime-local"
+                      value={formData.start_date}
+                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                      className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    />
+                    {formData.start_date && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, start_date: '' })}
+                        className="px-4 py-3 bg-gray-600 hover:bg-gray-500 text-white rounded-lg font-bold transition"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-bold text-gray-300 mb-2">
                     End Date *
                   </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="datetime-local"
+                      required
+                      value={formData.end_date}
+                      onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                      className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    />
+                    {formData.end_date && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, end_date: '' })}
+                        className="px-4 py-3 bg-gray-600 hover:bg-gray-500 text-white rounded-lg font-bold transition"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Locations */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                    Start Location
+                  </label>
                   <input
-                    type="datetime-local"
-                    required
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    type="text"
+                    value={formData.start_location}
+                    onChange={(e) => setFormData({ ...formData, start_location: e.target.value })}
+                    placeholder="e.g., Central Park, NY"
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                    End Location
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.end_location}
+                    onChange={(e) => setFormData({ ...formData, end_location: e.target.value })}
+                    placeholder="e.g., Times Square, NY"
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   />
                 </div>
               </div>
@@ -673,12 +803,65 @@ const Events = () => {
           </div>
         </div>
       )}
+
+      {/* Participants Modal */}
+      {showParticipantsModal && viewingEvent && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto border border-gray-700 shadow-2xl">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-6 flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-black flex items-center gap-2">
+                  <Users className="text-blue-500" size={28} />
+                  Participants
+                </h2>
+                <p className="text-gray-400 text-sm mt-1">{viewingEvent.name}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowParticipantsModal(false);
+                  setViewingEvent(null);
+                }}
+                className="text-gray-400 hover:text-white p-2 hover:bg-gray-700 rounded-lg transition"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Participants List */}
+            <div className="p-6">
+              {viewingEvent.participantDetails && viewingEvent.participantDetails.length > 0 ? (
+                <div className="space-y-3">
+                  {viewingEvent.participantDetails.map((participant, index) => (
+                    <div key={participant.id} className="bg-gray-700/50 rounded-lg p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+                        {participant.username?.[0]?.toUpperCase() || 'U'}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-gray-100">{participant.username || 'Unknown User'}</p>
+                        {index === 0 && (
+                          <p className="text-xs text-yellow-400">Organizer</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Users className="mx-auto mb-4 text-gray-600" size={48} />
+                  <p className="text-gray-400">No participants yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 // Event Card Component
-const EventCard = ({ event, user, onJoin, onEdit, onDelete, status }) => {
+const EventCard = ({ event, user, onJoin, onEdit, onDelete, onViewParticipants, status }) => {
   const isParticipant = (event.participants || []).includes(user?.id);
   const isCreator = Array.isArray(event.participants) && event.participants[0] === user?.id;
   const endDate = new Date(event.end_date || event.enddate);
@@ -764,12 +947,12 @@ const EventCard = ({ event, user, onJoin, onEdit, onDelete, status }) => {
         
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-gray-700/50 rounded-lg p-3">
+          <div className="bg-gray-700/50 rounded-lg p-3 cursor-pointer hover:bg-gray-700 transition" onClick={() => onViewParticipants(event)}>
             <div className="flex items-center text-gray-300 text-sm">
               <Users className="mr-2 text-blue-400" size={16} />
               <span className="font-bold">{(event.participants || []).length}</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Participants</p>
+            <p className="text-xs text-gray-500 mt-1">Participants (Click to view)</p>
           </div>
           
           <div className="bg-gray-700/50 rounded-lg p-3">
@@ -798,6 +981,29 @@ const EventCard = ({ event, user, onJoin, onEdit, onDelete, status }) => {
               </div>
             </div>
           </div>
+
+          {/* Locations */}
+          {(event.start_location || event.end_location) && (
+            <div className="bg-gray-700/50 rounded-lg p-3 col-span-2">
+              <div className="flex items-start text-gray-300 text-sm gap-2">
+                <Flag className="mt-0.5 text-orange-400 flex-shrink-0" size={16} />
+                <div className="flex-1">
+                  {event.start_location && (
+                    <div className="text-xs">
+                      <span className="text-gray-400">Start:</span>{' '}
+                      <span className="font-semibold">{event.start_location}</span>
+                    </div>
+                  )}
+                  {event.end_location && (
+                    <div className="text-xs mt-1">
+                      <span className="text-gray-400">End:</span>{' '}
+                      <span className="font-semibold">{event.end_location}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Button */}

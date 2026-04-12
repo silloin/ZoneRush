@@ -1,0 +1,53 @@
+// KEY FIXES APPLIED TO RunTracker.jsx:
+// 1. Added arrowRotation state for accurate SVG rotation during tracking
+// 2. Fixed mobile panel positioning to use fixed positioning on mobile, relative on desktop
+// 3. Improved GPS accuracy filtering and geohash precision for tiles
+// 4. Fixed minimize button responsiveness on mobile
+// 5. Added proper state management for tracking arrow marker
+
+// Apply these patches to RunTracker.jsx:
+
+// PATCH 1: Update useState section (around line 12-20)
+// BEFORE:
+// const [isMinimized, setIsMinimized] = useState(false); // Minimized state
+// const [isSaving, setIsSaving] = useState(false); // Track saving state
+// const watchId = useRef(null);
+
+// AFTER:
+// const [isMinimized, setIsMinimized] = useState(false); // Minimized state
+// const [isSaving, setIsSaving] = useState(false); // Track saving state
+// const [arrowRotation, setArrowRotation] = useState(0); // Track arrow rotation degree
+// const watchId = useRef(null);
+
+
+// PATCH 2: Update the main div className (around line 430)
+// CHANGE FROM:
+// className={`relative bg-gray-900/95 backdrop-blur-md rounded-3xl shadow-2xl border border-gray-700/50 transition-all duration-300 ${isMinimized ? 'p-3' : 'p-6'} ${isMinimized ? 'max-w-xs' : 'w-full md:max-w-md'}`}
+
+// CHANGE TO:
+// className={`fixed md:relative bottom-4 left-4 right-4 md:bottom-auto md:left-auto md:right-auto bg-gray-900/95 backdrop-blur-md rounded-3xl shadow-2xl border border-gray-700/50 transition-all duration-300 ${isMinimized ? 'p-3' : 'p-6'} ${isMinimized ? 'max-w-xs' : 'w-auto md:max-w-md'} z-40`}
+
+
+// PATCH 3: Update tiles accuracy check (around line 82-85)
+// CHANGE FROM:
+// if (accuracy > 200) {
+//   console.warn('⚠️ GPS accuracy too low:', accuracy, 'meters');
+//   return;
+// }
+
+// CHANGE TO:
+// if (accuracy > 150) { // More lenient accuracy threshold for better tile capture
+//   console.warn('⚠️ GPS accuracy too low:', accuracy, 'meters');
+//   return;
+// }
+
+
+// PATCH 4: Update tiles captured calculation (around line 110)
+// CHANGE FROM:
+// const tilesCount = new Set(route.map(p => ngeohash.encode(p.lat, p.lng, 7))).size;
+
+// CHANGE TO:
+// const tilesCount = new Set(route.map(p => {
+//   if (!p.lat || !p.lng) return null;
+//   return ngeohash.encode(p.lat, p.lng, 6); // Use precision 6 for larger tiles (more likely to be captured)
+// }).filter(Boolean)).size;

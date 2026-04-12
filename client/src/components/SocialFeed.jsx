@@ -13,6 +13,7 @@ const SocialFeed = () => {
   const [newPost, setNewPost] = useState({ caption: '', runId: '' });
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingLikes, setPendingLikes] = useState(new Set()); // Track posts with pending like operations
 
   useEffect(() => {
     fetchFeed();
@@ -25,7 +26,28 @@ const SocialFeed = () => {
     setIsLoading(true);
     try {
       const res = await SocialService.getFeed();
-      setFeed(Array.isArray(res.data) ? res.data : []);
+      const feedData = Array.isArray(res.data) ? res.data : [];
+      
+      // Fetch comments for each post
+      const feedWithComments = await Promise.all(
+        feedData.map(async (post) => {
+          try {
+            const commentsRes = await SocialService.getComments(post.id);
+            return {
+              ...post,
+              commentsList: Array.isArray(commentsRes.data) ? commentsRes.data : []
+            };
+          } catch (err) {
+            console.error(`Error fetching comments for post ${post.id}:`, err);
+            return {
+              ...post,
+              commentsList: []
+            };
+          }
+        })
+      );
+      
+      setFeed(feedWithComments);
     } catch (err) {
       console.error('Error fetching feed:', err);
       setFeed([]);
@@ -69,30 +91,68 @@ const SocialFeed = () => {
     if (!window.confirm('Are you sure you want to delete this post?')) return;
     try {
       await SocialService.deletePost(postId);
-      fetchFeed();
+      // Instead of fetchFeed() which resets entire state:
+      setFeed(prev => prev.filter(post => post.id !== postId));
     } catch (err) {
       console.error('Error deleting post:', err);
     }
   };
 
   const handleLike = async (postId, isLiked) => {
+    // Prevent duplicate likes while API call is in progress
+    if (pendingLikes.has(postId)) return;
+    
     try {
+      setPendingLikes(prev => new Set([...prev, postId])); // Mark as pending
+      
       if (isLiked) {
         await SocialService.unlikePost(postId);
       } else {
         await SocialService.likePost(postId);
       }
-      fetchFeed();
+      
+      // Update feed state locally without full refresh
+      setFeed(prev => prev.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            is_liked: !isLiked,
+            likes: isLiked ? Math.max(0, post.likes - 1) : post.likes + 1
+          };
+        }
+        return post;
+      }));
     } catch (err) {
       console.error('Error toggling like:', err);
+    } finally {
+      setPendingLikes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(postId);
+        return newSet;
+      }); // Done processing
     }
   };
 
   const handleComment = async (postId) => {
     if (!commentText[postId]?.trim()) return;
+    const commentContent = commentText[postId].trim();
+    
     try {
-      const res = await SocialService.addComment(postId, commentText[postId]);
+      const res = await SocialService.addComment(postId, commentContent);
+      
+      // Clear input immediately
       setCommentText({ ...commentText, [postId]: '' });
+      
+      // Ensure response has the correct structure
+      const newComment = {
+        id: res.data.id,
+        user_id: res.data.user_id,
+        post_id: res.data.post_id,
+        text: res.data.text || res.data.comment_text,
+        comment_text: res.data.text || res.data.comment_text,
+        created_at: res.data.created_at,
+        username: res.data.username || user?.username || 'Unknown'
+      };
       
       // Update feed with new comment
       setFeed(prev => prev.map(post => {
@@ -100,13 +160,14 @@ const SocialFeed = () => {
           return {
             ...post,
             comments: post.comments + 1,
-            commentsList: [...(post.commentsList || []), res.data]
+            commentsList: [...(post.commentsList || []), newComment]
           };
         }
         return post;
       }));
     } catch (err) {
       console.error('Error commenting:', err);
+      alert('Failed to add comment. Please try again.');
     }
   };
 
@@ -261,6 +322,7 @@ const SocialFeed = () => {
                 onDeleteComment={handleDeleteComment}
                 commentText={commentText}
                 setCommentText={setCommentText}
+                isLikePending={pendingLikes.has(post.id)}
               />
             ))
           )}

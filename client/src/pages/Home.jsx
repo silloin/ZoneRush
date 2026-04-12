@@ -22,6 +22,7 @@ import {
   Droplets,
   Thermometer
 } from 'lucide-react';
+import SOSButton from '../components/SOSButton';
 
 const Home = () => {
   const { user } = useContext(AuthContext);
@@ -450,6 +451,9 @@ const Home = () => {
           </motion.section>
         </div>
       </div>
+      
+      {/* SOS Emergency Button - Fixed Position */}
+      <SOSButton />
     </div>
   );
 };

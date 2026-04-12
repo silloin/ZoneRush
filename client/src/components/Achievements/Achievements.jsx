@@ -18,9 +18,22 @@ const Achievements = ({ userId }) => {
         axios.get(`/achievements/user/${userId}`)
       ]);
 
-      // Deduplicate progress by achievement.id
-      const uniqueProgress = Array.from(new Map(progressRes.data.map(item => [item.id, item])).values());
-      setProgress(uniqueProgress);
+      // Deduplicate progress by achievement id and name
+      const deduplicatedProgress = [];
+      const seenIds = new Set();
+      
+      for (const item of progressRes.data) {
+        // Use id as primary key, fallback to name if id is missing
+        const uniqueKey = item.id || item.name;
+        if (!seenIds.has(uniqueKey)) {
+          seenIds.add(uniqueKey);
+          deduplicatedProgress.push(item);
+        }
+      }
+      
+      console.log(`Achievements API returned ${progressRes.data.length} items, deduplicated to ${deduplicatedProgress.length}`);
+      
+      setProgress(deduplicatedProgress);
       setAchievements(unlockedRes.data);
       setLoading(false);
     } catch (error) {
@@ -56,6 +69,16 @@ const Achievements = ({ userId }) => {
     if (filter === 'locked') return !achievement.isUnlocked;
     return true;
   });
+
+  // Final render-time deduplication safety layer
+  const dedicatedSeenNames = new Set();
+  const finalDeduplicatedProgress = [];
+  for (const achievement of filteredProgress) {
+    if (!dedicatedSeenNames.has(achievement.name)) {
+      dedicatedSeenNames.add(achievement.name);
+      finalDeduplicatedProgress.push(achievement);
+    }
+  }
 
   if (loading) {
     return (
@@ -118,9 +141,9 @@ const Achievements = ({ userId }) => {
 
         {/* Achievements Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProgress.map((achievement) => (
+          {finalDeduplicatedProgress.map((achievement, index) => (
             <AchievementCard
-              key={`${achievement.id}-${achievement.isUnlocked}`}
+              key={`achievement-${achievement.id || achievement.name || index}`}
               achievement={achievement}
               getBadgeColor={getBadgeColor}
               getCategoryIcon={getCategoryIcon}

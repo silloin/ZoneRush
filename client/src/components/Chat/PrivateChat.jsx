@@ -58,9 +58,10 @@ const PrivateChat = () => {
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      setTimeout(() => {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }, 0);
     }
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   // Close delete menu when clicking outside
@@ -361,8 +362,7 @@ const PrivateChat = () => {
             {/* Messages */}
             <div 
               ref={messagesContainerRef}
-              className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-900 min-h-0"
-              style={{ scrollBehavior: 'smooth' }}
+              className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-900 min-h-0 flex flex-col"
             >
               {loading ? (
                 <div className="text-center text-gray-400">Loading messages...</div>
@@ -372,14 +372,16 @@ const PrivateChat = () => {
                   <p className="text-sm mt-2">Send a message to start the conversation</p>
                 </div>
               ) : (
-                messages.map((msg) => (
+                messages.map((msg) => {
+                  const isOwnMessage = String(msg.sender_id) === String(user.id);
+                  return (
                   <div
                     key={msg.id}
-                    className={`flex ${msg.sender_id === user.id ? 'justify-end' : 'justify-start'} relative group`}
+                    className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} relative group`}
                   >
                     <div
                       className={`max-w-[85%] md:max-w-[70%] rounded-lg p-3 break-words relative ${
-                        msg.sender_id === user.id
+                        isOwnMessage
                           ? 'bg-blue-600 text-white'
                           : 'bg-gray-700 text-white'
                       } ${msg.pending ? 'opacity-70' : ''} ${msg.failed ? 'bg-red-600' : ''}`}
@@ -392,7 +394,7 @@ const PrivateChat = () => {
                       </div>
                       
                       {/* Delete button - only show for own messages */}
-                      {msg.sender_id === user.id && !msg.pending && !msg.failed && (
+                      {isOwnMessage && !msg.pending && !msg.failed && (
                         <button
                           onClick={(e) => toggleDeleteMenu(e, msg.id)}
                           className="absolute -top-2 -right-2 bg-gray-800 hover:bg-red-600 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg z-10"
@@ -419,7 +421,8 @@ const PrivateChat = () => {
                       )}
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
               <div ref={messagesEndRef} />
             </div>
