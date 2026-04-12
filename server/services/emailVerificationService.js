@@ -34,14 +34,19 @@ class EmailVerificationService {
           user: emailUser,
           pass: emailPass
         },
-        // Force IPv4 to avoid ENETUNREACH errors on Render
+        // Force IPv4 and disable IPv6 to avoid ENETUNREACH errors on Render
+        family: 4, // Force IPv4 only
         tls: {
           rejectUnauthorized: false
         },
         // Additional connection settings for Render compatibility
         connectionTimeout: 30000,
-        greetingTimeout: 10000,
-        socketTimeout: 10000
+        greetingTimeout: 15000,
+        socketTimeout: 15000,
+        // Add pool configuration for better reliability
+        pool: true,
+        maxConnections: 1,
+        maxMessages: 5
       });
     } else if (emailService === 'ethereal') {
       // Ethereal Email - Free testing service (emails don't actually send, but you can view them)
@@ -180,7 +185,7 @@ class EmailVerificationService {
       const info = await Promise.race([
         this.transporter.sendMail(mailOptions),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Email send timeout')), 5000)
+          setTimeout(() => reject(new Error('Email send timeout')), 15000)
         )
       ]);
       console.log('✅ Verification email sent:', info.messageId);
