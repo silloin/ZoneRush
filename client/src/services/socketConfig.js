@@ -9,26 +9,26 @@
  */
 
 export const getSocketURL = () => {
-  // Use VITE_API_URL_PROD in production mode, otherwise use VITE_API_URL
-  const API = import.meta.env.MODE === "production" 
-    ? import.meta.env.VITE_API_URL_PROD 
-    : import.meta.env.VITE_API_URL;
-  
   // If explicitly set socket URL exists, prefer it
   if (import.meta.env.VITE_SOCKET_URL) {
     return import.meta.env.VITE_SOCKET_URL;
   }
   
-  // Extract base URL from API URL (strip /api)
-  if (API) {
-    return API.replace('/api', '');
+  // In production, use VITE_API_URL_PROD if set
+  if (import.meta.env.PROD) {
+    const prodApiUrl = import.meta.env.VITE_API_URL_PROD;
+    if (prodApiUrl) {
+      // Extract base URL from API URL (strip /api)
+      return prodApiUrl.replace('/api', '');
+    }
+    // Fallback to current window location
+    return window.location.origin;
   }
   
-  // Fallback to default production backend if no env var set
-  if (import.meta.env.PROD) {
-    // In production, use current window location (should be same as backend)
-    // Or set VITE_SOCKET_URL environment variable
-    return window.location.origin;
+  // In development, use VITE_API_URL or default to localhost
+  const devApiUrl = import.meta.env.VITE_API_URL;
+  if (devApiUrl) {
+    return devApiUrl.replace('/api', '');
   }
   
   // Default development socket URL

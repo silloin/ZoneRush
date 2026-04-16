@@ -3,22 +3,21 @@ import axios from 'axios';
 
 // Smart API URL detection: works for both localhost and production
 const getApiUrl = () => {
-  // Use VITE_API_URL_PROD in production mode, otherwise use VITE_API_URL
-  const API = import.meta.env.MODE === "production" 
-    ? import.meta.env.VITE_API_URL_PROD 
-    : import.meta.env.VITE_API_URL;
-    
-  // Fallback to defaults if environment variables are not set
-  if (!API) {
-    if (import.meta.env.PROD) {
-      // In production, use relative URLs (Vercel will proxy to backend)
-      // Or set VITE_API_URL_PROD environment variable
-      return '/api';
+  // In production, use VITE_API_URL_PROD if set
+  if (import.meta.env.PROD) {
+    const prodApiUrl = import.meta.env.VITE_API_URL_PROD;
+    if (prodApiUrl) {
+      // Use the full production URL (e.g., https://your-app.onrender.com/api)
+      return prodApiUrl;
     }
+    // Fallback to relative URL if VITE_API_URL_PROD is not set
+    // This will work if you deploy frontend and backend on the same domain
     return '/api';
   }
   
-  return API;
+  // In development, use VITE_API_URL or default to /api (for Vite proxy)
+  const devApiUrl = import.meta.env.VITE_API_URL;
+  return devApiUrl || '/api';
 };
 
 axios.defaults.baseURL = getApiUrl();
