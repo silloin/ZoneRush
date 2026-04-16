@@ -32,10 +32,14 @@ export const SocketProvider = ({ children }) => {
       setIsConnected(true);
       
       // Authenticate user with socket server
-      newSocket.emit('authenticate', {
-        userId: user.id,
-        username: user.username
-      });
+      if (user && user.id) {
+        newSocket.emit('authenticate', {
+          userId: user.id,
+          username: user.username
+        });
+      } else {
+        console.warn('Socket connected but user not authenticated yet');
+      }
     });
 
     newSocket.on('disconnect', () => {

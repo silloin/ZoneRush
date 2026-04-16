@@ -32,6 +32,14 @@ module.exports = (io, notificationService) => {
     
     socket.on('authenticate', async (data) => {
       userId = data.userId;
+      
+      // Validate userId is present
+      if (!userId) {
+        console.error('authenticate event received without userId');
+        socket.emit('auth-error', { message: 'userId is required' });
+        return;
+      }
+      
       socket.join(`user:${userId}`);
       
       // Register with notification service for real-time notifications

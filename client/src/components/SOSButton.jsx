@@ -104,9 +104,13 @@ const SOSButton = () => {
     const socket = io(socketUrl, getSocketOptions());
     
     socket.on('connect', () => {
-      socket.emit('authenticate', { userId: user.id });
-      socket.emit('start-sos-tracking', { sosId, latitude: lat, longitude: lng });
-      setLiveTrackingActive(true);
+      if (user && user.id) {
+        socket.emit('authenticate', { userId: user.id });
+        socket.emit('start-sos-tracking', { sosId, latitude: lat, longitude: lng });
+        setLiveTrackingActive(true);
+      } else {
+        console.warn('Socket connected but user not authenticated for SOS tracking');
+      }
     });
 
     // Continue watching location with fallback

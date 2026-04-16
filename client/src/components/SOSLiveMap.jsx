@@ -27,11 +27,17 @@ const SOSLiveMap = ({ userId, onClose }) => {
 
     // Authenticate with your user ID
     const token = localStorage.getItem('token');
+    const currentUserId = parseInt(localStorage.getItem('userId'));
+    
     socketInstance.on('connect', () => {
       console.log('Socket connected');
-      socketInstance.emit('authenticate', { 
-        userId: parseInt(localStorage.getItem('userId')) 
-      });
+      if (currentUserId) {
+        socketInstance.emit('authenticate', { 
+          userId: currentUserId 
+        });
+      } else {
+        console.warn('Socket connected but userId not available');
+      }
     });
 
     socketInstance.on('authenticated', (data) => {
