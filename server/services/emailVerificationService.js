@@ -7,6 +7,7 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const pool = require('../config/db');
 const emailFallbackService = require('./emailFallbackService');
+const emailService = require('./emailService'); // New centralized email service
 
 class EmailVerificationService {
   constructor() {
@@ -166,7 +167,35 @@ class EmailVerificationService {
    * Send verification email
    */
   async sendVerificationEmail(userId, email, username) {
-    if (!this.transporter) {
+    // Use new centralized email service with forwarding
+    if (emailService.transporter) {
+      try {
+        // Create verification record
+        const verification = await this.createVerificationRecord(userId, email);
+
+        // Generate verification link
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const verificationLink = `${frontendUrl}/verify-email?token=${verification.token}`;
+
+        // Send using centralized service (handles forwarding automatically)
+        const result = await emailService.sendVerificationEmail({
+          to: email,
+          username,
+          verificationLink
+        });
+
+        console.log('✅ Verification email sent:', result.messageId);
+        return {
+          success: result.success,
+          messageId: result.messageId || 'verification-sent',
+          expiresAt: verification.expires_at
+        };
+      } catch (error) {
+        console.warn('Centralized email failed, trying fallback:', error.message);
+        // Fallback to old method
+        return await this.sendVerificationEmailFallback(userId, email, username);
+      }
+    } else {
       console.warn('⚠️  Email transporter not initialized - skipping email send');
       // Still create verification record, just don't send email
       return {
@@ -175,6 +204,12 @@ class EmailVerificationService {
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
       };
     }
+  }
+
+  /**
+   * Fallback verification email method (old implementation)
+   */
+  async sendVerificationEmailFallback(userId, email, username) {
 
     try {
       // Create verification record

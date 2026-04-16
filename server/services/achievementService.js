@@ -24,17 +24,39 @@ class AchievementService {
 
   // Check if achievement requirement is met
   meetsRequirement(stats, achievement) {
-    if (!achievement.requirement) return false;
+    // Support both old JSON format and new schema columns
+    if (achievement.requirement) {
+      const req = typeof achievement.requirement === 'string' 
+        ? JSON.parse(achievement.requirement) 
+        : achievement.requirement;
+      
+      if (req.runs && stats.total_runs >= req.runs) return true;
+      if (req.distance && stats.total_distance >= req.distance) return true;
+      if (req.tiles && stats.total_tiles_captured >= req.tiles) return true;
+      if (req.streak && stats.current_streak >= req.streak) return true;
+      if (req.posts && stats.total_posts >= req.posts) return true;
+    }
     
-    const req = typeof achievement.requirement === 'string' 
-      ? JSON.parse(achievement.requirement) 
-      : achievement.requirement;
-    
-    if (req.runs && stats.total_runs >= req.runs) return true;
-    if (req.distance && stats.total_distance >= req.distance) return true;
-    if (req.tiles && stats.total_tiles_captured >= req.tiles) return true;
-    if (req.streak && stats.current_streak >= req.streak) return true;
-    if (req.posts && stats.total_posts >= req.posts) return true;
+    // Support new schema with requirement_type and requirement_value
+    if (achievement.requirement_type && achievement.requirement_value) {
+      const type = achievement.requirement_type;
+      const value = parseInt(achievement.requirement_value);
+      
+      switch(type) {
+        case 'runs':
+          return stats.total_runs >= value;
+        case 'distance':
+          return stats.total_distance >= value;
+        case 'tiles':
+          return stats.total_tiles_captured >= value;
+        case 'streak':
+          return stats.current_streak >= value;
+        case 'posts':
+          return stats.total_posts >= value;
+        default:
+          return false;
+      }
+    }
     
     return false;
   }
@@ -69,8 +91,13 @@ class AchievementService {
 
   // Get all achievements
   async getAllAchievements() {
-    // Add DISTINCT to prevent duplicate achievements
-    const query = 'SELECT DISTINCT ON (id) * FROM achievements ORDER BY id';
+    // Use GROUP BY to prevent duplicates and ensure unique achievements
+    const query = `
+      SELECT id, name, description, icon, requirement_type, requirement_value, xp_reward, category, created_at
+      FROM achievements
+      GROUP BY id, name, description, icon, requirement_type, requirement_value, xp_reward, category, created_at
+      ORDER BY id
+    `;
     const result = await pool.query(query);
     return result.rows;
   }
@@ -144,28 +171,54 @@ class AchievementService {
     const progress = await Promise.all(achievements.map(async (achievement) => {
       const isUnlocked = await this.isAchievementUnlocked(userId, achievement.id);
       
-      const req = typeof achievement.requirement === 'string' 
-        ? JSON.parse(achievement.requirement) 
-        : achievement.requirement;
-      
       let currentValue = 0;
       let targetValue = 0;
 
-      if (req.runs) {
-        currentValue = stats.total_runs;
-        targetValue = req.runs;
-      } else if (req.distance) {
-        currentValue = stats.total_distance;
-        targetValue = req.distance;
-      } else if (req.tiles) {
-        currentValue = stats.total_tiles_captured;
-        targetValue = req.tiles;
-      } else if (req.streak) {
-        currentValue = stats.current_streak;
-        targetValue = req.streak;
-      } else if (req.posts) {
-        currentValue = stats.total_posts;
-        targetValue = req.posts;
+      // Support new schema with requirement_type and requirement_value
+      if (achievement.requirement_type && achievement.requirement_value) {
+        const type = achievement.requirement_type;
+        targetValue = parseInt(achievement.requirement_value);
+        
+        switch(type) {
+          case 'runs':
+            currentValue = stats.total_runs;
+            break;
+          case 'distance':
+            currentValue = stats.total_distance;
+            break;
+          case 'tiles':
+            currentValue = stats.total_tiles_captured;
+            break;
+          case 'streak':
+            currentValue = stats.current_streak;
+            break;
+          case 'posts':
+            currentValue = stats.total_posts;
+            break;
+        }
+      } 
+      // Support old JSON format
+      else if (achievement.requirement) {
+        const req = typeof achievement.requirement === 'string' 
+          ? JSON.parse(achievement.requirement) 
+          : achievement.requirement;
+        
+        if (req.runs) {
+          currentValue = stats.total_runs;
+          targetValue = req.runs;
+        } else if (req.distance) {
+          currentValue = stats.total_distance;
+          targetValue = req.distance;
+        } else if (req.tiles) {
+          currentValue = stats.total_tiles_captured;
+          targetValue = req.tiles;
+        } else if (req.streak) {
+          currentValue = stats.current_streak;
+          targetValue = req.streak;
+        } else if (req.posts) {
+          currentValue = stats.total_posts;
+          targetValue = req.posts;
+        }
       }
       
       const percentage = targetValue > 0 ? Math.min(100, (currentValue / targetValue) * 100) : 0;
@@ -193,6 +246,73 @@ class AchievementService {
     const content = `Unlocked achievement: ${activityData.title || activityType}`;
     const result = await pool.query(query, [userId, content, activityType, JSON.stringify(activityData)]);
     return result.rows[0];
+  }
+
+  // Reset weekly achievements for all users
+  async resetWeeklyAchievements() {
+    try {
+      console.log('🔄 Starting weekly achievements reset...');
+      
+      // Get all weekly achievements
+      const weeklyAchievements = await pool.query(
+        "SELECT id FROM achievements WHERE category = 'weekly' OR type = 'weekly'"
+      );
+
+      if (weeklyAchievements.rows.length === 0) {
+        console.log('No weekly achievements found to reset');
+        return { success: true, message: 'No weekly achievements to reset', resetCount: 0 };
+      }
+
+      const weeklyAchievementIds = weeklyAchievements.rows.map(a => a.id);
+      console.log(`Found ${weeklyAchievementIds.length} weekly achievements to reset`);
+
+      // Delete all user progress for weekly achievements
+      const placeholders = weeklyAchievementIds.map((_, i) => `$${i + 1}`).join(',');
+      const deleteResult = await pool.query(
+        `DELETE FROM user_achievements WHERE achievement_id IN (${placeholders})`,
+        weeklyAchievementIds
+      );
+
+      console.log(`✅ Reset ${deleteResult.rowCount} weekly achievement unlocks`);
+
+      // Log the reset
+      await pool.query(
+        `INSERT INTO system_logs (action, details, created_at)
+         VALUES ($1, $2, NOW())`,
+        ['weekly_achievements_reset', `Reset ${deleteResult.rowCount} weekly achievement unlocks`]
+      );
+
+      return {
+        success: true,
+        message: 'Weekly achievements reset successfully',
+        resetCount: deleteResult.rowCount,
+        achievementCount: weeklyAchievementIds.length
+      };
+    } catch (error) {
+      console.error('Error resetting weekly achievements:', error);
+      throw error;
+    }
+  }
+
+  // Get current week number (for tracking)
+  getCurrentWeekNumber() {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const days = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));
+    const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+    return weekNumber;
+  }
+
+  // Check if it's time for weekly reset (runs every Monday at 00:00)
+  shouldResetWeekly(lastResetDate) {
+    if (!lastResetDate) return true;
+    
+    const now = new Date();
+    const lastReset = new Date(lastResetDate);
+    
+    // Check if more than 7 days have passed
+    const daysSinceLastReset = (now - lastReset) / (1000 * 60 * 60 * 24);
+    return daysSinceLastReset >= 7;
   }
 }
 

@@ -8,6 +8,7 @@ const { redisClient, isRedisAvailable } = require('../middleware/rateLimiter');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const pool = require('../config/db');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -118,29 +119,42 @@ router.get('/stats/:userId', auth, async (req, res) => {
   const cacheKey = `stats:${userId}`;
 
   try {
-    // Try to get from Redis cache
-    if (isRedisAvailable()) {
-      const cachedStats = await redisClient.get(cacheKey);
-      if (cachedStats) {
-        return res.json(JSON.parse(cachedStats));
+    // Try to get from Redis cache (skip if Redis not available)
+    if (isRedisAvailable() && redisClient) {
+      try {
+        const cachedStats = await redisClient.get(cacheKey);
+        if (cachedStats) {
+          return res.json(JSON.parse(cachedStats));
+        }
+      } catch (cacheError) {
+        console.warn('⚠️ Redis cache error, fetching from database:', cacheError.message);
+        // Continue to fetch from database
       }
     }
 
     const stats = await statsService.getBasicStats(userId);
 
-    // Cache in Redis for 30 seconds
-    if (isRedisAvailable()) {
-      await redisClient.setEx(cacheKey, 30, JSON.stringify(stats));
+    // Cache in Redis for 30 seconds (skip if not available)
+    if (isRedisAvailable() && redisClient) {
+      try {
+        await redisClient.setEx(cacheKey, 30, JSON.stringify(stats));
+      } catch (cacheError) {
+        console.warn('⚠️ Redis cache set error:', cacheError.message);
+      }
     }
 
     res.json(stats);
   } catch (error) {
-    console.error('=== STATS API ERROR ===');
+    console.error('❌ STATS API ERROR');
     console.error('UserId:', userId);
-    console.error('Full error:', error);
-    console.error('Error stack:', error.stack);
-    console.error('====================');
-    res.status(500).json({ error: 'Failed to fetch stats', details: process.env.NODE_ENV === 'development' ? error.message : 'Internal error' });
+    console.error('Error:', error.message);
+    console.error('Stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to fetch stats', 
+      message: error.message,
+      detail: error.detail,
+      hint: error.hint
+    });
   }
 });
 
@@ -170,7 +184,11 @@ router.get('/hr-zones/:userId', auth, async (req, res) => {
     
     res.json(zones);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ Error fetching HR zones:', err.message);
+    res.status(500).json({ 
+      error: err.message,
+      detail: err.detail
+    });
   }
 });
 

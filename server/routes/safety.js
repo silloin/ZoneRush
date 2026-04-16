@@ -94,6 +94,23 @@ router.put('/contacts/:id', authenticateToken, async (req, res) => {
     );
     
     if (result.rows.length === 0) {
+      // Check if contact exists at all
+      const contactCheck = await pool.query('SELECT user_id FROM safety_contacts WHERE id = $1', [contactId]);
+      
+      if (contactCheck.rows.length > 0) {
+        // Contact exists but doesn't belong to user - IDOR attempt
+        await pool.query(
+          `INSERT INTO security_events (user_id, event_type, ip_address, details)
+           VALUES ($1, 'unauthorized_access', $2, $3)`,
+          [userId, req.ip, JSON.stringify({
+            type: 'safety_contact_edit',
+            contactId: contactId,
+            contactOwner: contactCheck.rows[0].user_id,
+            attempt: 'IDOR'
+          })]
+        );
+      }
+      
       return res.status(404).json({ error: 'Contact not found or not authorized' });
     }
     
@@ -119,6 +136,23 @@ router.delete('/contacts/:id', authenticateToken, async (req, res) => {
     );
     
     if (result.rows.length === 0) {
+      // Check if contact exists at all
+      const contactCheck = await pool.query('SELECT user_id FROM safety_contacts WHERE id = $1', [contactId]);
+      
+      if (contactCheck.rows.length > 0) {
+        // Contact exists but doesn't belong to user - IDOR attempt
+        await pool.query(
+          `INSERT INTO security_events (user_id, event_type, ip_address, details)
+           VALUES ($1, 'unauthorized_access', $2, $3)`,
+          [userId, req.ip, JSON.stringify({
+            type: 'safety_contact_delete',
+            contactId: contactId,
+            contactOwner: contactCheck.rows[0].user_id,
+            attempt: 'IDOR'
+          })]
+        );
+      }
+      
       return res.status(404).json({ error: 'Contact not found or not authorized' });
     }
     

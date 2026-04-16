@@ -649,7 +649,7 @@ class AICoachService {
       
       // Determine plan type based on preferences or fitness level
       let planType = 'beginner';
-      if (preferences.goal && preferences.goal.toLowerCase().includes('5k')) {
+      if (preferences?.goal && typeof preferences.goal === 'string' && preferences.goal.toLowerCase().includes('5k')) {
         planType = '5k';
       } else if (fitnessLevel === 'intermediate') {
         planType = '5k';

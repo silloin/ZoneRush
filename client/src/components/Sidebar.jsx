@@ -1,9 +1,9 @@
 import React, { useContext, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Map as MapIcon, User as UserIcon, Activity, Flag, Trophy, Users, Award, Home, MessageCircle } from 'lucide-react';
+import { LayoutDashboard, Map as MapIcon, User as UserIcon, Activity, Flag, Trophy, Users, Award, Home, MessageCircle, X } from 'lucide-react';
 import FriendsModal from './Chat/FriendsModal';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen = true, onClose, isChatActive }) => {
   const location = useLocation();
   const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false);
 
@@ -23,40 +23,96 @@ const Sidebar = () => {
 
   return (
     <>
-      <div className="w-full md:w-64 bg-gray-900 md:h-screen border-b md:border-b-0 md:border-r border-gray-800 flex md:flex-col p-2 md:p-4">
-        <div className="mb-2 md:mb-8 flex-shrink-0">
-          <h1 className="text-lg md:text-2xl font-bold bg-gradient-to-r from-red-500 via-orange-500 to-red-500 bg-clip-text text-transparent tracking-wider">RunTerra</h1>
+      {/* Mobile Overlay Backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+      
+      <div 
+        className={`
+          w-64 bg-gray-900/90 backdrop-blur-xl border-r border-gray-800/50 h-screen flex-shrink-0 shadow-2xl
+          transition-all duration-300 ease-in-out flex flex-col
+          
+          // Default desktop state (visible, relative)
+          md:flex md:relative md:z-auto md:translate-x-0
+
+          // Mobile default state (hidden, fixed)
+          fixed inset-y-0 left-0 z-50 transform -translate-x-full
+
+          // Mobile open state
+          ${isOpen ? 'translate-x-0' : ''}
+
+          // Override for chat active (hidden on all screens)
+          ${isChatActive ? 'hidden' : ''}
+        `}
+      >
+        
+        {/* Logo */}
+        <div className="p-6 flex-shrink-0 border-b border-gray-800/50 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-black gradient-text tracking-tight drop-shadow-lg">
+              ZoneRush
+            </h1>
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Run The City</p>
+          </div>
+          {/* Close button - visible only on mobile */}
+          <button
+            onClick={onClose}
+            className="md:hidden p-2 rounded-lg hover:bg-gray-800 transition"
+            aria-label="Close sidebar"
+          >
+            <X size={24} className="text-gray-400" />
+          </button>
         </div>
 
-      <nav className="flex md:flex-col flex-1 md:max-h-[calc(100vh-200px)] overflow-y-auto md:space-y-2 space-x-1 md:space-x-0 justify-around md:justify-start scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.name}
-              to={item.path}
-              title={item.name}
-              className={`flex flex-col md:flex-row items-center justify-center md:justify-start p-2 md:p-3 rounded-lg transition flex-1 md:flex-none ${
-                isActive 
-                  ? 'bg-gradient-to-r from-red-600/30 to-orange-600/30 text-orange-500 border-l-2 border-orange-500' 
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-white hover:border-l-2 hover:border-gray-600'
-              }`}
-            >
-              <Icon className="md:mr-3" size={18} />
-              <span className="hidden md:inline font-medium text-sm">{item.name}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 gap-1.5 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900 flex flex-col">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.name}
+                to={item.path}
+                title={item.name}
+                onClick={() => {
+                  // Auto-close sidebar on mobile when navigating
+                  if (onClose && window.innerWidth < 768) {
+                    onClose();
+                  }
+                }}
+                className={`
+                  flex items-center justify-start 
+                  px-4 py-3 rounded-xl transition-all duration-200 whitespace-nowrap
+                  group relative
+                  ${
+                    isActive 
+                      ? 'bg-gradient-to-r from-orange-600/20 to-red-600/20 text-orange-400 border-l-2 border-orange-500 shadow-lg shadow-orange-500/10' 
+                      : 'text-gray-400 hover:bg-gray-800/50 hover:text-white border-l-2 border-transparent hover:border-gray-600'
+                  }
+                `}
+              >
+                <Icon className="mr-3 flex-shrink-0 transition-transform group-hover:scale-110" size={18} />
+                <span className="font-semibold text-sm">{item.name}</span>
+                {isActive && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-red-500/5 rounded-xl" />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
 
-    {/* Friends Modal */}
-    <FriendsModal 
-      isOpen={isFriendsModalOpen} 
-      onClose={() => setIsFriendsModalOpen(false)} 
-    />
-  </>
+      {/* Friends Modal */}
+      <FriendsModal 
+        isOpen={isFriendsModalOpen} 
+        onClose={() => setIsFriendsModalOpen(false)} 
+      />
+    </>
   );
 };
 

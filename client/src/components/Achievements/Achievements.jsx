@@ -33,7 +33,10 @@ const Achievements = ({ userId }) => {
       
       console.log(`Achievements API returned ${progressRes.data.length} items, deduplicated to ${deduplicatedProgress.length}`);
       
-      setProgress(deduplicatedProgress);
+      // Limit to 8 achievements for better performance
+      const limitedProgress = deduplicatedProgress.slice(0, 8);
+      
+      setProgress(limitedProgress);
       setAchievements(unlockedRes.data);
       setLoading(false);
     } catch (error) {
@@ -70,12 +73,13 @@ const Achievements = ({ userId }) => {
     return true;
   });
 
-  // Final render-time deduplication safety layer
+  // Deduplicate filtered progress before rendering
   const dedicatedSeenNames = new Set();
   const finalDeduplicatedProgress = [];
   for (const achievement of filteredProgress) {
-    if (!dedicatedSeenNames.has(achievement.name)) {
-      dedicatedSeenNames.add(achievement.name);
+    const uniqueKey = achievement.id || achievement.name;
+    if (!dedicatedSeenNames.has(uniqueKey)) {
+      dedicatedSeenNames.add(uniqueKey);
       finalDeduplicatedProgress.push(achievement);
     }
   }

@@ -23,6 +23,8 @@ import {
   Thermometer
 } from 'lucide-react';
 import SOSButton from '../components/SOSButton';
+import Skeleton from '../components/Skeleton';
+import Card from '../components/ui/Card';
 
 const Home = () => {
   const { user } = useContext(AuthContext);
@@ -143,34 +145,85 @@ const Home = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full bg-gray-900 text-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+      <div className="p-4 sm:p-6 lg:p-8 bg-gray-900/50 text-white space-y-6">
+        {/* Welcome Section Skeleton */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="space-y-3 flex-1">
+            <Skeleton type="text-lg" width="250px" height="36px" />
+            <Skeleton type="text" width="200px" />
+          </div>
+          <Skeleton type="rect" width="200px" height="56px" className="hidden md:block" />
+        </div>
+
+        {/* Quick Stats Skeleton */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-gray-800/40 p-4 rounded-2xl border border-gray-700/50 space-y-3">
+              <Skeleton type="circle" width="40px" height="40px" />
+              <Skeleton type="text" width="80px" />
+              <Skeleton type="text-lg" width="60px" />
+            </div>
+          ))}
+        </div>
+
+        {/* Content Skeleton */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Recent Runs Skeleton */}
+            <div className="space-y-4">
+              <Skeleton type="text-lg" width="150px" />
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-gray-800/40 p-4 rounded-2xl border border-gray-700/50 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <Skeleton type="circle" width="48px" height="48px" />
+                    <div className="space-y-2">
+                      <Skeleton type="text" width="120px" />
+                      <Skeleton type="text-sm" width="150px" />
+                    </div>
+                  </div>
+                  <Skeleton type="text" width="80px" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-6">
+            {/* Sidebar Skeleton */}
+            <Skeleton type="card" height="200px" />
+            <Skeleton type="card" height="200px" />
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-gray-900 min-h-screen text-white space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 bg-gray-900/50 text-white space-y-6 sm:space-y-8 page-enter">
       {/* Welcome Section */}
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+        className="relative"
       >
-        <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-red-500 via-orange-500 to-red-500 bg-clip-text text-transparent">
-            Welcome back, {user?.username}!
-          </h1>
-          <p className="text-gray-400 mt-2 text-lg">Ready for your next territory conquest?</p>
+        {/* Background Glow */}
+        <div className="absolute inset-0 bg-gradient-to-r from-orange-600/10 via-red-600/10 to-orange-600/10 blur-3xl -z-10" />
+        
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black gradient-text mb-2">
+              RUN THE CITY
+            </h1>
+            <p className="text-gray-300 mt-2 text-lg">Welcome back, <span className="font-bold text-orange-400">{user?.username}</span>!</p>
+            <p className="text-gray-500 text-sm mt-1">Ready for your next territory conquest?</p>
+          </div>
+          <button 
+            onClick={handleStartRun}
+            className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:shadow-orange-500/30 hover:shadow-xl transition-all flex items-center gap-3 transform hover:scale-105 active:scale-95"
+          >
+            <Play fill="white" size={24} />
+            START RUN NOW
+          </button>
         </div>
-        <button 
-          onClick={handleStartRun}
-          className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:shadow-2xl transition-all flex items-center gap-3 transform hover:scale-105 active:scale-95"
-        >
-          <Play fill="white" size={24} />
-          START RUN NOW
-        </button>
       </motion.header>
 
       {/* Quick Stats Grid */}
@@ -181,10 +234,10 @@ const Home = () => {
         className="grid grid-cols-2 md:grid-cols-4 gap-4"
       >
         {[
-          { label: 'Total Distance', value: `${(stats?.total_distance / 1000 || 0).toFixed(2)} km`, icon: <TrendingUp className="text-red-400" />, color: 'from-red-500/10 to-orange-500/10', border: 'border-red-500/30' },
-          { label: 'Territories', value: stats?.territories_captured || 0, icon: <MapIcon className="text-orange-400" />, color: 'from-orange-500/10 to-red-500/10', border: 'border-orange-500/30' },
-          { label: 'Level', value: user?.level || 1, icon: <Award className="text-red-400" />, color: 'from-red-500/10 to-orange-500/10', border: 'border-red-500/30' },
-          { label: 'XP Points', value: user?.xp || 0, icon: <Zap className="text-orange-400" />, color: 'from-orange-500/10 to-red-500/10', border: 'border-orange-500/30' },
+          { label: 'Total Distance', value: `${Number(stats?.total_distance || 0).toFixed(2)} km`, icon: <TrendingUp className="text-orange-400" />, color: 'from-orange-500/10 to-red-500/10', border: 'border-orange-500/30' },
+          { label: 'Territories', value: stats?.territories_captured || 0, icon: <MapIcon className="text-red-400" />, color: 'from-red-500/10 to-orange-500/10', border: 'border-red-500/30' },
+          { label: 'Level', value: user?.level || 1, icon: <Award className="text-orange-400" />, color: 'from-orange-500/10 to-red-500/10', border: 'border-orange-500/30' },
+          { label: 'XP Points', value: user?.xp || 0, icon: <Zap className="text-red-400" />, color: 'from-red-500/10 to-orange-500/10', border: 'border-red-500/30' },
         ].map((stat, idx) => (
           <motion.div 
             key={idx} 
@@ -192,13 +245,16 @@ const Home = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4, delay: idx * 0.1 }}
             whileHover={{ scale: 1.05, y: -5 }}
-            className={`bg-gradient-to-br ${stat.color} border ${stat.border} p-4 rounded-2xl flex items-center gap-4 shadow-lg`}
           >
-            <div className="p-3 bg-gray-900/50 rounded-xl">{stat.icon}</div>
-            <div>
-              <p className="text-gray-500 text-xs uppercase tracking-wider">{stat.label}</p>
-              <p className="text-xl font-bold">{stat.value}</p>
-            </div>
+            <Card className={`bg-gradient-to-br ${stat.color} border ${stat.border} p-4`}>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gray-900/50 rounded-xl backdrop-blur-sm">{stat.icon}</div>
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wider font-semibold">{stat.label}</p>
+                  <p className="text-2xl font-black text-white">{stat.value}</p>
+                </div>
+              </div>
+            </Card>
           </motion.div>
         ))}
       </motion.div>
@@ -207,63 +263,25 @@ const Home = () => {
         {/* Main Content Area */}
         <div className="lg:col-span-2 space-y-8">
           {/* New Features Highlights */}
-          <motion.section 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="bg-gradient-to-br from-red-900/20 to-orange-900/20 border border-red-500/30 p-6 rounded-3xl"
-          >
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Zap className="text-orange-400" size={20} />
-              New in ZoneRush
-            </h2>
-            <div className="grid md:grid-cols-3 gap-4">
-              <motion.div 
-                whileHover={{ scale: 1.05, y: -5 }}
-                className="bg-gray-900/60 p-4 rounded-2xl border border-gray-700"
-              >
-                <Users className="text-red-400 mb-2" size={24} />
-                <h3 className="font-bold text-sm">Live Multiplayer</h3>
-                <p className="text-gray-400 text-xs mt-1">See other runners live on the map and compete in real-time.</p>
-              </motion.div>
-              <motion.div 
-                whileHover={{ scale: 1.05, y: -5 }}
-                className="bg-gray-900/60 p-4 rounded-2xl border border-gray-700"
-              >
-                <Shield className="text-orange-400 mb-2" size={24} />
-                <h3 className="font-bold text-sm">Smart Safety</h3>
-                <p className="text-gray-400 text-xs mt-1">AI-powered safety checks and instant SOS for your peace of mind.</p>
-              </motion.div>
-              <motion.div 
-                whileHover={{ scale: 1.05, y: -5 }}
-                className="bg-gray-900/60 p-4 rounded-2xl border border-gray-700"
-              >
-                <MapIcon className="text-red-400 mb-2" size={24} />
-                <h3 className="font-bold text-sm">Territory War</h3>
-                <p className="text-gray-400 text-xs mt-1">Capture areas and defend them from other runners in your city.</p>
-              </motion.div>
-            </div>
-          </motion.section>
-
           {/* Recent Runs */}
           <section>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <History className="text-gray-400" size={20} />
+              <h2 className="text-xl font-bold flex items-center gap-2 gradient-text">
+                <History className="text-orange-400" size={20} />
                 Recent Runs
               </h2>
-              <Link to="/runs" className="text-orange-400 hover:text-red-400 text-sm font-medium transition">View All</Link>
+              <Link to="/runs" className="text-orange-400 hover:text-red-400 text-sm font-semibold transition hover:underline">View All</Link>
             </div>
             <div className="space-y-3">
               {safeRuns.length > 0 ? (
                 safeRuns.map((run) => (
-                  <div key={run.id} className="bg-gray-800/40 hover:bg-gray-800/60 transition border border-gray-700/50 p-4 rounded-2xl flex items-center justify-between">
+                  <Card key={run.id} className="p-4 flex items-center justify-between hover:scale-[1.01] transition-transform">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-red-500/10 to-orange-500/10 rounded-full flex items-center justify-center text-orange-500 border border-orange-500/30">
+                      <div className="w-12 h-12 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-full flex items-center justify-center text-orange-400 border border-orange-500/30">
                         <Activity size={24} />
                       </div>
                       <div>
-                        <h4 className="font-bold">{new Date(run.completed_at).toLocaleDateString()}</h4>
+                        <h4 className="font-bold text-white">{new Date(run.completed_at).toLocaleDateString()}</h4>
                         <p className="text-gray-400 text-xs">{(run.distance / 1000).toFixed(2)} km • {Math.floor(run.duration / 60)}m {run.duration % 60}s</p>
                       </div>
                     </div>
@@ -271,12 +289,12 @@ const Home = () => {
                       <p className="font-bold text-orange-400">{Number(run.pace)?.toFixed(2) ?? 'N/A'} min/km</p>
                       <p className="text-gray-500 text-[10px] uppercase tracking-tighter font-bold">min/km</p>
                     </div>
-                  </div>
+                  </Card>
                 ))
               ) : (
-                <div className="text-center py-8 bg-gray-800/20 rounded-2xl border border-dashed border-gray-700">
-                  <p className="text-gray-500">No runs yet. Get out there and start running!</p>
-                </div>
+                <Card className="text-center py-8">
+                  <p className="text-gray-400">No runs yet. Get out there and start running!</p>
+                </Card>
               )}
             </div>
           </section>
@@ -289,8 +307,8 @@ const Home = () => {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="bg-gradient-to-br from-orange-900/30 to-red-900/30 border border-orange-500/30 p-6 rounded-3xl"
           >
+            <Card className="p-6">
               {!weather ? (
                 <div className="text-center py-8">
                   <p className="text-gray-400">Loading weather...</p>
@@ -299,12 +317,12 @@ const Home = () => {
               <div className="space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-lg font-bold flex items-center gap-2">
-                    <Thermometer className="text-blue-400" size={20} />
+                  <h2 className="text-lg font-bold flex items-center gap-2 gradient-text">
+                    <Thermometer className="text-orange-400" size={20} />
                     Current Weather
                   </h2>
                   {weather.weather?.location && (
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       📍 {weather.weather?.location?.city}, {weather.weather?.location?.country}
                     </p>
                   )}
@@ -412,25 +430,27 @@ const Home = () => {
                 )}
               </div>
               )}
+            </Card>
           </motion.section>
 
           <motion.section 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-orange-500/30 p-6 rounded-3xl h-fit"
           >
-            <div className="flex items-center gap-2 mb-6">
-              <Trophy className="text-yellow-400" size={24} />
-              <h2 className="text-xl font-bold">Top Runners</h2>
-            </div>
-            {/* Quick leaderboard list could go here */}
-            <div className="space-y-4">
-              <p className="text-gray-500 text-sm italic">Connect with others to see your ranking among friends.</p>
-              <Link to="/leaderboard" className="block w-full text-center py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 rounded-xl font-bold transition shadow-lg hover:shadow-xl transform hover:scale-105">
-                Full Leaderboard
-              </Link>
-            </div>
+            <Card className="p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <Trophy className="text-yellow-400" size={24} />
+                <h2 className="text-xl font-bold gradient-text">Top Runners</h2>
+              </div>
+              {/* Quick leaderboard list could go here */}
+              <div className="space-y-4">
+                <p className="text-gray-400 text-sm italic">Connect with others to see your ranking among friends.</p>
+                <Link to="/leaderboard" className="block w-full text-center py-3 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 rounded-xl font-bold transition shadow-lg hover:shadow-orange-500/30 hover:shadow-xl transform hover:scale-105">
+                  Full Leaderboard
+                </Link>
+              </div>
+            </Card>
           </motion.section>
 
           {/* Training Tip */}
@@ -439,15 +459,16 @@ const Home = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.5 }}
             whileHover={{ scale: 1.02 }}
-            className="bg-gradient-to-r from-red-600 to-orange-600 p-6 rounded-3xl text-white relative overflow-hidden group shadow-2xl"
           >
-            <div className="relative z-10">
-              <h3 className="font-bold text-lg mb-2">Pro Tip</h3>
-              <p className="text-blue-100 text-sm">Run through new areas to capture territories and earn 2x XP points today!</p>
-            </div>
-            <div className="absolute -right-4 -bottom-4 opacity-20 group-hover:scale-110 transition-transform duration-500">
-              <TrendingUp size={120} />
-            </div>
+            <Card className="bg-gradient-to-r from-orange-600 to-red-600 p-6 text-white relative overflow-hidden group shadow-2xl hover:shadow-orange-500/30" hover={false}>
+              <div className="relative z-10">
+                <h3 className="font-bold text-lg mb-2">Pro Tip</h3>
+                <p className="text-white/90 text-sm">Run through new areas to capture territories and earn 2x XP points today!</p>
+              </div>
+              <div className="absolute -right-4 -bottom-4 opacity-20 group-hover:scale-110 transition-transform duration-500">
+                <TrendingUp size={120} />
+              </div>
+            </Card>
           </motion.section>
         </div>
       </div>

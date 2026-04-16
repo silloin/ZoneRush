@@ -1,12 +1,20 @@
 const { Pool } = require('pg');
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
 const pool = new Pool({
-  user: 'postgres',
-  password: '8810',
-  host: 'localhost',
-  database: 'zonerush',
-  port: 5432
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD,
+  host: process.env.DB_HOST || 'localhost',
+  database: process.env.DB_DATABASE || 'zonerush',
+  port: process.env.DB_PORT || 5432
 });
+
+if (!process.env.DB_PASSWORD) {
+  console.error('❌ ERROR: DB_PASSWORD environment variable not set!');
+  console.error('   Please create server/.env with database credentials.');
+  console.error('   See server/.env.example for template.');
+  process.exit(1);
+}
 
 async function checkUsers() {
   try {

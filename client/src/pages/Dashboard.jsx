@@ -18,6 +18,7 @@ import {
   Legend,
 } from 'recharts';
 import { Trophy, Map as MapIcon, Activity, TrendingUp, Calendar, Upload, MessageSquare, Lightbulb, Send, Bot, User } from 'lucide-react';
+import Card from '../components/ui/Card';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
@@ -177,16 +178,19 @@ const Dashboard = () => {
     : '0.00';
 
   return (
-    <div className="p-4 sm:p-8 bg-gray-900 min-h-screen text-white">
+    <div className="p-4 sm:p-6 lg:p-8 bg-gray-900/50 min-h-screen text-white page-enter">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 space-y-4 sm:space-y-0">
-        <h1 className="text-2xl sm:text-3xl font-bold">Runner Dashboard</h1>
+        <div>
+          <h1 className="text-3xl sm:text-4xl font-black gradient-text">Runner Dashboard</h1>
+          <p className="text-gray-400 text-sm mt-1">Track your progress and get AI-powered coaching</p>
+        </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
-          <label className="flex items-center space-x-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 p-2 px-4 rounded cursor-pointer transition w-full sm:w-auto justify-center shadow-lg">
+          <label className="flex items-center space-x-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 p-2 px-4 rounded-xl cursor-pointer transition w-full sm:w-auto justify-center shadow-lg hover:shadow-orange-500/30 hover:shadow-xl transform hover:scale-105">
             <Upload size={20} />
-            <span className="text-sm sm:text-base">{uploading ? 'Processing...' : 'Upload GPX'}</span>
+            <span className="text-sm sm:text-base font-semibold">{uploading ? 'Processing...' : 'Upload GPX'}</span>
             <input type="file" className="hidden" accept=".gpx" onChange={handleFileUpload} disabled={uploading} />
           </label>
-          <div className="flex items-center space-x-2 bg-gradient-to-r from-orange-600/20 to-red-600/20 border border-orange-500/30 p-2 rounded w-full sm:w-auto justify-center">
+          <div className="flex items-center space-x-2 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 p-2 px-4 rounded-xl w-full sm:w-auto justify-center">
             <Calendar className="text-orange-400" size={20} />
             <span className="text-sm sm:text-base">{new Date().toLocaleDateString()}</span>
           </div>
@@ -194,45 +198,44 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-3 sm:p-6 rounded-lg border border-red-500/30 shadow-lg">
+        <Card className="p-3 sm:p-6">
           <div className="flex items-center mb-2">
             <Trophy className="text-orange-500 mr-1 sm:mr-2" size={16} />
-            <span className="text-gray-400 text-xs sm:text-sm">Total Distance</span>
+            <span className="text-gray-400 text-xs sm:text-sm font-semibold">Total Distance</span>
           </div>
-          <p className="text-lg sm:text-3xl font-bold">{totalDistance} km</p>
-        </div>
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-3 sm:p-6 rounded-lg border border-orange-500/30 shadow-lg">
+          <p className="text-lg sm:text-3xl font-black">{totalDistance} km</p>
+        </Card>
+        <Card className="p-3 sm:p-6">
           <div className="flex items-center mb-2">
             <MapIcon className="text-red-500 mr-1 sm:mr-2" size={16} />
-            <span className="text-gray-400 text-xs sm:text-sm">Tiles Owned</span>
+            <span className="text-gray-400 text-xs sm:text-sm font-semibold">Tiles Owned</span>
           </div>
-          <p className="text-lg sm:text-3xl font-bold">{tileCount}</p>
-
-        </div>
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-3 sm:p-6 rounded-lg border border-red-500/30 shadow-lg">
+          <p className="text-lg sm:text-3xl font-black">{tileCount}</p>
+        </Card>
+        <Card className="p-3 sm:p-6">
           <div className="flex items-center mb-2">
             <Activity className="text-orange-500 mr-1 sm:mr-2" size={16} />
-            <span className="text-gray-400 text-xs sm:text-sm">Total Runs</span>
+            <span className="text-gray-400 text-xs sm:text-sm font-semibold">Total Runs</span>
           </div>
-          <p className="text-lg sm:text-3xl font-bold">{runs.length}</p>
-        </div>
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-3 sm:p-6 rounded-lg border border-orange-500/30 shadow-lg">
+          <p className="text-lg sm:text-3xl font-black">{runs.length}</p>
+        </Card>
+        <Card className="p-3 sm:p-6">
           <div className="flex items-center mb-2">
             <TrendingUp className="text-red-500 mr-1 sm:mr-2" size={16} />
-            <span className="text-gray-400 text-xs sm:text-sm">Average Pace</span>
+            <span className="text-gray-400 text-xs sm:text-sm font-semibold">Average Pace</span>
           </div>
-          <p className="text-lg sm:text-3xl font-bold">{avgPace} min/km</p>
-        </div>
+          <p className="text-lg sm:text-3xl font-black">{avgPace} min/km</p>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 mb-6 sm:mb-8">
         {/* AI Coach Chat Card */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-4 sm:p-6 rounded-lg border border-red-500/30 flex flex-col h-[500px] shadow-lg">
+        <Card className="p-4 sm:p-6 flex flex-col h-[500px]">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg sm:text-xl font-semibold flex items-center">
+            <h2 className="text-lg sm:text-xl font-semibold flex items-center gradient-text">
               <Lightbulb className="text-orange-400 mr-2" /> AI Running Coach
             </h2>
-            <span className="text-xs bg-gradient-to-r from-red-600 to-orange-600 px-2 py-1 rounded shadow">BETA</span>
+            <span className="text-xs bg-gradient-to-r from-orange-600 to-red-600 px-2 py-1 rounded shadow font-semibold">BETA</span>
           </div>
           
           {/* Chat Messages */}
@@ -336,10 +339,10 @@ const Dashboard = () => {
               <Send size={18} />
             </button>
           </form>
-        </div>
+        </Card>
 
-        <div className="bg-gray-800 p-4 sm:p-6 rounded-lg">
-          <h2 className="text-lg sm:text-xl font-semibold mb-4">Distance (Last 7 Runs)</h2>
+        <Card className="p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold mb-4 gradient-text">Distance (Last 7 Runs)</h2>
           <div className="h-48 sm:h-64">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -348,16 +351,16 @@ const Dashboard = () => {
                   <XAxis dataKey="date" stroke="#9CA3AF" fontSize={12} />
                   <YAxis stroke="#9CA3AF" fontSize={12} />
                   <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', fontSize: '12px' }} />
-                  <Bar dataKey="distance" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="distance" fill="#ff6b35" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-400 text-sm">No runs yet</div>
             )}
           </div>
-        </div>
-        <div className="bg-gray-800 p-4 sm:p-6 rounded-lg">
-          <h2 className="text-lg sm:text-xl font-semibold mb-4">Pace Trend (Last 7 Runs)</h2>
+        </Card>
+        <Card className="p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold mb-4 gradient-text">Pace Trend (Last 7 Runs)</h2>
           <div className="h-48 sm:h-64">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -366,18 +369,18 @@ const Dashboard = () => {
                   <XAxis dataKey="date" stroke="#9CA3AF" fontSize={12} />
                   <YAxis stroke="#9CA3AF" fontSize={12} />
                   <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', fontSize: '12px' }} />
-                  <Line type="monotone" dataKey="pace" stroke="#F59E0B" strokeWidth={2} />
+                  <Line type="monotone" dataKey="pace" stroke="#f44336" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-400 text-sm">No runs yet</div>
             )}
           </div>
-        </div>
+        </Card>
       </div>
 
-      <div className="bg-gray-800 p-4 sm:p-6 rounded-lg">
-        <h2 className="text-lg sm:text-xl font-semibold mb-4">Recent Activity</h2>
+      <Card className="p-4 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4 gradient-text">Recent Activity</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -391,7 +394,7 @@ const Dashboard = () => {
             <tbody>
               {runs.length > 0 ? (
                 runs.slice(0, 5).map((run, idx) => (
-                  <tr key={run.id} className="border-b border-gray-700 hover:bg-gray-700/50">
+                  <tr key={run.id} className="border-b border-gray-700/50 hover:bg-gray-800/50 transition">
                     <td className="py-3 text-xs sm:text-sm">#{idx + 1}</td>
                     <td className="py-3 font-medium text-xs sm:text-sm">{parseFloat(run.distance || 0).toFixed(2)}</td>
                     <td className="py-3 text-xs sm:text-sm hidden sm:table-cell">{Math.floor(run.duration / 60)}m {run.duration % 60}s</td>
@@ -406,7 +409,7 @@ const Dashboard = () => {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

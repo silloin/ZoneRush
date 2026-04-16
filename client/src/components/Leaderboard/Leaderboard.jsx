@@ -151,9 +151,9 @@ const Leaderboard = ({ currentUserId }) => {
               <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${getMedalColor(2)} flex items-center justify-center text-3xl font-bold mb-2`}>
                 2
               </div>
-              <p className="font-bold text-lg">{leaderboard[1].username}</p>
+              <p className="font-bold text-lg">{leaderboard[1]?.username || 'No data'}</p>
               <p className="text-sm text-gray-400">
-                {formatValue(getValue(leaderboard[1], category), category)}
+                {leaderboard[1] ? formatValue(getValue(leaderboard[1], category), category) : 'N/A'}
               </p>
             </div>
 
@@ -163,9 +163,9 @@ const Leaderboard = ({ currentUserId }) => {
               <div className={`w-24 h-24 rounded-full bg-gradient-to-br ${getMedalColor(1)} flex items-center justify-center text-4xl font-bold mb-2 shadow-2xl`}>
                 1
               </div>
-              <p className="font-bold text-xl">{leaderboard[0].username}</p>
+              <p className="font-bold text-xl">{leaderboard[0]?.username || 'No data'}</p>
               <p className="text-sm text-gray-400">
-                {formatValue(getValue(leaderboard[0], category), category)}
+                {leaderboard[0] ? formatValue(getValue(leaderboard[0], category), category) : 'N/A'}
               </p>
             </div>
 
@@ -174,9 +174,9 @@ const Leaderboard = ({ currentUserId }) => {
               <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${getMedalColor(3)} flex items-center justify-center text-3xl font-bold mb-2`}>
                 3
               </div>
-              <p className="font-bold text-lg">{leaderboard[2].username}</p>
+              <p className="font-bold text-lg">{leaderboard[2]?.username || 'No data'}</p>
               <p className="text-sm text-gray-400">
-                {formatValue(getValue(leaderboard[2], category), category)}
+                {leaderboard[2] ? formatValue(getValue(leaderboard[2], category), category) : 'N/A'}
               </p>
             </div>
           </div>

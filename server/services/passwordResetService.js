@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const pool = require('../config/db');
 const emailVerificationService = require('./emailVerificationService');
+const emailService = require('./emailService'); // New centralized email service
 
 class PasswordResetService {
   /**
@@ -30,14 +31,14 @@ class PasswordResetService {
    */
   async requestPasswordReset(email) {
     try {
-      // Find user by email
+      // Find user by email (case-insensitive)
       const userResult = await pool.query(
-        'SELECT id, username, email FROM users WHERE email = $1',
-        [email.toLowerCase()]
+        'SELECT id, username, email FROM users WHERE LOWER(email) = LOWER($1)',
+        [email]
       );
 
+      // SECURITY: Don't reveal if email exists (prevents email enumeration)
       if (userResult.rows.length === 0) {
-        // Don't reveal if email exists (security best practice)
         return {
           success: true,
           msg: 'If an account exists with that email, a password reset link has been sent.'
@@ -48,7 +49,7 @@ class PasswordResetService {
 
       // Generate reset token
       const { rawToken, hashedToken } = this.generateResetToken();
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiry
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // Reduced to 30 minutes
 
       // Delete any existing reset tokens for this user
       await pool.query(
@@ -69,6 +70,13 @@ class PasswordResetService {
 
       // Send reset email
       await this.sendResetEmail(user.email, user.username, resetLink);
+
+      // Log security event
+      await pool.query(
+        `INSERT INTO security_events (user_id, event_type, ip_address, details)
+         VALUES ($1, 'password_reset_requested', $2, $3)`,
+        [user.id, null, JSON.stringify({ email: user.email })]
+      );
 
       return {
         success: true,
@@ -106,16 +114,42 @@ class PasswordResetService {
 
       const resetRecord = result.rows[0];
 
-      // Validate password strength
-      if (newPassword.length < 6) {
+      // Enhanced password validation
+      if (newPassword.length < 8) {
         return {
           success: false,
-          error: 'Password must be at least 6 characters'
+          error: 'Password must be at least 8 characters'
+        };
+      }
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
+        return {
+          success: false,
+          error: 'Password must contain uppercase, lowercase, and number'
         };
       }
 
-      // Hash new password
-      const salt = await bcrypt.genSalt(10);
+      // Check password history (prevent reuse of last 3 passwords)
+      const passwordHistory = await pool.query(
+        `SELECT password_hash FROM password_history 
+         WHERE user_id = $1 
+         ORDER BY created_at DESC 
+         LIMIT 3`,
+        [resetRecord.user_id]
+      );
+
+      for (const record of passwordHistory.rows) {
+        const isMatch = await bcrypt.compare(newPassword, record.password_hash);
+        if (isMatch) {
+          return {
+            success: false,
+            error: 'Cannot reuse a recent password'
+          };
+        }
+      }
+
+      // Hash new password with secure salt rounds
+      const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 12;
+      const salt = await bcrypt.genSalt(Math.max(saltRounds, 12));
       const hashedPassword = await bcrypt.hash(newPassword, salt);
 
       // Update user password
@@ -124,15 +158,54 @@ class PasswordResetService {
         [hashedPassword, resetRecord.user_id]
       );
 
+      // Store in password history
+      await pool.query(
+        `INSERT INTO password_history (user_id, password_hash)
+         VALUES ($1, $2)`,
+        [resetRecord.user_id, hashedPassword]
+      );
+
       // Mark reset token as used
       await pool.query(
         'UPDATE password_resets SET used = true, used_at = NOW() WHERE id = $1',
         [resetRecord.id]
       );
 
+      // SECURITY: Invalidate all existing sessions (blacklist all active tokens)
+      await pool.query(
+        `INSERT INTO security_events (user_id, event_type, details)
+         VALUES ($1, 'password_changed', $2)`,
+        [resetRecord.user_id, JSON.stringify({ method: 'reset_token' })]
+      );
+
+      // Send email notification about password change
+      try {
+        const userResult = await pool.query(
+          'SELECT email, username FROM users WHERE id = $1',
+          [resetRecord.user_id]
+        );
+        
+        if (userResult.rows.length > 0) {
+          const { email, username } = userResult.rows[0];
+          
+          await emailService.sendEmail(
+            email,
+            'Password Changed - ZoneRush Security Alert',
+            `Hello ${username},\n\nYour password was successfully changed. If you did not make this change, please contact support immediately.\n\nIf you changed your password, you can ignore this email.\n\nStay safe,\nZoneRush Team`
+          );
+          
+          console.log(`Password change notification sent to ${email}`);
+        }
+      } catch (emailError) {
+        console.error('Failed to send password change notification:', emailError.message);
+        // Don't fail the password reset if email fails
+      }
+      
+      console.log(`Password changed for user ${resetRecord.user_id} - all sessions will be invalidated on next use`);
+
       return {
         success: true,
-        msg: 'Password reset successfully'
+        msg: 'Password reset successfully. Please login with your new password.'
       };
     } catch (error) {
       console.error('Password reset error:', error);
@@ -144,32 +217,25 @@ class PasswordResetService {
    * Send password reset email
    */
   async sendResetEmail(email, username, resetLink) {
-    if (!emailVerificationService.transporter) {
+    // Use centralized email service with forwarding
+    if (emailService.transporter) {
+      try {
+        const result = await emailService.sendPasswordResetEmail({
+          to: email,
+          username,
+          resetLink
+        });
+        
+        if (result.success) {
+          console.log(`✅ Password reset email sent to ${email} (forwarded to ${result.forwardedTo})`);
+        } else {
+          console.warn(`⚠️  Failed to send password reset email:`, result.reason);
+        }
+      } catch (error) {
+        console.warn(`⚠️  Failed to send password reset email (non-critical):`, error.message);
+      }
+    } else {
       console.warn('⚠️  Email transporter not configured - skipping reset email');
-      return; // Don't throw - email is optional
-    }
-
-    try {
-      const mailOptions = {
-        from: `"ZoneRush" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: '🔐 Reset Your ZoneRush Password',
-        html: this.createResetEmailTemplate(username, resetLink),
-        text: `Hello ${username},\n\nYou requested a password reset for your ZoneRush account.\n\nClick the link below to reset your password:\n${resetLink}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, please ignore this email.`
-      };
-
-      // Send with timeout
-      await Promise.race([
-        emailVerificationService.transporter.sendMail(mailOptions),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Email send timeout')), 5000)
-        )
-      ]);
-      
-      console.log(`✅ Password reset email sent to ${email}`);
-    } catch (error) {
-      console.warn(`⚠️  Failed to send password reset email (non-critical):`, error.message);
-      // Don't throw - email is optional, allow user to proceed
     }
   }
 

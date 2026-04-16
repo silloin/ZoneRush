@@ -8,6 +8,7 @@ const challengeService = require('../services/challengeService');
 const statsService = require('../services/statsService');
 const weatherService = require('../services/weatherService');
 const authenticateToken = require('../middleware/auth');
+const { checkOwnership } = require('../middleware/idorProtection');
 const { antiCheatMiddleware } = require('../middleware/anticheat');
 
 // Get weather-based training recommendation
@@ -61,8 +62,14 @@ router.get('/', authenticateToken, async (req, res) => {
     
     res.json(runs);
   } catch (error) {
-    console.error('Error fetching runs:', error);
-    res.status(500).json({ error: 'Failed to fetch runs' });
+    console.error('❌ Error fetching runs:', error.message);
+    console.error('Stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to fetch runs',
+      message: error.message,
+      detail: error.detail,
+      hint: error.hint
+    });
   }
 });
 
@@ -100,7 +107,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   }
 });
 
-// Get single run details
+// Get single run details - IDOR PROTECTED
 router.get('/:runId', authenticateToken, async (req, res) => {
   try {
     const query = `
@@ -121,11 +128,30 @@ router.get('/:runId', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Run not found' });
     }
     
+    const runData = result.rows[0];
+    
+    // IDOR CHECK: Only allow access if user owns this run
+    if (String(runData.user_id) !== String(req.user.id)) {
+      // Log unauthorized access attempt
+      await pool.query(
+        `INSERT INTO security_events (user_id, event_type, ip_address, details)
+         VALUES ($1, 'unauthorized_access', $2, $3)`,
+        [req.user.id, req.ip, JSON.stringify({
+          type: 'run',
+          runId: req.params.runId,
+          runOwner: runData.user_id,
+          attempt: 'IDOR'
+        })]
+      );
+      
+      return res.status(403).json({ error: 'Access denied. You do not own this run.' });
+    }
+    
     const run = {
-      ...result.rows[0],
-      route_geometry: result.rows[0].route_json ? JSON.parse(result.rows[0].route_json) : null,
-      start_location: result.rows[0].start_json ? JSON.parse(result.rows[0].start_json) : null,
-      end_location: result.rows[0].end_json ? JSON.parse(result.rows[0].end_json) : null
+      ...runData,
+      route_geometry: runData.route_json ? JSON.parse(runData.route_json) : null,
+      start_location: runData.start_json ? JSON.parse(runData.start_json) : null,
+      end_location: runData.end_json ? JSON.parse(runData.end_json) : null
     };
     
     // Get route points
@@ -277,15 +303,31 @@ router.post('/', authenticateToken, antiCheatMiddleware, async (req, res) => {
       capturedTiles = await tileService.processRouteForTiles(userId, route_points, run.id);
       console.log('🏆 Tile capture complete:', capturedTiles.length, 'new tiles');
     } catch(e) {
-      console.warn('❌ tileService failed:', e.message);
+      console.error('❌ tileService failed:', e.message);
       console.error(e);
     }
     let segments = [];
-    try { segments = await segmentService.detectSegments(lineString); } catch(e) { console.warn('segmentService failed:', e.message); }
+    try { 
+      segments = await segmentService.detectSegments(lineString); 
+    } catch(e) { 
+      console.error('❌ segmentService failed:', e.message); 
+    }
     let unlockedAchievements = [];
-    try { unlockedAchievements = await achievementService.checkAchievements(userId); } catch(e) { console.warn('achievementService failed:', e.message); }
-    try { await challengeService.processRunForChallenges(userId, { distance, duration, pace, tilesCapture: capturedTiles.length }); } catch(e) { console.warn('challengeService failed:', e.message); }
-    try { await statsService.calculateStreak(userId); } catch(e) { console.warn('statsService failed:', e.message); }
+    try { 
+      unlockedAchievements = await achievementService.checkAchievements(userId); 
+    } catch(e) { 
+      console.error('❌ achievementService failed:', e.message); 
+    }
+    try { 
+      await challengeService.processRunForChallenges(userId, { distance, duration, pace, tilesCapture: capturedTiles.length }); 
+    } catch(e) { 
+      console.error('❌ challengeService failed:', e.message); 
+    }
+    try { 
+      await statsService.calculateStreak(userId); 
+    } catch(e) { 
+      console.error('❌ statsService failed:', e.message); 
+    }
     
     res.status(201).json({
       run: {
@@ -298,7 +340,11 @@ router.post('/', authenticateToken, antiCheatMiddleware, async (req, res) => {
     });
     
   } catch (error) {
-    try { await client.query('ROLLBACK'); } catch (_) {}
+    try { 
+      await client.query('ROLLBACK'); 
+    } catch (rollbackError) {
+      console.error('Failed to rollback transaction:', rollbackError.message);
+    }
     console.error('❌ Error creating run:', error);
     res.status(500).json({ 
       error: 'Failed to create run',
@@ -313,7 +359,7 @@ router.post('/', authenticateToken, antiCheatMiddleware, async (req, res) => {
   }
 });
 
-// Delete run
+// Delete run - IDOR PROTECTED
 router.delete('/:runId', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -326,12 +372,31 @@ router.delete('/:runId', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Run not found' });
     }
     
-    if (checkResult.rows[0].user_id !== userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    if (String(checkResult.rows[0].user_id) !== String(userId)) {
+      // Log unauthorized access attempt
+      await pool.query(
+        `INSERT INTO security_events (user_id, event_type, ip_address, details)
+         VALUES ($1, 'unauthorized_access', $2, $3)`,
+        [userId, req.ip, JSON.stringify({
+          type: 'run_delete',
+          runId: req.params.runId,
+          runOwner: checkResult.rows[0].user_id,
+          attempt: 'IDOR'
+        })]
+      );
+      
+      return res.status(403).json({ error: 'Access denied. You do not own this run.' });
     }
     
     const deleteQuery = 'DELETE FROM runs WHERE id = $1';
     await pool.query(deleteQuery, [req.params.runId]);
+    
+    // Log successful deletion
+    await pool.query(
+      `INSERT INTO security_events (user_id, event_type, details)
+       VALUES ($1, 'run_deleted', $2)`,
+      [userId, JSON.stringify({ runId: req.params.runId })]
+    );
     
     res.json({ message: 'Run deleted successfully' });
   } catch (error) {

@@ -1,5 +1,5 @@
-import React, { useContext, useMemo } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useContext, useMemo, useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import Map from './components/Map/Map';
@@ -16,6 +16,8 @@ import Sidebar from './components/Sidebar';
 import SocialFeed from './components/SocialFeed';
 import Achievements from './components/Achievements/Achievements';
 import ChatLayout from './components/Chat/ChatLayout';
+import ErrorBoundary from './components/ErrorBoundary';
+import { Menu } from 'lucide-react';
 import './App.css';
 
 // Optimized ProtectedRoute with React.memo to prevent unnecessary re-renders
@@ -46,10 +48,148 @@ const ProtectedRoute = React.memo(({ children }) => {
 ProtectedRoute.displayName = 'ProtectedRoute';
 
 const Layout = ({ children }) => {
+  const { user } = useContext(AuthContext);
+  const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isPrivateChatActive, setIsPrivateChatActive] = useState(false);
+
+  // Auto-close sidebar when route changes
+  useEffect(() => {
+    setSidebarOpen(false);
+    // Reset isPrivateChatActive when navigating away from chat
+    if (location.pathname !== '/chat') {
+      setIsPrivateChatActive(false);
+    }
+  }, [location.pathname]);
+
+  // Hide sidebar on mobile for certain routes
+  const hideSidebarOnMobile = location.pathname === '/chat';
+
+  // Special layout for chat route - full height without constraints
+  if (location.pathname === '/chat') {
+    return (
+      <div className="flex flex-col md:flex-row w-full h-[100dvh] bg-gray-900">
+        {/* Mobile Horizontal Top Navigation for Chat */}
+        {!isPrivateChatActive && (
+          <div className="md:hidden bg-gray-900/90 backdrop-blur-xl border-b border-gray-800/50 flex-shrink-0">
+            <div className="flex items-center px-4 py-2">
+              <h1 className="text-lg font-black gradient-text">ZoneRush</h1>
+            </div>
+            {/* Horizontal Scrollable Menu - All Pages */}
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent px-2 pb-2">
+              <div className="flex space-x-1 min-w-max">
+                {[
+                  { name: 'Home', path: '/' },
+                  { name: 'Live Map', path: '/map' },
+                  { name: 'Dashboard', path: '/dashboard' },
+                  { name: 'Run History', path: '/runs' },
+                  { name: 'Leaderboard', path: '/leaderboard' },
+                  { name: 'Social Feed', path: '/social' },
+                  { name: 'Chat', path: '/chat' },
+                  { name: 'Achievements', path: '/achievements' },
+                  { name: 'Training Plans', path: '/training' },
+                  { name: 'Events', path: '/events' },
+                  { name: 'Profile', path: '/profile' },
+                ].map((item) => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.path}
+                      className={`
+                        px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition
+                        ${isActive 
+                          ? 'bg-gradient-to-r from-orange-600/20 to-red-600/20 text-orange-400 border border-orange-500/50' 
+                          : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'
+                        }
+                      `}
+                    >
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {!isPrivateChatActive && !isPrivateChatActive && <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} isChatActive={isPrivateChatActive} />}
+        <div className="flex-1 relative h-full">
+          <ChatLayout onPrivateChatActiveChange={setIsPrivateChatActive} />
+        </div>
+      </div>
+    );
+  }
+
+  // Special layout for map route - full screen without scrolling
+  if (location.pathname === '/map') {
+    return (
+      <div className="flex flex-col md:flex-row w-full h-[100dvh] bg-gray-900 overflow-hidden">
+        {/* Mobile Burger Menu Button */}
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="md:hidden fixed top-4 left-4 z-30 p-2 bg-gray-900/90 backdrop-blur-xl rounded-xl border border-gray-700/50 shadow-lg hover:bg-gray-800/90 transition"
+          aria-label="Open sidebar"
+        >
+          <Menu size={24} className="text-white" />
+        </button>
+        
+        {!isPrivateChatActive && <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} isChatActive={isPrivateChatActive} />}
+        <div className="flex-1 relative h-[100dvh] overflow-hidden">
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  // Default layout - horizontal top nav on mobile, sidebar on desktop
   return (
-    <div className="flex flex-col md:flex-row w-full h-screen overflow-hidden bg-gray-900">
-      <Sidebar />
-      <div className="flex-1 relative overflow-auto">
+    <div className="flex flex-col md:flex-row w-full h-screen h-[100dvh] overflow-hidden bg-gray-900">
+      {/* Mobile Horizontal Top Navigation */}
+      <div className="md:hidden bg-gray-900/90 backdrop-blur-xl border-b border-gray-800/50 flex-shrink-0">
+        <div className="flex items-center px-4 py-2">
+          <h1 className="text-lg font-black gradient-text">ZoneRush</h1>
+        </div>
+        {/* Horizontal Scrollable Menu - All Pages */}
+        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent px-2 pb-2">
+          <div className="flex space-x-1 min-w-max">
+            {[
+              { name: 'Home', path: '/' },
+              { name: 'Live Map', path: '/map' },
+              { name: 'Dashboard', path: '/dashboard' },
+              { name: 'Run History', path: '/runs' },
+              { name: 'Leaderboard', path: '/leaderboard' },
+              { name: 'Social Feed', path: '/social' },
+              { name: 'Chat', path: '/chat' },
+              { name: 'Achievements', path: '/achievements' },
+              { name: 'Training Plans', path: '/training' },
+              { name: 'Events', path: '/events' },
+              { name: 'Profile', path: '/profile' },
+            ].map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  className={`
+                    px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition
+                    ${isActive 
+                      ? 'bg-gradient-to-r from-orange-600/20 to-red-600/20 text-orange-400 border border-orange-500/50' 
+                      : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'
+                    }
+                  `}
+                >
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      
+      {/* Desktop Sidebar */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} isChatActive={isPrivateChatActive} />
+      <div className="flex-1 relative h-full overflow-y-auto">
         {children}
       </div>
     </div>
@@ -64,12 +204,13 @@ const AchievementsWrapper = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <SocketProvider>
-        <div className="App w-full h-screen">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+    <ErrorBoundary>
+      <AuthProvider>
+        <SocketProvider>
+          <div className="App w-full h-screen h-[100dvh] overflow-hidden">
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
             <Route
               path="/"
               element={
@@ -174,9 +315,7 @@ function App() {
               path="/chat"
               element={
                 <ProtectedRoute>
-                  <div className="h-screen w-full">
-                    <ChatLayout />
-                  </div>
+                  <Layout />
                 </ProtectedRoute>
               }
             />
@@ -184,6 +323,7 @@ function App() {
         </div>
       </SocketProvider>
     </AuthProvider>
+  </ErrorBoundary>
   );
 }
 

@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
 const auth = require('../middleware/auth');
+const { messageProtection } = require('../middleware/abuseMiddleware');
 
 // ============================================
 // SEND PRIVATE MESSAGE
 // ============================================
-router.post('/private', auth, async (req, res) => {
+router.post('/private', auth, messageProtection, async (req, res) => {
   const { receiverId, content } = req.body;
   const senderId = req.user.id;
 
@@ -18,6 +19,17 @@ router.post('/private', auth, async (req, res) => {
 
     if (content.length > 2000) {
       return res.status(400).json({ message: 'Message too long (max 2000 characters)' });
+    }
+
+    // Fetch sender username if missing from token
+    let senderUsername = req.user.username;
+    if (!senderUsername) {
+      const sender = await pool.query('SELECT username FROM users WHERE id = $1', [senderId]);
+      if (sender.rows.length > 0) {
+        senderUsername = sender.rows[0].username;
+      } else {
+        return res.status(404).json({ message: 'Sender not found' });
+      }
     }
 
     // Validate receiver exists
@@ -56,10 +68,10 @@ router.post('/private', auth, async (req, res) => {
     await pool.query(
       `INSERT INTO notifications (user_id, type, title, content, data)
        VALUES ($1, 'message', 'New Message', $2, $3)`,
-      [receiverId, `${req.user.username} sent you a message`, JSON.stringify({
+      [receiverId, `${senderUsername} sent you a message`, JSON.stringify({
         messageId: result.rows[0].id,
         senderId: senderId,
-        senderUsername: req.user.username,
+        senderUsername: senderUsername,
         content: content.substring(0, 100)
       })]
     );
@@ -69,7 +81,7 @@ router.post('/private', auth, async (req, res) => {
       req.io.to(`user:${receiverId}`).emit('message-received', {
         messageId: result.rows[0].id,
         senderId: senderId,
-        senderUsername: req.user.username,
+        senderUsername: senderUsername,
         content: content
       });
     }
@@ -277,8 +289,20 @@ router.delete('/:messageId', auth, async (req, res) => {
       return res.status(404).json({ message: 'Message not found' });
     }
 
-    // Only the sender can delete their own messages
-    if (message.rows[0].sender_id !== userId) {
+    // Only the sender can delete their own messages - IDOR PROTECTION
+    if (String(message.rows[0].sender_id) !== String(userId)) {
+      // Log unauthorized access attempt
+      await pool.query(
+        `INSERT INTO security_events (user_id, event_type, ip_address, details)
+         VALUES ($1, 'unauthorized_access', $2, $3)`,
+        [userId, req.ip, JSON.stringify({
+          type: 'message_delete',
+          messageId: messageId,
+          messageOwner: message.rows[0].sender_id,
+          attempt: 'IDOR'
+        })]
+      );
+      
       return res.status(403).json({ message: 'You can only delete your own messages' });
     }
 

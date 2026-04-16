@@ -146,6 +146,7 @@ const PostCard = ({ post, currentUser, onLike, onComment, onDelete, onUpdate, co
         <div className="mt-4 space-y-3 border-t border-gray-700/50 pt-4">
           <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Comments ({post.commentsList.length})</h4>
           {post.commentsList.map(comment => {
+            console.log('🎨 Rendering comment:', comment);
             const isCommentOwner = currentUser && comment.user_id === currentUser.id;
             
             return (

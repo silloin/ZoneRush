@@ -1,6 +1,6 @@
 # 🏃‍♂️ ZoneRush - Real-Time GPS Territory Capture Game
 
-**ZoneRush** is a modern, real-time multiplayer fitness game that turns running into an exciting territory conquest experience. Capture zones, compete with other runners, track your progress, and stay safe with AI-powered features.
+**ZoneRush** is a modern, real-time multiplayer fitness game that turns running into an exciting territory conquest experience. Capture zones, compete with other runners, track your progress, chat with friends, and stay safe with AI-powered features.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)
@@ -20,7 +20,7 @@
 ### 🏆 **Gamification & Competition**
 - XP points and level progression system
 - Global and friend leaderboards
-- Achievements and badges
+- **Weekly achievements** with auto-reset every Monday
 - Weekly challenges and events
 - Clan system for team competition
 
@@ -31,16 +31,19 @@
 - Air quality monitoring for safe outdoor runs
 
 ### 💬 **Social & Communication**
-- Real-time private messaging
+- **Modern chat interface** with real-time private messaging
 - Global chat for community interaction
 - Friend requests and social feed
 - Activity sharing and kudos system
+- **Smart message grouping** with avatars
+- **Emoji picker** integration
 
 ### 🆘 **Safety First**
 - SOS emergency alerts with live location sharing
 - Emergency contact management
 - Real-time location sharing with trusted contacts
 - AI safety monitoring during runs
+- **Email notifications** for SOS alerts
 
 ### 📊 **Advanced Analytics**
 - Run history with detailed statistics
@@ -48,6 +51,13 @@
 - Performance insights and pace analysis
 - Heatmap visualization of popular routes
 - Territory capture statistics
+
+### 🎨 **User Experience**
+- **Responsive design** - Works on mobile, tablet, and desktop
+- **Skeleton loading** - Smooth loading animations
+- **Modern UI** - Gradient backgrounds, smooth animations
+- **Dark theme** - Easy on the eyes
+- **Mobile-optimized** - Touch-friendly navigation
 
 ---
 
@@ -134,10 +144,10 @@ WEATHER_API_KEY=your_weather_api_key
 # Air Quality API (WAQI)
 AQI_API_KEY=your_aqi_api_key
 
-# Email Configuration (Gmail)
-EMAIL_SERVICE=gmail
-EMAIL_USER=your_email@gmail.com
-EMAIL_APP_PASSWORD=your_app_password
+# Email Configuration (Resend)
+EMAIL_SERVICE=resend
+RESEND_API_KEY=your_resend_api_key
+RESEND_VERIFIED_EMAIL=your_verified_email@example.com
 
 # Frontend URL
 FRONTEND_URL=http://localhost:5173
@@ -189,9 +199,9 @@ Navigate to `http://localhost:5173`
    WEATHER_API_KEY=your_key
    AQI_API_KEY=your_key
    GROQ_API_KEY=your_key
-   EMAIL_SERVICE=gmail
-   EMAIL_USER=your_email@gmail.com
-   EMAIL_APP_PASSWORD=your_app_password
+   EMAIL_SERVICE=resend
+   RESEND_API_KEY=your_resend_key
+   RESEND_VERIFIED_EMAIL=your_verified_email
    ```
 
 4. **Done!** 🎉
@@ -217,7 +227,12 @@ Navigate to `http://localhost:5173`
 - **Auto-Save**: Runs automatically saved to database
 
 ### Social Features
-- **Private Chat**: Message other runners directly
+- **Private Chat**: Modern messaging interface with real-time updates
+  - Smart message grouping with avatars
+  - Emoji picker integration
+  - Message delete functionality
+  - Online status indicators
+  - Responsive mobile design
 - **Global Chat**: Community-wide communication
 - **Friend System**: Add and manage friends
 - **Activity Feed**: Share and view running activities
@@ -280,6 +295,7 @@ The app automatically detects the environment:
 - **OpenWeatherMap** - Weather data
 - **WAQI** - Air quality index
 - **Groq AI** - AI coach integration
+- **Resend** - Email service (SOS alerts, verification)
 - **Firebase** - Push notifications (optional)
 
 ---
@@ -298,8 +314,9 @@ The application uses PostgreSQL with PostGIS for spatial data:
 - `friend_requests` - Friend connections
 - `notifications` - User notifications
 - `sos_alerts` - Emergency alerts
-- `achievements` - User achievements
+- `achievements` - User achievements (with weekly reset support)
 - `training_plans` - AI-generated training plans
+- `system_logs` - System activity logging
 
 **Spatial Columns (SRID: 4326):**
 - Route geometries (LINESTRING)
@@ -319,7 +336,9 @@ The application uses PostgreSQL with PostGIS for spatial data:
 6. **Join clans** and participate in team challenges
 7. **Check leaderboards** to see your ranking
 8. **Chat** with other runners in real-time
-9. **Stay safe** with SOS and emergency contacts
+9. **Unlock achievements** - Weekly achievements reset every Monday!
+10. **Stay safe** with SOS and emergency contacts
+11. **Customize your profile** with profile pictures
 
 ---
 
@@ -331,6 +350,9 @@ zonerush/
 ├── client/                 # React frontend
 │   ├── src/
 │   │   ├── components/    # Reusable components
+│   │   │   ├── Chat/     # Chat interface components
+│   │   │   ├── Avatar.jsx # Profile avatar component
+│   │   │   └── Skeleton.jsx # Loading skeleton component
 │   │   ├── pages/         # Page components
 │   │   ├── context/       # React context (Auth, Socket)
 │   │   ├── services/      # API services
@@ -339,6 +361,8 @@ zonerush/
 ├── server/                # Express backend
 │   ├── routes/           # API routes
 │   ├── services/         # Business logic
+│   │   ├── emailService.js # Centralized email service
+│   │   └── achievementService.js # Achievement management
 │   ├── middleware/       # Auth, validation, etc.
 │   ├── config/           # Database config
 │   └── package.json
@@ -404,6 +428,12 @@ npm test             # Run tests
 - `GET /api/friends/list` - Get friends list
 - `POST /api/friends/request` - Send friend request
 
+### Achievements
+- `GET /api/achievements` - Get all achievements
+- `GET /api/achievements/user/:userId` - Get user's achievements
+- `GET /api/achievements/user/:userId/progress` - Get achievement progress
+- `POST /api/achievements/reset-weekly` - Reset weekly achievements (admin)
+
 ### AI Coach
 - `GET /api/ai-coach/recommendations/:userId` - Get recommendations
 - `POST /api/ai-coach/ask` - Ask AI coach a question
@@ -433,7 +463,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Mapbox** for the amazing mapping platform
 - **OpenStreetMap** contributors for map data
 - **OpenWeatherMap** for weather data
+- **WAQI** for air quality data
 - **PostGIS** for spatial database capabilities
+- **Resend** for email delivery service
+- **Groq AI** for AI coach capabilities
 - All contributors and testers
 
 ---
@@ -453,3 +486,19 @@ Give a ⭐️ if this project helped you!
 ---
 
 **Built with ❤️ for runners everywhere** 🏃‍♂️💨
+
+---
+
+## 🆕 Recent Updates
+
+### Latest Features (2026)
+- ✅ **Modern Chat Interface** - Redesigned messaging with smart grouping, avatars, and emoji support
+- ✅ **Weekly Achievements** - Auto-reset system for weekly challenges
+- ✅ **Skeleton Loading** - Smooth loading animations across all pages
+- ✅ **Responsive Design** - Fully optimized for mobile, tablet, and desktop
+- ✅ **Email Service Migration** - Switched to Resend for reliable email delivery
+- ✅ **Profile Avatars** - Automatic first-letter fallback for missing profile pictures
+- ✅ **Enhanced UI** - Gradient backgrounds, smooth animations, and better UX
+- ✅ **Sidebar Navigation** - Improved navigation with left-aligned desktop menu
+- ✅ **Message Input Fix** - Always-visible input field with better styling
+- ✅ **Safety Improvements** - Email notifications for SOS alerts

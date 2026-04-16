@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../config/database');
 const achievementService = require('../services/achievementService');
 const authenticateToken = require('../middleware/auth');
+const requireAdmin = require('../middleware/requireAdmin');
 
 // Get all achievements
 router.get('/', authenticateToken, async (req, res) => {
@@ -62,6 +63,17 @@ router.get('/profile/:userId', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching user profile stats:', error);
     res.status(500).json({ error: 'Failed to fetch profile stats' });
+  }
+});
+
+// Reset weekly achievements (admin only - can be called manually or via cron job)
+router.post('/reset-weekly', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await achievementService.resetWeeklyAchievements();
+    res.json(result);
+  } catch (error) {
+    console.error('Error resetting weekly achievements:', error);
+    res.status(500).json({ error: 'Failed to reset weekly achievements' });
   }
 });
 

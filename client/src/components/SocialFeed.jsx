@@ -33,9 +33,13 @@ const SocialFeed = () => {
         feedData.map(async (post) => {
           try {
             const commentsRes = await SocialService.getComments(post.id);
+            const comments = Array.isArray(commentsRes.data) ? commentsRes.data : [];
+            if (comments.length > 0) {
+              console.log(`📥 Post ${post.id} comments:`, comments.map(c => ({ id: c.id, text: c.text?.substring(0, 20) })));
+            }
             return {
               ...post,
-              commentsList: Array.isArray(commentsRes.data) ? commentsRes.data : []
+              commentsList: comments
             };
           } catch (err) {
             console.error(`Error fetching comments for post ${post.id}:`, err);
@@ -139,6 +143,7 @@ const SocialFeed = () => {
     
     try {
       const res = await SocialService.addComment(postId, commentContent);
+      console.log('📨 Comment API response:', res.data);
       
       // Clear input immediately
       setCommentText({ ...commentText, [postId]: '' });
@@ -153,6 +158,7 @@ const SocialFeed = () => {
         created_at: res.data.created_at,
         username: res.data.username || user?.username || 'Unknown'
       };
+      console.log('📝 Processed new comment:', newComment);
       
       // Update feed with new comment
       setFeed(prev => prev.map(post => {

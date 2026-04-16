@@ -56,6 +56,14 @@ class TileService {
       
       const tile = await this.getOrCreateTile(lat, lng);
       
+      // Check if tile already has an owner (someone else captured it first)
+      const previousOwnerResult = await client.query(
+        'SELECT user_id FROM captured_tiles WHERE tile_id = $1 ORDER BY first_captured_at ASC LIMIT 1',
+        [tile.id]
+      );
+      const previousOwner = previousOwnerResult.rows[0];
+      const hasDifferentOwner = previousOwner && previousOwner.user_id !== userId;
+      
       // Use SELECT FOR UPDATE to prevent race conditions during concurrent captures
       await client.query('SELECT * FROM tiles WHERE id = $1 FOR UPDATE', [tile.id]);
       
@@ -83,7 +91,8 @@ class TileService {
       return { 
         captured: true, 
         tile, 
-        isNew
+        isNew,
+        previousOwner: hasDifferentOwner ? previousOwner : null
       };
     } catch (err) {
       await client.query('ROLLBACK');

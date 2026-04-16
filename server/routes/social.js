@@ -141,15 +141,21 @@ router.post('/comment/:postId', auth, async (req, res) => {
       commentId = comment.id;
     } catch (err) {
       // If that fails, try with run_id and comment_text (old schema)
-      console.log('Trying old schema for comments...');
-      const result = await pool.query(
-        `INSERT INTO comments (user_id, run_id, comment_text, created_at) 
-         VALUES ($1, $2, $3, NOW()) 
-         RETURNING id, user_id, run_id as post_id, comment_text as text, created_at`,
-        [req.user.id, postId, text]
-      );
-      comment = result.rows[0];
-      commentId = comment.id;
+      console.log('Trying old schema for comments...', err.message);
+      try {
+        const result = await pool.query(
+          `INSERT INTO comments (user_id, run_id, comment_text, created_at) 
+           VALUES ($1, $2, $3, NOW()) 
+           RETURNING id, user_id, run_id as post_id, comment_text as text, created_at`,
+          [req.user.id, postId, text]
+        );
+        comment = result.rows[0];
+        commentId = comment.id;
+        console.log('✅ Comment saved with old schema:', comment);
+      } catch (oldErr) {
+        console.error('❌ Old schema also failed:', oldErr.message);
+        throw oldErr;
+      }
     }
     
     // Fetch the username for the response
@@ -187,10 +193,11 @@ router.get('/comments/:postId', async (req, res) => {
     let result = null;
     
     // Try new schema first (with post_id and text columns)
+    // Use NULLIF to treat empty strings as NULL, then COALESCE to fall back to comment_text
     try {
       result = await pool.query(
         `SELECT c.id, c.user_id, COALESCE(c.post_id, c.run_id) as post_id, 
-                COALESCE(c.text, c.comment_text) as text, 
+                COALESCE(NULLIF(c.text, ''), c.comment_text) as text, 
                 c.created_at, u.username 
          FROM comments c 
          JOIN users u ON c.user_id = u.id 
@@ -212,6 +219,7 @@ router.get('/comments/:postId', async (req, res) => {
            ORDER BY c.created_at DESC`,
           [postId]
         );
+        console.log(`📥 Fetched ${result.rows.length} comments for post ${postId}:`, result.rows.map(c => ({ id: c.id, text: c.text?.substring(0, 20) })));
       } catch (oldSchemaErr) {
         // If both fail, return empty array
         console.log('Both schemas failed for comments:', oldSchemaErr.message);
@@ -245,18 +253,47 @@ router.put('/comments/:commentId', auth, async (req, res) => {
       return res.status(404).json({ msg: 'Comment not found' });
     }
     
-    if (comment.rows[0].user_id !== req.user.id) {
-      return res.status(401).json({ msg: 'User not authorized' });
+    if (String(comment.rows[0].user_id) !== String(req.user.id)) {
+      // Log unauthorized access attempt
+      await pool.query(
+        `INSERT INTO security_events (user_id, event_type, ip_address, details)
+         VALUES ($1, 'unauthorized_access', $2, $3)`,
+        [req.user.id, req.ip, JSON.stringify({
+          type: 'comment_edit',
+          commentId: commentId,
+          commentOwner: comment.rows[0].user_id,
+          attempt: 'IDOR'
+        })]
+      );
+      
+      return res.status(403).json({ msg: 'Access denied. You do not own this comment.' });
     }
 
-    const updatedComment = await pool.query(
-      'UPDATE comments SET text = $1, created_at = NOW() WHERE id = $2 RETURNING id, user_id, post_id, text as comment_text, created_at',
-      [text, commentId]
-    );
+    let updatedComment = null;
     
-    // Get username for the updated comment
+    // Try new schema first (text column)
+    try {
+      updatedComment = await pool.query(
+        'UPDATE comments SET text = $1, created_at = NOW() WHERE id = $2 RETURNING id, user_id, post_id, text, created_at',
+        [text, commentId]
+      );
+    } catch (newSchemaErr) {
+      // Fall back to old schema (comment_text column)
+      console.log('Trying old schema for comment update...', newSchemaErr.message);
+      updatedComment = await pool.query(
+        'UPDATE comments SET comment_text = $1, created_at = NOW() WHERE id = $2 RETURNING id, user_id, run_id as post_id, comment_text as text, created_at',
+        [text, commentId]
+      );
+    }
+    
+    // Get username for the updated comment - return both text and comment_text for compatibility
     const commentWithUser = await pool.query(
-      'SELECT c.id, c.user_id, c.post_id, c.text as comment_text, c.created_at, u.username FROM comments c JOIN users u ON c.user_id = u.id WHERE c.id = $1',
+      `SELECT c.id, c.user_id, COALESCE(c.post_id, c.run_id) as post_id, 
+              COALESCE(c.text, c.comment_text) as text,
+              COALESCE(c.text, c.comment_text) as comment_text, 
+              c.created_at, u.username 
+       FROM comments c JOIN users u ON c.user_id = u.id 
+       WHERE c.id = $1`,
       [commentId]
     );
     
@@ -286,8 +323,20 @@ router.delete('/comments/:commentId', auth, async (req, res) => {
       return res.status(404).json({ msg: 'Comment not found' });
     }
     
-    if (comment.rows[0].user_id !== req.user.id) {
-      return res.status(403).json({ msg: 'Not authorized to delete this comment' });
+    if (String(comment.rows[0].user_id) !== String(req.user.id)) {
+      // Log unauthorized access attempt
+      await pool.query(
+        `INSERT INTO security_events (user_id, event_type, ip_address, details)
+         VALUES ($1, 'unauthorized_access', $2, $3)`,
+        [req.user.id, req.ip, JSON.stringify({
+          type: 'comment_delete',
+          commentId: commentId,
+          commentOwner: comment.rows[0].user_id,
+          attempt: 'IDOR'
+        })]
+      );
+      
+      return res.status(403).json({ msg: 'Access denied. You do not own this comment.' });
     }
 
     const result = await pool.query('DELETE FROM comments WHERE id = $1 RETURNING id', [commentId]);
@@ -326,8 +375,20 @@ router.put('/posts/:postId', auth, async (req, res) => {
       return res.status(404).json({ msg: 'Post not found' });
     }
     
-    if (post.rows[0].user_id !== req.user.id) {
-      return res.status(401).json({ msg: 'User not authorized' });
+    if (String(post.rows[0].user_id) !== String(req.user.id)) {
+      // Log unauthorized access attempt
+      await pool.query(
+        `INSERT INTO security_events (user_id, event_type, ip_address, details)
+         VALUES ($1, 'unauthorized_access', $2, $3)`,
+        [req.user.id, req.ip, JSON.stringify({
+          type: 'post_edit',
+          postId: req.params.postId,
+          postOwner: post.rows[0].user_id,
+          attempt: 'IDOR'
+        })]
+      );
+      
+      return res.status(403).json({ msg: 'Access denied. You do not own this post.' });
     }
 
     const updatedPost = await pool.query(

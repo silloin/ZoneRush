@@ -37,9 +37,16 @@ const RouteReplay = ({ runId, onClose }) => {
   };
 
   const initializeMap = (runData) => {
-    if (!runData.route_points || runData.route_points.length === 0) return;
+    if (!runData.route_points || runData.route_points.length === 0) {
+      console.error('Invalid route data: no route points available');
+      return;
+    }
 
-    const firstPoint = runData.route_points[0].location.coordinates;
+    const firstPoint = runData.route_points[0]?.location?.coordinates;
+    if (!firstPoint || !Array.isArray(firstPoint) || firstPoint.length < 2) {
+      console.error('Invalid route data: missing or malformed first point coordinates');
+      return;
+    }
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -222,7 +229,11 @@ const RouteReplay = ({ runId, onClose }) => {
     }
 
     if (run && run.route_points.length > 0) {
-      const firstPoint = run.route_points[0].location.coordinates;
+      const firstPoint = run.route_points[0]?.location?.coordinates;
+      if (!firstPoint || !Array.isArray(firstPoint) || firstPoint.length < 2) {
+        console.error('Invalid route data: missing or malformed first point coordinates');
+        return;
+      }
       if (marker.current) {
         marker.current.setLngLat(firstPoint);
       }

@@ -22,7 +22,7 @@ async getBasicStats(userId) {
       SELECT 
         u.id,
         u.username,
-        COALESCE(u.total_distance, 0) as total_distance,
+        COALESCE((SELECT SUM(distance) FROM runs WHERE user_id = u.id), 0) as total_distance,
         COALESCE(u.total_tiles, 0) as total_tiles,
         COALESCE(u.weekly_mileage, 0) as weekly_mileage,
         COALESCE(u.xp, 0) as xp,
@@ -35,7 +35,7 @@ async getBasicStats(userId) {
       FROM users u
       LEFT JOIN user_achievements ua ON u.id = ua.user_id
       WHERE u.id = $1
-      GROUP BY u.id, u.username, u.total_distance, u.total_tiles, u.weekly_mileage, u.xp, u.level, u.streak, u.territory_points, u.total_territory_area, u.territories_captured
+      GROUP BY u.id, u.username, u.total_tiles, u.weekly_mileage, u.xp, u.level, u.streak, u.territory_points, u.total_territory_area, u.territories_captured
     `;
     
     const result = await pool.query(query, [userId]);

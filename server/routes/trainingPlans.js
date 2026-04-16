@@ -48,8 +48,14 @@ router.get('/current', auth, async (req, res) => {
     ]);
     res.json(plan.rows[0] || null);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('❌ Error fetching training plan:', err.message);
+    console.error('Stack:', err.stack);
+    res.status(500).json({ 
+      msg: 'Failed to fetch training plan',
+      error: err.message,
+      detail: err.detail,
+      hint: err.hint
+    });
   }
 });
 

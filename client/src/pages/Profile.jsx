@@ -11,8 +11,8 @@ const Profile = () => {
   const { user, logout, updateProfile, updateProfilePhoto, uploadProfilePhoto } = useContext(AuthContext);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
-    username: '',
-    city: ''
+    username: user?.username || '',
+    city: user?.city || ''
   });
   const [photoUrl, setPhotoUrl] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -20,6 +20,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [imageError, setImageError] = useState(false);
   const fileInputRef = React.useRef(null);
 
   // Emergency Contacts State
@@ -243,18 +244,19 @@ const Profile = () => {
         <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-4 sm:p-8 mb-6 sm:mb-8 flex flex-col md:flex-row items-center shadow-2xl border border-red-500/30 relative">
           {/* Profile Photo */}
           <div className="relative mb-4 sm:mb-0 md:mr-8">
-            {user?.profile_picture ? (
+            {user?.profile_picture && !imageError ? (
               <div className="relative">
                 <img 
                   src={user.profile_picture} 
                   alt={user.username}
                   className="w-24 sm:w-32 h-24 sm:h-32 rounded-full object-cover border-4 border-orange-500/50 shadow-lg"
-                  onError={(e) => {
+                  onError={() => {
                     console.error('❌ Image failed to load:', user.profile_picture);
-                    e.target.style.display = 'none';
+                    setImageError(true);
                   }}
                   onLoad={() => {
                     console.log('✅ Image loaded successfully:', user.profile_picture);
+                    setImageError(false);
                   }}
                 />
                 <button
@@ -267,7 +269,7 @@ const Profile = () => {
             ) : (
               <div className="relative">
                 <div className="w-24 sm:w-32 h-24 sm:h-32 bg-gradient-to-br from-red-500 to-orange-500 rounded-full flex items-center justify-center text-3xl sm:text-5xl font-bold border-4 border-orange-500/50 shadow-lg">
-                  {user?.username?.[0].toUpperCase()}
+                  {user?.username?.[0]?.toUpperCase() || '?'}
                 </div>
                 <button
                   onClick={() => setIsUpdatingPhoto(!isUpdatingPhoto)}
@@ -480,7 +482,7 @@ const Profile = () => {
         </div>
 
         {/* Emergency Contacts Section */}
-        <div className="bg-gray-800 rounded-2xl p-4 sm:p-8 mt-6 sm:mt-8 shadow-2xl border border-gray-700">
+        <div className="bg-gray-800 rounded-2xl p-4 sm:p-8 mt-6 sm:mt-8 shadow-2xl border border-gray-700 pb-24 sm:pb-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl sm:text-2xl font-bold flex items-center">
               <Shield className="mr-2 sm:mr-3 text-red-500" size={24} /> Emergency Contacts

@@ -210,10 +210,10 @@ const SOSButton = () => {
       {/* SOS Button */}
       <button
         onClick={getLocationAndSend}
-        className="fixed bottom-6 right-6 bg-red-600 hover:bg-red-700 text-white p-4 rounded-full shadow-2xl z-50 animate-pulse transition transform hover:scale-110 flex items-center justify-center"
+        className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 md:bottom-6 md:right-6 bg-red-600 hover:bg-red-700 text-white p-3 sm:p-4 rounded-full shadow-2xl z-50 animate-pulse transition transform hover:scale-110 flex items-center justify-center"
         title="Emergency SOS"
       >
-        <AlertTriangle size={32} />
+        <AlertTriangle size={24} className="sm:w-8 sm:h-8" />
         <span className="absolute -top-2 -right-2 bg-yellow-500 text-black text-[10px] font-extrabold px-2 py-1 rounded-full border-2 border-red-600 shadow-sm">
           SOS
         </span>

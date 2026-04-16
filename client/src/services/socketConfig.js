@@ -9,22 +9,29 @@
  */
 
 export const getSocketURL = () => {
-  // 1. Check if explicitly set in environment
+  // Use VITE_API_URL_PROD in production mode, otherwise use VITE_API_URL
+  const API = import.meta.env.MODE === "production" 
+    ? import.meta.env.VITE_API_URL_PROD 
+    : import.meta.env.VITE_API_URL;
+  
+  // If explicitly set socket URL exists, prefer it
   if (import.meta.env.VITE_SOCKET_URL) {
     return import.meta.env.VITE_SOCKET_URL;
   }
   
-  // 2. Check if API URL is set (use same host for socket)
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL.replace('/api', '');
+  // Extract base URL from API URL (strip /api)
+  if (API) {
+    return API.replace('/api', '');
   }
   
-  // 3. Production build - use environment variable or fallback to Render backend URL
+  // Fallback to default production backend if no env var set
   if (import.meta.env.PROD) {
-    return import.meta.env.VITE_SOCKET_URL || 'https://zonerush-api.onrender.com';
+    // In production, use current window location (should be same as backend)
+    // Or set VITE_SOCKET_URL environment variable
+    return window.location.origin;
   }
   
-  // 4. Local development - use localhost backend
+  // Default development socket URL
   return 'http://localhost:5000';
 };
 

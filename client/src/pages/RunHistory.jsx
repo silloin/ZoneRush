@@ -125,38 +125,40 @@ const RunHistory = () => {
     : '0.00';
 
   if (loading) return (
-    <div className="p-8 bg-gray-900 min-h-screen text-white flex items-center justify-center">
+    <div className="p-4 sm:p-6 lg:p-8 bg-gray-900 text-white flex items-center justify-center">
       <div className="text-xl">Loading run history...</div>
     </div>
   );
 
   return (
-    <div className="p-8 bg-gray-900 min-h-screen text-white">
-      <div className="max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 bg-gray-900 text-white">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold flex items-center">
-            <Route className="mr-3 text-blue-500" size={32} /> Run History
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center">
+            <Route className="mr-3 text-blue-500" size={24} />
+            <span className="text-xl sm:text-3xl">Run History</span>
           </h1>
-          <div className="flex items-center space-x-2 bg-gray-800 p-1 rounded-lg">
+          <div className="flex items-center space-x-2 bg-gray-800 p-1 rounded-lg w-full sm:w-auto">
             {['all', 'week', 'month'].map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-4 py-2 rounded-md capitalize transition ${
+                className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md capitalize transition text-sm sm:text-base ${
                   filter === f 
                     ? 'bg-blue-600 text-white' 
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
-                {f === 'all' ? 'All Time' : f === 'week' ? 'This Week' : 'This Month'}
+                <span className="hidden sm:inline">{f === 'all' ? 'All Time' : f === 'week' ? 'This Week' : 'This Month'}</span>
+                <span className="sm:hidden">{f === 'all' ? 'All' : f === 'week' ? 'Week' : 'Month'}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
             <div className="flex items-center mb-2">
               <Trophy className="text-yellow-500 mr-2" />
@@ -197,48 +199,48 @@ const RunHistory = () => {
               >
                 {/* Run Header - Always visible */}
                 <div 
-                  className="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-750 transition"
+                  className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:bg-gray-750 transition"
                   onClick={() => setExpandedRun(expandedRun === run.id ? null : run.id)}
                 >
-                  <div className="flex items-center space-x-6">
-                    <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-xl font-bold">
+                  <div className="flex items-center space-x-4 sm:space-x-6">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-full flex items-center justify-center text-base sm:text-xl font-bold flex-shrink-0">
                       #{runs.length - index}
                     </div>
                     <div>
-                      <p className="text-lg font-bold">{formatDate(run.created_at)}</p>
-                      <p className="text-gray-400 text-sm">
+                      <p className="text-base sm:text-lg font-bold">{formatDate(run.created_at)}</p>
+                      <p className="text-gray-400 text-xs sm:text-sm">
                         {run.route ? (() => {
                           try {
                             return JSON.parse(run.route).length;
                           } catch {
                             return 0;
                           }
-                        })() : 0} GPS points recorded
+                        })() : 0} GPS points
                       </p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-8">
+                  <div className="flex items-center space-x-4 sm:space-x-6 md:space-x-8 w-full sm:w-auto justify-between sm:justify-start">
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-blue-400">
+                      <p className="text-xl sm:text-2xl font-bold text-blue-400">
                         {parseFloat(run.distance || 0).toFixed(2)} km
                       </p>
-                      <p className="text-xs text-gray-500">Distance</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500">Distance</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-green-400">
+                      <p className="text-xl sm:text-2xl font-bold text-green-400">
                         {formatDuration(run.duration)}
                       </p>
-                      <p className="text-xs text-gray-500">Duration</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500">Duration</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-yellow-400">
+                      <p className="text-xl sm:text-2xl font-bold text-yellow-400">
                         {parseFloat(run.avgpace || 0).toFixed(2)}
                       </p>
-                      <p className="text-xs text-gray-500">Pace (min/km)</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500">Pace</p>
                     </div>
-                    <div className="text-gray-400">
-                      {expandedRun === run.id ? <ChevronUp /> : <ChevronDown />}
+                    <div className="text-gray-400 flex-shrink-0">
+                      {expandedRun === run.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                     </div>
                   </div>
                 </div>

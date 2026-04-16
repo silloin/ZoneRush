@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, MapPin, Trophy, Award, Activity } from 'lucide-react';
 import SendFriendRequestButton from './SendFriendRequestButton';
+import Avatar from '../Avatar';
 import axios from 'axios';
 
 const UserProfileModal = ({ userId, username, isOpen, onClose }) => {
@@ -52,17 +53,12 @@ const UserProfileModal = ({ userId, username, isOpen, onClose }) => {
           </button>
           
           <div className="flex items-center space-x-4">
-            <div className="w-20 h-20 rounded-full bg-white bg-opacity-20 flex items-center justify-center text-3xl font-bold border-4 border-white border-opacity-30">
-              {userProfile?.profile_picture ? (
-                <img 
-                  src={userProfile.profile_picture} 
-                  alt={username}
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                username?.charAt(0).toUpperCase()
-              )}
-            </div>
+            <Avatar
+              imageUrl={userProfile?.profile_picture}
+              username={username}
+              size="lg"
+              className="border-4 border-white border-opacity-30"
+            />
             <div>
               <h2 className="text-2xl font-bold text-white">{username}</h2>
               {userProfile?.city && (

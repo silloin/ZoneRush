@@ -5,10 +5,37 @@
   width: 100%;
 }
 
-/* Ensure map container takes full height */
+/* Ensure map container takes full height - responsive */
 .w-full.h-full {
-  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
   width: 100%;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+  .w-full.h-full {
+    height: 100dvh !important;
+  }
+  
+  /* Prevent any overflow on mobile */
+  body {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+  
+  /* Ensure map controls are accessible */
+  .mapboxgl-ctrl-bottom-left,
+  .mapboxgl-ctrl-bottom-right {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* Desktop - use full viewport height */
+@media (min-width: 769px) {
+  .w-full.h-full {
+    height: 100vh;
+  }
 }
 
 /* Controls now on LEFT - adjust Mapbox top-left/right */

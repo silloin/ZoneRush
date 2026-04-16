@@ -4,6 +4,7 @@ const aiCoachService = require('../services/aiCoachService');
 const authenticateToken = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 const { validateTrainingPlanPreferences, validateUserId } = require('../middleware/validation');
+const securityLogger = require('../middleware/securityLogger');
 
 // Rate limiter for AI plan generation (expensive API calls)
 const aiPlanRateLimiter = rateLimit({
@@ -34,8 +35,26 @@ const generalRateLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// Generate recommendations for user
-router.post('/generate/:userId', authenticateToken, validateUserId, generalRateLimiter, async (req, res) => {
+// Generate recommendations for user - AI abuse protection
+router.post('/generate/:userId', 
+  authenticateToken, 
+  validateUserId, 
+  generalRateLimiter,
+  (req, res, next) => {
+    if (req.abuseProtection) {
+      return req.abuseProtection.rateLimit(
+        req.abuseProtection.aiGenerationLimiter,
+        {
+          keyGenerator: (req) => `user_${req.user.id}`,
+          points: 1,
+          errorMessage: 'AI generation limit reached. Try again in 1 hour.',
+          logViolation: true
+        }
+      )(req, res, next);
+    }
+    next();
+  },
+  async (req, res) => {
   try {
     const recommendations = await aiCoachService.generateRecommendations(req.params.userId);
     res.json(recommendations);
@@ -110,6 +129,7 @@ const userConversations = new Map();
 
 // Helper function to handle short inputs intelligently
 function preprocessUserInput(input, conversationHistory) {
+  if (!input || typeof input !== 'string') return '';
   const lowerInput = input.toLowerCase().trim();
   
   // Handle very short/generic responses

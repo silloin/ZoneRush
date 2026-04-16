@@ -11,6 +11,27 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+server/.env
+client/.env
+!.env.example
+!server/.env.example
+
+# Security logs (may contain sensitive data)
+server/logs/
+*.log
+
+# SSL/TLS Certificates
+*.pem
+*.key
+*.cert
+*.crt
+ssl/
+certs/
+
+# Database dumps (may contain sensitive data)
+*.sql.gz
+*.sql.backup
+database/backups/
 
 # Build outputs
 build/

@@ -3,18 +3,22 @@ import axios from 'axios';
 
 // Smart API URL detection: works for both localhost and production
 const getApiUrl = () => {
-  // If explicitly set in env, use it (for production cross-origin)
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+  // Use VITE_API_URL_PROD in production mode, otherwise use VITE_API_URL
+  const API = import.meta.env.MODE === "production" 
+    ? import.meta.env.VITE_API_URL_PROD 
+    : import.meta.env.VITE_API_URL;
+    
+  // Fallback to defaults if environment variables are not set
+  if (!API) {
+    if (import.meta.env.PROD) {
+      // In production, use relative URLs (Vercel will proxy to backend)
+      // Or set VITE_API_URL_PROD environment variable
+      return '/api';
+    }
+    return '/api';
   }
   
-  // For production without explicit URL, use environment variable or fallback to Render backend URL
-  if (import.meta.env.PROD) {
-    return import.meta.env.VITE_API_URL || 'https://zonerush-api.onrender.com/api';
-  }
-  
-  // For development, use relative URL (Vite proxy will forward to localhost:5000)
-  return '/api';
+  return API;
 };
 
 axios.defaults.baseURL = getApiUrl();

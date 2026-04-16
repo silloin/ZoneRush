@@ -11,8 +11,14 @@ router.get('/', async (req, res) => {
     const events = await pool.query('SELECT * FROM events ORDER BY start_date DESC');
     res.json(events.rows);
   } catch (err) {
-    console.error('Error fetching events:', err.message);
-    res.status(500).send('Server Error');
+    console.error('❌ Error fetching events:', err.message);
+    console.error('Stack:', err.stack);
+    res.status(500).json({ 
+      msg: 'Failed to fetch events',
+      error: err.message,
+      detail: err.detail,
+      hint: err.hint
+    });
   }
 });
 

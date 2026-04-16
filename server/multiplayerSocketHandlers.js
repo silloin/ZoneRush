@@ -7,7 +7,7 @@ const heatmapService = require('./services/heatmapService');
 const ngeohash = require('ngeohash');
 const { calculateDistance } = require('./utils/geoUtils');
 
-module.exports = (io) => {
+module.exports = (io, notificationService) => {
   // Store active runners in Redis if available, otherwise in-memory Map
   const RUNNER_PRESENCE_KEY = 'active_runners';
   // Store ALL online users (authenticated, whether running or not)
@@ -33,6 +33,11 @@ module.exports = (io) => {
     socket.on('authenticate', async (data) => {
       userId = data.userId;
       socket.join(`user:${userId}`);
+      
+      // Register with notification service for real-time notifications
+      if (notificationService) {
+        notificationService.registerUserSocket(userId, socket);
+      }
       
       // Track this user as online
       const userData = {
@@ -292,13 +297,22 @@ module.exports = (io) => {
           }, socket.id);
           
           // Broadcast territory update if a new territory is formed or expanded
-          // This could be triggered here or from the territories route
           io.emit('territory-updated', {
             userId,
             username: runner?.username,
             tile: result.tile,
             type: 'tile_capture'
           });
+
+          // Send notification to previous tile owner if tile was captured
+          if (result.previousOwner && notificationService) {
+            await notificationService.createTileCapturedNotification(
+              result.previousOwner.userId,
+              userId,
+              runner?.username || 'Unknown',
+              result.tile?.geohash
+            );
+          }
 
           // Check for achievements
           const achievements = await achievementService.checkAchievements(userId);
@@ -618,6 +632,11 @@ module.exports = (io) => {
       console.log('User disconnected:', socket.id);
       
       if (userId) {
+        // Unregister from notification service
+        if (notificationService) {
+          notificationService.unregisterUserSocket(userId);
+        }
+        
         // Remove from online users
         if (isRedisAvailable()) {
           await redisClient.hDel(ONLINE_USERS_KEY, userId.toString());
