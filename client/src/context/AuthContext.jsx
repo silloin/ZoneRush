@@ -33,9 +33,14 @@ axios.interceptors.request.use(
       // Always set the token header when token exists
       config.headers['x-auth-token'] = token;
       
-      // Debug logging in development
+      // Debug logging
       if (import.meta.env.DEV) {
         console.log('🔑 Adding token to request:', config.url);
+      }
+    } else {
+      // Log warning in production to help debug auth issues
+      if (import.meta.env.PROD && !config.url.includes('/auth/login') && !config.url.includes('/auth/register')) {
+        console.warn('⚠️ No token found for authenticated request:', config.url);
       }
     }
     

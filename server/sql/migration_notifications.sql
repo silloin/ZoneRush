@@ -101,4 +101,7 @@ SELECT id FROM users
 WHERE id NOT IN (SELECT user_id FROM notification_preferences)
 ON CONFLICT DO NOTHING;
 
-RAISE NOTICE 'Enhanced notifications system migration completed';
+DO $$
+BEGIN
+    RAISE NOTICE 'Enhanced notifications system migration completed';
+END $$;
