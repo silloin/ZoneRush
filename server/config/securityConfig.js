@@ -77,20 +77,52 @@ class SecurityConfig {
    * Validate database configuration is secure
    */
   validateDatabaseConfig() {
+    const databaseUrl = process.env.DATABASE_URL;
     const dbHost = process.env.DB_HOST;
     const dbPassword = process.env.DB_PASSWORD;
 
-    if (!dbHost) {
-      this.errors.push('DB_HOST is not set');
+    // Support both DATABASE_URL (Render/Supabase) and individual DB_* variables
+    if (!databaseUrl && !dbHost) {
+      this.errors.push('DATABASE_URL or DB_HOST is not set');
+      return;
     }
 
-    if (!dbPassword || dbPassword === '8810' || dbPassword === 'password') {
-      this.errors.push('DB_PASSWORD is too weak or using default value');
-    }
+    // If using DATABASE_URL, validate it
+    if (databaseUrl) {
+      if (!databaseUrl.startsWith('postgres://') && !databaseUrl.startsWith('postgresql://')) {
+        this.errors.push('DATABASE_URL must start with postgres:// or postgresql://');
+      }
+      
+      // Check if password is embedded in the URL
+      try {
+        const url = new URL(databaseUrl);
+        const password = url.password;
+        
+        if (!password || password === 'password' || password === '8810') {
+          this.errors.push('DB_PASSWORD in DATABASE_URL is too weak or using default value');
+        }
+        
+        // Warn if using localhost in production
+        if (url.hostname === 'localhost' && process.env.NODE_ENV === 'production') {
+          this.warnings.push('Database host is localhost in production - ensure database is not publicly accessible');
+        }
+      } catch (e) {
+        this.errors.push('DATABASE_URL is malformed');
+      }
+    } else {
+      // Using individual DB_* variables
+      if (!dbHost) {
+        this.errors.push('DB_HOST is not set');
+      }
 
-    // Warn if using localhost in production
-    if (dbHost === 'localhost' && process.env.NODE_ENV === 'production') {
-      this.warnings.push('Database host is localhost in production - ensure database is not publicly accessible');
+      if (!dbPassword || dbPassword === '8810' || dbPassword === 'password') {
+        this.errors.push('DB_PASSWORD is too weak or using default value');
+      }
+
+      // Warn if using localhost in production
+      if (dbHost === 'localhost' && process.env.NODE_ENV === 'production') {
+        this.warnings.push('Database host is localhost in production - ensure database is not publicly accessible');
+      }
     }
 
     // Check for SSL requirement
@@ -112,7 +144,7 @@ class SecurityConfig {
 
     switch (emailService) {
       case 'resend':
-        if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY.includes('re_')) {
+        if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 're_YOUR_RESEND_API_KEY') {
           this.errors.push('RESEND_API_KEY is not set or using placeholder');
         }
         break;
@@ -188,6 +220,18 @@ class SecurityConfig {
     const envString = JSON.stringify(process.env);
 
     for (const { pattern, name } of dangerousPatterns) {
+      // Skip database password check if using DATABASE_URL with strong password
+      if (pattern === '8810' && process.env.DATABASE_URL) {
+        try {
+          const url = new URL(process.env.DATABASE_URL);
+          if (url.password && url.password !== '8810') {
+            continue; // Skip this check if DATABASE_URL has a different password
+          }
+        } catch (e) {
+          // If URL parsing fails, continue with normal check
+        }
+      }
+      
       if (envString.includes(pattern)) {
         this.errors.push(`Exposed ${name} detected in environment - must be changed for production`);
       }
