@@ -216,7 +216,8 @@ const initializeDatabase = async () => {
     './sql/emergency_contacts.sql',
     './sql/sos_alerts.sql',
     './sql/clans.sql',
-    './sql/chat_system.sql'           // Chat system last (depends on users table)
+    './sql/chat_system.sql',          // Chat system (depends on users table)
+    './sql/migration_notifications.sql' // Enhanced notifications system
   ];
   
   let successCount = 0;
