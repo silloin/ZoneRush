@@ -148,10 +148,10 @@ router.post('/register',
     res.cookie('token', token, {
       httpOnly: true, // Prevents JavaScript access (XSS protection)
       secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-      sameSite: 'strict', // CSRF protection
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict', // Allow cross-origin in production
       maxAge: 12 * 60 * 60 * 1000, // 12 hours (reduced from 24h)
       path: '/',
-      domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined
+      domain: undefined
     });
 
     // Send verification email (non-blocking)
@@ -167,9 +167,9 @@ router.post('/register',
       // Don't fail registration if email fails
     }
 
-    // SECURITY: Do NOT return token in response (prevents localStorage storage)
-    // Token is only in httpOnly cookie
+    // Return token in response for cross-origin requests (Vercel → Render)
     res.json({ 
+      token: token,
       user: {
         id: newUser.rows[0].id,
         username: newUser.rows[0].username,
@@ -360,14 +360,14 @@ router.post('/login',
       .setExpirationTime('12h')
       .sign(secret);
 
-    // Set secure cookie
+    // Set secure cookie (for same-origin requests)
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
       maxAge: 12 * 60 * 60 * 1000,
       path: '/',
-      domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined
+      domain: process.env.NODE_ENV === 'production' ? undefined : undefined
     });
 
     // Log successful login
@@ -377,8 +377,9 @@ router.post('/login',
       [userData.id, req.ip]
     );
 
-    // SECURITY: Do NOT return token in response
+    // Return token in response for cross-origin requests (Vercel → Render)
     res.json({ 
+      token: token,
       user: {
         id: userData.id,
         username: userData.username,

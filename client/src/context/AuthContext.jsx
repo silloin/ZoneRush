@@ -149,15 +149,23 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    const token = localStorage.getItem('token');
+    
     try {
-      await axios.post('/auth/logout');
+      // Only call logout API if token exists
+      if (token) {
+        await axios.post('/auth/logout');
+      }
+      
       setUser(null);
       // Clear localStorage token to properly logout
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
+      console.log('✅ User logged out successfully');
     } catch (error) {
-      console.error('❌ Logout failed:', error);
+      console.warn('⚠️ Logout API call failed, but clearing local data:', error.message);
       // Even if logout fails, clear localStorage
+      setUser(null);
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
     }
