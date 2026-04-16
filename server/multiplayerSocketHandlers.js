@@ -65,9 +65,19 @@ module.exports = (io, notificationService) => {
       console.log(`Total online users: ${isRedisAvailable() ? await redisClient.hLen(ONLINE_USERS_KEY) : memoryOnlineUsers.size}`);
       
       // If user has a position, add them to geographic zone immediately
-      if (data.initialPosition) {
-        updateGeographicZone(socket, data.initialPosition.lat, data.initialPosition.lng);
-        console.log(`User ${userId} added to zone ${currentZone} on authentication`);
+      if (data.initialPosition && data.initialPosition.lat && data.initialPosition.lng) {
+        const zone = updateGeographicZone(socket, data.initialPosition.lat, data.initialPosition.lng);
+        console.log(`User ${userId} added to zone ${zone} on authentication`);
+        
+        // Also store initial position in online users data for quick lookup
+        userData.initialPosition = data.initialPosition;
+        if (isRedisAvailable()) {
+          await redisClient.hSet(ONLINE_USERS_KEY, userId.toString(), JSON.stringify(userData));
+        } else {
+          memoryOnlineUsers.set(userId.toString(), userData);
+        }
+      } else {
+        console.log(`User ${userId} authenticated without initial position`);
       }
       
       // Notify others that a new user is online
@@ -479,16 +489,17 @@ module.exports = (io, notificationService) => {
             const onlineUser = allOnlineUsers.find(u => u.socketId === socketId);
             
             if (onlineUser && onlineUser.userId !== userId) {
-              // Find their position from active runners
+              // Find their position from active runners first
               const runner = activeRunners.find(r => r.userId === onlineUser.userId);
               
               if (runner && runner.lastPosition) {
+                // User is actively tracking - use their live position
                 const distance = calculateDistance(
                   lat, lng,
                   runner.lastPosition.lat, runner.lastPosition.lng
                 );
                 
-                console.log(`[get-nearby-runners] Runner ${onlineUser.username} (${onlineUser.userId}) at distance ${distance.toFixed(0)}m`);
+                console.log(`[get-nearby-runners] Runner ${onlineUser.username} (${onlineUser.userId}) at distance ${distance.toFixed(0)}m (active)`);
                 
                 if (distance <= radius) {
                   nearbyRunners.push({
@@ -498,6 +509,26 @@ module.exports = (io, notificationService) => {
                     position: runner.lastPosition,
                     distance: runner.distance,
                     pace: runner.pace
+                  });
+                }
+              } else if (onlineUser.initialPosition) {
+                // User is online but not actively tracking - use initial position
+                const distance = calculateDistance(
+                  lat, lng,
+                  onlineUser.initialPosition.lat, onlineUser.initialPosition.lng
+                );
+                
+                console.log(`[get-nearby-runners] User ${onlineUser.username} (${onlineUser.userId}) at distance ${distance.toFixed(0)}m (initial position)`);
+                
+                if (distance <= radius) {
+                  nearbyRunners.push({
+                    userId: onlineUser.userId,
+                    username: onlineUser.username,
+                    profilePicture: onlineUser.profilePicture,
+                    position: onlineUser.initialPosition,
+                    distance: 0,
+                    pace: 0,
+                    isIdle: true // Mark as not actively running
                   });
                 }
               } else {

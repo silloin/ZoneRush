@@ -33,10 +33,36 @@ export const SocketProvider = ({ children }) => {
       
       // Authenticate user with socket server
       if (user && user.id) {
-        newSocket.emit('authenticate', {
-          userId: user.id,
-          username: user.username
-        });
+        // Try to get user's current position to send with authentication
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              newSocket.emit('authenticate', {
+                userId: user.id,
+                username: user.username,
+                initialPosition: {
+                  lat: position.coords.latitude,
+                  lng: position.coords.longitude
+                }
+              });
+            },
+            (error) => {
+              console.warn('Unable to get position for authentication:', error);
+              // Authenticate without position
+              newSocket.emit('authenticate', {
+                userId: user.id,
+                username: user.username
+              });
+            },
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+          );
+        } else {
+          // Geolocation not available
+          newSocket.emit('authenticate', {
+            userId: user.id,
+            username: user.username
+          });
+        }
       } else {
         console.warn('Socket connected but user not authenticated yet');
       }

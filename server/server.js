@@ -357,7 +357,11 @@ app.get('/{*splat}', (req, res) => {
 });
 
 // Socket.io integration - Use enhanced multiplayer handlers
-multiplayerSocketHandlers(io);
+const NotificationService = require('./services/notificationService');
+const notificationService = new NotificationService(io);
+notificationService.initialize();
+
+multiplayerSocketHandlers(io, notificationService);
 
 // SOS Emergency Live Tracking
 sosSocketHandlers(io);
