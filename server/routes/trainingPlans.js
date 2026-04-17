@@ -125,7 +125,18 @@ router.put('/workout/:workoutId', auth, async (req, res) => {
     let updatedPlan;
     
     // Check if this is an AI-generated plan with weekly structure
-    if (plan.metadata && plan.metadata.isAI) {
+    const isAIPlan = plan.metadata && plan.metadata.isAI;
+    const hasWeeklyStructure = plan.workouts && Array.isArray(plan.workouts) && plan.workouts.length > 0 && plan.workouts[0].week;
+    
+    console.log('Plan analysis:', { 
+      isAIPlan, 
+      hasWeeklyStructure, 
+      workoutId, 
+      workoutIdType: typeof workoutId,
+      planId: plan.id 
+    });
+    
+    if (isAIPlan && hasWeeklyStructure) {
       // Handle AI-generated plan with weekly structure
       const metadata = plan.metadata || {};
       const weeklyPlans = plan.workouts || [];

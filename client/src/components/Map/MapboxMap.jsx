@@ -1374,11 +1374,25 @@ const MapboxMap = () => {
               }
             }
           }}
-          className={`p-3 rounded-full shadow-lg transition ${showHeatmap ? 'bg-orange-500 text-white' : 'bg-white text-gray-700'} ${mapStyleMode === 2 ? 'opacity-50 cursor-not-allowed' : ''}`}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            const newShowHeatmap = !showHeatmap;
+            setShowHeatmap(newShowHeatmap);
+            
+            if (map.current) {
+              if (newShowHeatmap) {
+                map.current.setLayoutProperty('heatmap-layer', 'visibility', 'visible');
+                fetchHeatmapData();
+              } else {
+                map.current.setLayoutProperty('heatmap-layer', 'visibility', 'none');
+              }
+            }
+          }}
+          className={`p-3 rounded-full shadow-lg transition ${showHeatmap ? 'bg-orange-500 text-white' : 'bg-white text-gray-700'} ${mapStyleMode === 2 ? 'opacity-50 cursor-not-allowed' : ''} active:scale-95 touch-manipulation`}
           title={mapStyleMode === 2 ? "Heatmap auto-enabled in this mode" : "Toggle Heatmap"}
           disabled={mapStyleMode === 2}
         >
-          🔥
+          &#x1F525;
         </button>
         <button 
           onClick={() => setShowDirections(!showDirections)}

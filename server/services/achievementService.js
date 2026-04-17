@@ -93,9 +93,8 @@ class AchievementService {
   async getAllAchievements() {
     // Use GROUP BY to prevent duplicates and ensure unique achievements
     const query = `
-      SELECT id, name, description, icon, requirement_type, requirement_value, xp_reward, category, created_at
+      SELECT id, name, description, icon, requirement, xp_reward
       FROM achievements
-      GROUP BY id, name, description, icon, requirement_type, requirement_value, xp_reward, category, created_at
       ORDER BY id
     `;
     const result = await pool.query(query);
@@ -174,51 +173,43 @@ class AchievementService {
       let currentValue = 0;
       let targetValue = 0;
 
-      // Support new schema with requirement_type and requirement_value
-      if (achievement.requirement_type && achievement.requirement_value) {
-        const type = achievement.requirement_type;
-        targetValue = parseInt(achievement.requirement_value);
-        
-        switch(type) {
-          case 'runs':
-            currentValue = stats.total_runs;
-            break;
-          case 'distance':
-            currentValue = stats.total_distance;
-            break;
-          case 'tiles':
-            currentValue = stats.total_tiles_captured;
-            break;
-          case 'streak':
-            currentValue = stats.current_streak;
-            break;
-          case 'posts':
-            currentValue = stats.total_posts;
-            break;
-        }
-      } 
-      // Support old JSON format
-      else if (achievement.requirement) {
-        const req = typeof achievement.requirement === 'string' 
+      // Parse requirement from JSONB
+      if (achievement.requirement) {
+        const requirement = typeof achievement.requirement === 'string' 
           ? JSON.parse(achievement.requirement) 
           : achievement.requirement;
         
-        if (req.runs) {
+        // Handle different requirement types
+        if (requirement.runs) {
+          targetValue = requirement.runs;
           currentValue = stats.total_runs;
-          targetValue = req.runs;
-        } else if (req.distance) {
+        } else if (requirement.distance) {
+          targetValue = requirement.distance;
           currentValue = stats.total_distance;
-          targetValue = req.distance;
-        } else if (req.tiles) {
+        } else if (requirement.tiles) {
+          targetValue = requirement.tiles;
           currentValue = stats.total_tiles_captured;
-          targetValue = req.tiles;
-        } else if (req.streak) {
+        } else if (requirement.xp) {
+          targetValue = requirement.xp;
+          currentValue = stats.xp;
+        } else if (requirement.level) {
+          targetValue = requirement.level;
+          currentValue = stats.level;
+        } else if (requirement.streak) {
+          targetValue = requirement.streak;
           currentValue = stats.current_streak;
-          targetValue = req.streak;
-        } else if (req.posts) {
+        } else if (requirement.posts) {
+          targetValue = requirement.posts;
           currentValue = stats.total_posts;
-          targetValue = req.posts;
+        } else {
+          // Fallback
+          targetValue = 1;
+          currentValue = stats.total_runs;
         }
+      } else {
+        // Fallback for achievements without requirement
+        targetValue = 1;
+        currentValue = stats.total_runs;
       }
       
       const percentage = targetValue > 0 ? Math.min(100, (currentValue / targetValue) * 100) : 0;

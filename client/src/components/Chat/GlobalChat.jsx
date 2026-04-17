@@ -359,7 +359,7 @@ const GlobalChat = () => {
                   }
                 }}
                 placeholder="Type a message to everyone..."
-                className="flex-1 bg-transparent text-white px-3 py-2.5 sm:px-3 sm:py-2.5 md:px-3 md:py-2.5 focus:outline-none min-w-0 text-sm sm:text-sm placeholder-gray-400 resize-none max-h-32 scrollbar-none leading-relaxed"
+                className="flex-1 bg-transparent text-white px-3 py-2 sm:px-4 sm:py-2.5 focus:outline-none min-w-0 text-sm sm:text-sm placeholder-gray-400 resize-none max-h-32 scrollbar-none leading-relaxed"
                 rows="1"
                 style={{ caretColor: '#F97316' }}
               />

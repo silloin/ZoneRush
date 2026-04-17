@@ -59,11 +59,12 @@ router.post('/send', auth, async (req, res) => {
 
     // Create notification for receiver
     await pool.query(
-      `INSERT INTO notifications (user_id, type, title, content, data)
-       VALUES ($1, 'friend_request', 'New Friend Request', $2, $3)`,
-      [receiverId, `${req.user.username} wants to be your friend`, JSON.stringify({ 
+      `INSERT INTO notifications (user_id, type, title, data)
+       VALUES ($1, 'friend_request', 'New Friend Request', $2)`,
+      [receiverId, JSON.stringify({ 
         senderId: senderId, 
-        senderUsername: req.user.username 
+        senderUsername: req.user.username,
+        message: `${req.user.username} wants to be your friend`
       })]
     );
 
