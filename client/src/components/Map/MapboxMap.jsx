@@ -77,18 +77,7 @@ const MapboxMap = () => {
 
   // Toggle directions panel
   const toggleDirectionsPanel = () => {
-    const newPanelState = !showDirectionsPanel;
-    console.log('Toggling directions panel to:', newPanelState);
-    setShowDirectionsPanel(newPanelState);
-    
-    // Toggle MapboxDirections' built-in instructions panel
-    const instructionsPanel = document.querySelector('.mapbox-directions-instructions');
-    if (instructionsPanel) {
-      console.log('Found instructions panel, setting display to:', newPanelState ? 'block' : 'none');
-      instructionsPanel.style.display = newPanelState ? 'block' : 'none';
-    } else {
-      console.log('Instructions panel not found');
-    }
+    setShowDirectionsPanel(!showDirectionsPanel);
   };
 
   // Calculate route with directions data
@@ -905,13 +894,12 @@ const MapboxMap = () => {
         break;
       default:
         newStyle = 'mapbox://styles/mapbox/dark-v11';
-        setShowHeatmap(false);
     }
     
     currentStyle.current = newStyle;
     
     // Use setStyle with diff: false to avoid sprite update warnings
-    map.current.setStyle(newStyle);
+    map.current.setStyle(newStyle, { diff: false });
     
     // Wait for style to load before re-adding layers
     map.current.once('style.load', () => {
@@ -942,49 +930,39 @@ const MapboxMap = () => {
           alternatives: true
         });
 
-        // Override _move method to prevent layer query errors
+        // Override the _move method to prevent layer query errors
         const originalMove = directions._move;
         directions._move = function(e) {
           try {
             if (this._map && this._map.isStyleLoaded()) {
               const layers = this._map.getStyle().layers;
-              // More robust layer check - handle missing layers gracefully
-              const hasMoveDirectionsLayers = layers && layers.some(layer => 
-                layer.id && (
-                  layer.id.includes('directions-route-line-alt') || 
-                  layer.id.includes('directions-origin-point') ||
-                  layer.id.includes('directions-route-line') ||
-                  layer.id.includes('directions-destination-point')
-                )
+              const hasDirectionsLayers = layers.some(layer => 
+                layer.id.includes('directions-route-line-alt') || 
+                layer.id.includes('directions-origin-point')
               );
-              if (hasMoveDirectionsLayers) {
+              if (hasDirectionsLayers) {
                 originalMove.call(this, e);
               }
             }
           } catch (error) {
-            console.warn('Error in directions move:', error);
-            originalMove.call(this, e);
+            // Silently ignore layer query errors
           }
         };
-
+        
         // Override the _onSingleClick method to prevent layer query errors
         const originalOnSingleClick = directions._onSingleClick;
         directions._onSingleClick = function(e) {
           try {
             if (this._map && this._map.isStyleLoaded()) {
               const layers = this._map.getStyle().layers;
-              // More robust layer check - handle missing layers gracefully
-              const hasClickDirectionsLayers = layers && layers.some(layer => 
-                layer.id && (
-                  layer.id.includes('directions-origin-point') ||
-                  layer.id.includes('directions-destination-point')
-                )
+              const hasDirectionsLayers = layers.some(layer => 
+                layer.id.includes('directions-origin-point')
               );
-              if (hasClickDirectionsLayers) {
+              if (hasDirectionsLayers) {
                 originalOnSingleClick.call(this, e);
               }
             }
-          } catch (clickError) {
+          } catch (error) {
             // Silently ignore layer query errors
           }
         };
@@ -1001,125 +979,30 @@ const MapboxMap = () => {
               console.log('Current showDirectionsPanel state:', showDirectionsPanel);
               e.preventDefault();
               e.stopPropagation();
-              e.stopImmediatePropagation();
               
-              // Toggle the custom turn-by-turn panel
-              const newPanelState = !showDirectionsPanel;
-              console.log('Toggling showDirectionsPanel to:', newPanelState);
-              setShowDirectionsPanel(newPanelState);
+              // Hide the custom turn-by-turn panel
+              console.log('Setting showDirectionsPanel to false');
+              setShowDirectionsPanel(false);
               
-              // Force hide all Mapbox directions panels first
-              const allInstructionsPanels = document.querySelectorAll('.mapbox-directions-instructions, .directions-control-instructions');
-              allInstructionsPanels.forEach(panel => {
-                console.log('Force hiding panel:', panel.className);
-                panel.style.display = 'none';
-                panel.style.visibility = 'hidden';
-                panel.style.opacity = '0';
-              });
-              
-              // Then show/hide based on new state
-              setTimeout(() => {
-                const instructionsPanel = document.querySelector('.mapbox-directions-instructions');
-                if (instructionsPanel) {
-                  if (newPanelState) {
-                    console.log('Showing Mapbox instructions panel');
-                    instructionsPanel.style.display = 'block';
-                    instructionsPanel.style.visibility = 'visible';
-                    instructionsPanel.style.opacity = '1';
-                  } else {
-                    console.log('Hiding Mapbox instructions panel');
-                    instructionsPanel.style.display = 'none';
-                    instructionsPanel.style.visibility = 'hidden';
-                    instructionsPanel.style.opacity = '0';
-                  }
-                }
-                
-                // Update tooltip based on new state
-                directionsContainer.title = newPanelState ? 'Double-click to hide turn-by-turn panel' : 'Double-click to show turn-by-turn panel';
-                
-                // Verify the panel state changed
-                setTimeout(() => {
-                  const panel = document.querySelector('.mapbox-directions-instructions');
-                  console.log('After toggle, panel display style:', panel ? panel.style.display : 'Panel not found');
-                  console.log('After setState, showDirectionsPanel should be:', newPanelState);
-                }, 100);
-              }, 50);
-            }, true); // true = capture phase
-          };
-
-        const fetchHeatmapData = async () => {
-          try {
-            if (!map.current) return;
-            const bounds = map.current.getBounds();
-            const token = localStorage.getItem('token');
-            const res = await axios.get('/heatmap/bounds', {
-              params: {
-                minLat: bounds.getSouth(),
-                minLng: bounds.getWest(),
-                maxLat: bounds.getNorth(),
-                maxLng: bounds.getEast()
-              },
-              headers: { 'x-auth-token': token }
-            });
-            if (map.current.getSource('heatmap')) {
-              map.current.getSource('heatmap').setData(res.data);
-              console.log('Heatmap data updated successfully');
-            }
-          } catch (err) {
-            console.error('Heatmap fetch error:', err.message);
-          }
-        };
-                    
-                    // Check if this is a double tap (within 300ms of last tap)
-                    if (timeSinceLastTap < 300 && tapCount === 1) {
-                      console.log('Double tap detected on instructions panel!');
-                      e.preventDefault();
-                      e.stopPropagation();
-                      
-                      const newPanelState = !showDirectionsPanel;
-                      console.log('Mobile double tap: Toggling directions panel to:', newPanelState);
-                      setShowDirectionsPanel(newPanelState);
-                      
-                      // Update tooltip
-                      directionsContainer.title = newPanelState ? 'Double tap to hide turn-by-turn panel' : 'Double tap to show turn-by-turn panel';
-                      
-                      // Reset tap count
-                      tapCount = 0;
-                    } else {
-                      // First tap
-                      tapCount = 1;
-                      lastTapTime = currentTime;
-                      console.log('First tap detected, waiting for second tap...');
-                    }
-                  }
-                }, { passive: false });
-                
-                // Touch events on directions container as fallback
-                directionsContainer.addEventListener('touchstart', (e) => {
-                  console.log('Touch start on directions container');
-                  isLongPress = false;
-                  touchTimer = setTimeout(() => {
-                    isLongPress = true;
-                    console.log('Long press detected on container');
-                  }, 500);
-                }, { passive: true });
-                
-                directionsContainer.addEventListener('touchend', (e) => {
-                setShowDirectionsPanel(newPanelState);
-                
-                // Toggle MapboxDirections' built-in instructions panel
-                const instructionsPanel = document.querySelector('.mapbox-directions-instructions');
-                if (instructionsPanel) {
-                  instructionsPanel.style.display = newPanelState ? 'block' : 'none';
-                }
-                
-                directionsContainer.title = newPanelState ? 'Click to hide turn-by-turn panel' : 'Click to show turn-by-turn panel';
+              // Also hide MapboxDirections' built-in instructions panel
+              const instructionsPanel = document.querySelector('.mapbox-directions-instructions');
+              if (instructionsPanel) {
+                console.log('Hiding Mapbox instructions panel');
+                instructionsPanel.style.display = 'none';
               }
-            });
+              
+              // Verify the state changed
+              setTimeout(() => {
+                console.log('After setState, showDirectionsPanel should be false');
+              }, 100);
+            }, true); // true = capture phase
+
+            // Add tooltip
+            directionsContainer.title = 'Double-click to hide turn-by-turn panel';
+            directionsContainer.style.cursor = 'pointer';
             return true;
-          } else {
-            return false;
           }
+          return false;
         };
 
         // Try immediately first
@@ -1513,35 +1396,10 @@ const MapboxMap = () => {
         </button>
         <button 
           onClick={() => setShowDirections(!showDirections)}
-          onTouchEnd={(e) => {
-            e.preventDefault();
-            setShowDirections(!showDirections);
-          }}
-          className={`p-3 rounded-full shadow-lg transition ${showDirections ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'} active:scale-95 touch-manipulation`}
+          className={`p-3 rounded-full shadow-lg transition ${showDirections ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'}`}
           title="Toggle Directions"
         >
           <Route size={20} />
-        </button>
-        
-        {/* Mobile-only directions panel toggle button */}
-        <button 
-          onClick={() => {
-            console.log('Mobile button clicked - desktop fallback');
-            toggleDirectionsPanel();
-          }}
-          onTouchStart={(e) => {
-            console.log('Mobile button touch start');
-          }}
-          onTouchEnd={(e) => {
-            console.log('Mobile button touch end');
-            e.preventDefault();
-            toggleDirectionsPanel();
-          }}
-          className={`md:hidden p-3 rounded-full shadow-lg transition ${showDirectionsPanel ? 'bg-purple-500 text-white' : 'bg-white text-gray-700'} active:scale-95 touch-manipulation`}
-          title="Toggle Directions Panel"
-          style={{ minHeight: '48px', minWidth: '48px' }}
-        >
-          <Activity size={20} />
         </button>
       </div>
 
@@ -1693,10 +1551,7 @@ const MapboxMap = () => {
             </button>
 
             <button
-              onClick={() => {
-                toggleStyle();
-                setIsMenuOpen(false);
-              }}
+              onClick={toggleStyle}
               className="bg-purple-600 text-white px-3 py-3 rounded-lg font-bold shadow-lg hover:bg-purple-700 transition text-sm"
             >
               🗺️ Style
@@ -1705,14 +1560,10 @@ const MapboxMap = () => {
       
 
             <button
-              onClick={() => {
-                setShowDirections(!showDirections);
-                setIsMenuOpen(false);
-              }}
+              onClick={() => setShowDirections(!showDirections)}
               className={`${showDirections ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'} px-3 py-3 rounded-lg font-bold shadow-lg transition text-sm`}
             >
-              <Route size={16} className="inline-block mr-1" />
-              Directions
+              🧭 Directions
             </button>
 
             <button
