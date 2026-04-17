@@ -967,38 +967,60 @@ const MapboxMap = () => {
           }
         };
 
-        // Add double-click handler to mode selection area using MutationObserver
+        // Add double-click/tap handler to directions container using MutationObserver
         const waitForDirectionsContainer = () => {
           const directionsContainer = document.querySelector('.mapboxgl-ctrl-directions');
           if (directionsContainer) {
-            console.log('Directions container found, adding double-click handler');
+            console.log('Directions container found, adding double-click/tap handler');
             
-            // Add double-click handler with capture phase to intercept before Mapbox
+            // Add double-click handler for desktop
             directionsContainer.addEventListener('dblclick', (e) => {
               console.log('Double-click detected on directions container!');
-              console.log('Current showDirectionsPanel state:', showDirectionsPanel);
               e.preventDefault();
               e.stopPropagation();
               
-              // Hide the custom turn-by-turn panel
-              console.log('Setting showDirectionsPanel to false');
-              setShowDirectionsPanel(false);
-              
-              // Also hide MapboxDirections' built-in instructions panel
+              // Toggle the MapboxDirections' built-in instructions panel
               const instructionsPanel = document.querySelector('.mapbox-directions-instructions');
               if (instructionsPanel) {
-                console.log('Hiding Mapbox instructions panel');
-                instructionsPanel.style.display = 'none';
+                const isVisible = instructionsPanel.style.display !== 'none';
+                instructionsPanel.style.display = isVisible ? 'none' : 'block';
+                console.log('Toggling instructions panel to:', isVisible ? 'hidden' : 'visible');
               }
-              
-              // Verify the state changed
-              setTimeout(() => {
-                console.log('After setState, showDirectionsPanel should be false');
-              }, 100);
             }, true); // true = capture phase
+            
+            // Add double-tap handler for mobile
+            let lastTapTime = 0;
+            let tapCount = 0;
+            
+            directionsContainer.addEventListener('touchend', (e) => {
+              const currentTime = new Date().getTime();
+              const timeSinceLastTap = currentTime - lastTapTime;
+              
+              // Check if this is a double tap (within 300ms of last tap)
+              if (timeSinceLastTap < 300 && tapCount === 1) {
+                console.log('Double-tap detected on directions container!');
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Toggle the MapboxDirections' built-in instructions panel
+                const instructionsPanel = document.querySelector('.mapbox-directions-instructions');
+                if (instructionsPanel) {
+                  const isVisible = instructionsPanel.style.display !== 'none';
+                  instructionsPanel.style.display = isVisible ? 'none' : 'block';
+                  console.log('Toggling instructions panel to:', isVisible ? 'hidden' : 'visible');
+                }
+                
+                // Reset tap count
+                tapCount = 0;
+              } else {
+                // First tap
+                tapCount = 1;
+                lastTapTime = currentTime;
+              }
+            }, { passive: false });
 
             // Add tooltip
-            directionsContainer.title = 'Double-click to hide turn-by-turn panel';
+            directionsContainer.title = 'Double-click/tap to hide/show turn-by-turn panel';
             directionsContainer.style.cursor = 'pointer';
             return true;
           }
