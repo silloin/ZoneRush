@@ -12,20 +12,37 @@ const RunTracker = ({
   setRunStats,
   currentRoute: externalRoute 
 }) => {
-  const [startTime, setStartTime] = useState(runStats.startTime);
-  const [duration, setDuration] = useState(runStats.duration || 0);
-  const [distance, setDistance] = useState(runStats.distance || 0);
-  const [route, setRoute] = useState([]); // Don't initialize with externalRoute
-  const [pace, setPace] = useState(runStats.pace || 0);
+  const [startTime, setStartTime] = useState(() => {
+    const saved = localStorage.getItem('run_startTime');
+    return runStats.startTime || (saved ? parseInt(saved, 10) : null);
+  });
+  const [duration, setDuration] = useState(() => {
+    const saved = localStorage.getItem('run_duration');
+    return runStats.duration || (saved ? parseInt(saved, 10) : 0);
+  });
+  const [distance, setDistance] = useState(() => {
+    const saved = localStorage.getItem('run_distance');
+    return runStats.distance || (saved ? parseFloat(saved) : 0);
+  });
+  const [route, setRoute] = useState(() => {
+    const saved = localStorage.getItem('run_route');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [pace, setPace] = useState(() => {
+    const saved = localStorage.getItem('run_pace');
+    return runStats.pace || (saved ? parseFloat(saved) : 0);
+  });
   const [gpsStatus, setGpsStatus] = useState('idle'); // idle, searching, active, error
   const [isMinimized, setIsMinimized] = useState(false); // Minimized state
   const [isSaving, setIsSaving] = useState(false); // Track saving state
   const [arrowRotation, setArrowRotation] = useState(0); // Track arrow rotation for accurate rendering
   const watchId = useRef(null);
   const timerId = useRef(null);
+  const wakeLockRef = useRef(null);
   const setRunStatsRef = useRef(setRunStats);
   const onRouteUpdateRef = useRef(onRouteUpdate);
   const prevRouteLengthRef = useRef(0);
+
   
   // Keep refs updated with latest callbacks
   useEffect(() => {
@@ -58,8 +75,68 @@ const RunTracker = ({
     }
   }, [duration, distance, pace, startTime]);
 
+  // Update localStorage when state changes
+  useEffect(() => {
+    if (isTracking && startTime) {
+      localStorage.setItem('run_tracking_active', 'true');
+      localStorage.setItem('run_startTime', startTime.toString());
+      localStorage.setItem('run_duration', duration.toString());
+      localStorage.setItem('run_distance', distance.toString());
+      localStorage.setItem('run_pace', pace.toString());
+      localStorage.setItem('run_route', JSON.stringify(route));
+    }
+  }, [isTracking, startTime, duration, distance, pace, route]);
+
+  const clearLocalStorageSession = () => {
+    localStorage.removeItem('run_tracking_active');
+    localStorage.removeItem('run_startTime');
+    localStorage.removeItem('run_duration');
+    localStorage.removeItem('run_distance');
+    localStorage.removeItem('run_pace');
+    localStorage.removeItem('run_route');
+  };
+
+  const requestWakeLock = async () => {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request('screen');
+        console.log('Screen Wake Lock acquired');
+        
+        // Re-request on visibility change if we're tracking
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+      }
+    } catch (err) {
+      console.warn('Wake Lock error:', err.message);
+    }
+  };
+
+  const releaseWakeLock = () => {
+    if (wakeLockRef.current !== null) {
+      wakeLockRef.current.release().catch(console.error);
+      wakeLockRef.current = null;
+    }
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+
+  const handleVisibilityChange = async () => {
+    if (wakeLockRef.current !== null && document.visibilityState === 'visible' && isTracking) {
+      wakeLockRef.current = await navigator.wakeLock.request('screen').catch(console.error);
+    }
+  };
+
+  // Recover active session on mount
+  useEffect(() => {
+    const wasTracking = localStorage.getItem('run_tracking_active') === 'true';
+    if (wasTracking && !isTracking) {
+      console.log('Recovering active run session from localStorage');
+      setIsTracking(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (isTracking) {
+      requestWakeLock();
+
       timerId.current = setInterval(() => {
         const newDuration = Math.floor((Date.now() - startTime) / 1000);
         setDuration(newDuration);
@@ -160,6 +237,7 @@ const RunTracker = ({
         navigator.geolocation.clearWatch(watchId.current);
       }
       setGpsStatus('idle');
+      releaseWakeLock();
     }
 
     return () => {
@@ -168,6 +246,7 @@ const RunTracker = ({
       if (watchId.current) {
         navigator.geolocation.clearWatch(watchId.current);
       }
+      releaseWakeLock();
     };
   }, [isTracking, startTime]);
 
@@ -271,6 +350,7 @@ const RunTracker = ({
   const cancelRun = () => {
     if (window.confirm('Are you sure you want to cancel this run? No data will be saved.')) {
       setIsTracking(false);
+      clearLocalStorageSession();
       setGpsStatus('idle');
       if (onRunComplete) onRunComplete();
     }
@@ -322,6 +402,7 @@ const RunTracker = ({
       
       // Stop tracking AFTER successful save
       setIsTracking(false);
+      clearLocalStorageSession();
       setGpsStatus('idle');
       setIsSaving(false);
       

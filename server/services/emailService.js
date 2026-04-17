@@ -75,43 +75,21 @@ class EmailService {
     }
 
     try {
-      // Forward to verified email with original recipient info
-      const forwardedHtml = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: #f0f0f0; padding: 10px; margin-bottom: 20px; border-left: 4px solid #4CAF50;">
-            <p style="margin: 5px 0; color: #666;"><strong>📨 Original Recipient:</strong> ${to}</p>
-            <p style="margin: 5px 0; color: #666;"><strong>📅 Sent At:</strong> ${new Date().toLocaleString()}</p>
-          </div>
-          
-          ${html}
-          
-          <hr style="margin-top: 30px; border: none; border-top: 1px solid #ddd;">
-          <p style="color: #999; font-size: 12px;">
-            <em>This email was forwarded to ${this.verifiedEmail} because the Resend account is in testing mode.</em><br>
-            <em>Original recipient: <strong>${to}</strong></em>
-          </p>
-        </div>
-      `;
-
-      const forwardedText = text || 
-        `[Original Recipient: ${to}]\n\n${html.replace(/<[^>]*>/g, '')}\n\n---\nThis email was forwarded to ${this.verifiedEmail}. Original recipient: ${to}`;
-
       const mailOptions = {
         from: `"${from}" <onboarding@resend.dev>`,
-        to: this.verifiedEmail, // Always send to verified email
-        subject: `${subject} [To: ${to}]`, // Add original recipient to subject
-        html: forwardedHtml,
-        text: forwardedText
+        to: to,
+        subject: subject,
+        html: html,
+        text: text
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      console.log(`✅ Email sent to ${this.verifiedEmail} (forwarded from ${to})`, info.messageId);
+      console.log(`✅ Email sent to ${to}`, info.messageId);
       
       return {
         success: true,
         messageId: info.messageId,
-        forwardedTo: this.verifiedEmail,
-        originalRecipient: to
+        recipient: to
       };
     } catch (error) {
       console.error(`❌ Email failed for ${to}:`, error.message);

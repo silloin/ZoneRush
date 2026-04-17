@@ -222,7 +222,7 @@ const PrivateChat = ({ onChatStateChange }) => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-[100dvh] md:h-full w-full">
+    <div className="flex flex-col md:flex-row h-full w-full">
       {/* Conversations Sidebar - WhatsApp Style */}
       <div 
         className={`

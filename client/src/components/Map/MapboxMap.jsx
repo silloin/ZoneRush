@@ -1087,10 +1087,11 @@ const MapboxMap = () => {
 
     isTrackingRef.current = isTracking;
     if (isTracking) {
+      const newRunId = `run-${Date.now()}`;
       socket.current.emit('start-tracking', {
         userId: user?.id,
         username: user?.username,
-        runId: null, // This will be assigned on server if needed, or we can get it from parent
+        runId: newRunId,
         initialPosition: center[0] !== 0 ? { lat: center[1], lng: center[0] } : null
       });
     } else if (startTime.current && !isTracking) {
@@ -1205,14 +1206,6 @@ const MapboxMap = () => {
     } else {
       console.error('❌ userMarker.current is null - cannot create arrow marker');
     }
-    
-    if (socket.current) {
-      socket.current.emit('start-tracking', {
-        runId: `run-${Date.now()}`,
-        username: user?.username,
-        initialPosition: center[0] !== 0 ? { lat: center[1], lng: center[0] } : null
-      });
-    }
   };
 
   const stopTracking = async () => {
@@ -1229,12 +1222,6 @@ const MapboxMap = () => {
         .setLngLat(lngLat)
         .addTo(map.current);
       console.log('✅ Normal marker restored');
-    }
-    
-    if (socket.current) {
-      socket.current.emit('stop-tracking', {
-        finalStats: runStats
-      });
     }
     
     // Note: RunTracker handles saving the run to database

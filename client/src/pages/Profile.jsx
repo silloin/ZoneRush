@@ -222,7 +222,7 @@ const Profile = () => {
   ];
 
   return (
-    <div className="p-4 sm:p-8 bg-gray-900 min-h-screen text-white">
+    <div className="p-4 sm:p-8 pb-24 sm:pb-8 bg-gray-900 min-h-screen text-white">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -482,7 +482,7 @@ const Profile = () => {
         </div>
 
         {/* Emergency Contacts Section */}
-        <div className="bg-gray-800 rounded-2xl p-4 sm:p-8 mt-6 sm:mt-8 shadow-2xl border border-gray-700 pb-24 sm:pb-8">
+        <div className="bg-gray-800 rounded-2xl p-4 sm:p-8 mt-6 sm:mt-8 shadow-2xl border border-gray-700 mb-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl sm:text-2xl font-bold flex items-center">
               <Shield className="mr-2 sm:mr-3 text-red-500" size={24} /> Emergency Contacts

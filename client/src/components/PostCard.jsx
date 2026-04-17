@@ -7,7 +7,26 @@ const PostCard = ({ post, currentUser, onLike, onComment, onDelete, onUpdate, co
   const [editCaption, setEditCaption] = React.useState(post.caption);
   const [editingCommentId, setEditingCommentId] = React.useState(null);
   const [editCommentText, setEditCommentText] = React.useState('');
+  const [showComments, setShowComments] = React.useState(false);
   const isOwner = currentUser && post.user_id === currentUser.id;
+
+  const handleShare = async () => {
+    const postUrl = `${window.location.origin}/feed?postId=${post.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `ZoneRush Post by ${post.username}`,
+          text: post.caption,
+          url: postUrl,
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      navigator.clipboard.writeText(postUrl);
+      alert('Link copied to clipboard!');
+    }
+  };
 
   const handleUpdate = async () => {
     await onUpdate(post.id, editCaption);
@@ -112,11 +131,17 @@ const PostCard = ({ post, currentUser, onLike, onComment, onDelete, onUpdate, co
           <Heart size={18} fill={post.is_liked ? 'currentColor' : 'none'} />
           <span className="text-sm">{post.likes || 0}</span>
         </button>
-        <button className="flex items-center space-x-1.5 text-gray-400 hover:text-blue-400 transition-colors">
+        <button 
+          onClick={() => setShowComments(!showComments)}
+          className="flex items-center space-x-1.5 text-gray-400 hover:text-blue-400 transition-colors"
+        >
           <MessageSquare size={18} />
-          <span className="text-sm">{post.comments || 0}</span>
+          <span className="text-sm">{Array.isArray(post.commentsList) ? post.commentsList.length : (post.comments || 0)}</span>
         </button>
-        <button className="flex items-center space-x-1.5 text-gray-400 hover:text-green-400 transition-colors">
+        <button 
+          onClick={handleShare}
+          className="flex items-center space-x-1.5 text-gray-400 hover:text-green-400 transition-colors"
+        >
           <Share2 size={18} />
         </button>
       </div>
@@ -142,7 +167,7 @@ const PostCard = ({ post, currentUser, onLike, onComment, onDelete, onUpdate, co
       </div>
 
       {/* Comments List */}
-      {post.commentsList && post.commentsList.length > 0 && (
+      {showComments && post.commentsList && post.commentsList.length > 0 && (
         <div className="mt-4 space-y-3 border-t border-gray-700/50 pt-4">
           <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Comments ({post.commentsList.length})</h4>
           {post.commentsList.map(comment => {

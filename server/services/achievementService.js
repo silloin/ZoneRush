@@ -91,11 +91,11 @@ class AchievementService {
 
   // Get all achievements
   async getAllAchievements() {
-    // Use GROUP BY to prevent duplicates and ensure unique achievements
+    // Use DISTINCT ON to prevent duplicates from multiple seed runs
     const query = `
-      SELECT id, name, description, icon, requirement, xp_reward
+      SELECT DISTINCT ON (name) id, name, description, icon, requirement, xp_reward
       FROM achievements
-      ORDER BY id
+      ORDER BY name, id
     `;
     const result = await pool.query(query);
     return result.rows;
@@ -151,11 +151,11 @@ class AchievementService {
   // Get user achievements
   async getUserAchievements(userId) {
     const query = `
-      SELECT a.*, ua.unlocked_at
+      SELECT DISTINCT ON (a.name) a.*, ua.unlocked_at
       FROM achievements a
       JOIN user_achievements ua ON a.id = ua.achievement_id
       WHERE ua.user_id = $1
-      ORDER BY ua.unlocked_at DESC
+      ORDER BY a.name, ua.unlocked_at DESC
     `;
     
     const result = await pool.query(query, [userId]);

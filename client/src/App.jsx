@@ -98,8 +98,8 @@ const Layout = ({ children }) => {
                       to={item.path}
                       className={`
                         px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition
-                        ${isActive 
-                          ? 'bg-gradient-to-r from-orange-600/20 to-red-600/20 text-orange-400 border border-orange-500/50' 
+                        ${isActive
+                          ? 'bg-gradient-to-r from-orange-600/20 to-red-600/20 text-orange-400 border border-orange-500/50'
                           : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'
                         }
                       `}
@@ -112,7 +112,7 @@ const Layout = ({ children }) => {
             </div>
           </div>
         )}
-        
+
         {!isPrivateChatActive && !isPrivateChatActive && <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} isChatActive={isPrivateChatActive} />}
         <div className="flex-1 relative h-full">
           <ChatLayout onPrivateChatActiveChange={setIsPrivateChatActive} />
@@ -133,7 +133,7 @@ const Layout = ({ children }) => {
         >
           <Menu size={24} className="text-white" />
         </button>
-        
+
         {!isPrivateChatActive && <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} isChatActive={isPrivateChatActive} />}
         <div className="flex-1 relative h-[100dvh] overflow-hidden">
           {children}
@@ -173,8 +173,8 @@ const Layout = ({ children }) => {
                   to={item.path}
                   className={`
                     px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition
-                    ${isActive 
-                      ? 'bg-gradient-to-r from-orange-600/20 to-red-600/20 text-orange-400 border border-orange-500/50' 
+                    ${isActive
+                      ? 'bg-gradient-to-r from-orange-600/20 to-red-600/20 text-orange-400 border border-orange-500/50'
                       : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'
                     }
                   `}
@@ -186,7 +186,7 @@ const Layout = ({ children }) => {
           </div>
         </div>
       </div>
-      
+
       {/* Desktop Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} isChatActive={isPrivateChatActive} />
       <div className="flex-1 relative h-full overflow-y-auto">
@@ -211,119 +211,119 @@ function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Home />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/map"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Map />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Dashboard />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/leaderboard"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Leaderboard />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/training"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <TrainingPlans />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/events"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Events />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Profile />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/social"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <SocialFeed />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/achievements"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <AchievementsWrapper />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/runs"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <RunHistory />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/chat"
-              element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </div>
-      </SocketProvider>
-    </AuthProvider>
-  </ErrorBoundary>
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Home />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/map"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Map />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Dashboard />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/leaderboard"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Leaderboard />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/training"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <TrainingPlans />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/events"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Events />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Profile />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/social"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <SocialFeed />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/achievements"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <AchievementsWrapper />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/runs"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <RunHistory />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/chat"
+                element={
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </div>
+        </SocketProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

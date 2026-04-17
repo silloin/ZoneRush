@@ -764,13 +764,15 @@ const EventCard = ({ event, user, onJoin, onEdit, onDelete, status }) => {
         
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-gray-700/50 rounded-lg p-3">
-            <div className="flex items-center text-gray-300 text-sm">
-              <Users className="mr-2 text-blue-400" size={16} />
-              <span className="font-bold">{(event.participants || []).length}</span>
+          {isCreator && (
+            <div className="bg-gray-700/50 rounded-lg p-3">
+              <div className="flex items-center text-gray-300 text-sm">
+                <Users className="mr-2 text-blue-400" size={16} />
+                <span className="font-bold">{(event.participants || []).length}</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Participants</p>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Participants</p>
-          </div>
+          )}
           
           <div className="bg-gray-700/50 rounded-lg p-3">
             <div className="flex items-center text-gray-300 text-sm">
