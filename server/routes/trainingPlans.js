@@ -69,7 +69,28 @@ router.post('/generate', auth, async (req, res) => {
     // If useAI is true, generate AI-powered plan
     if (useAI) {
       const aiPlan = await aiCoachService.generateAITrainingPlan(req.user.id, preferences || {});
-      return res.json(aiPlan);
+      
+      // Save the AI plan to database
+      const savedPlan = await pool.query(
+        'INSERT INTO training_plans (user_id, plan_type, workouts, metadata, start_date) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [
+          req.user.id, 
+          'ai-generated', 
+          JSON.stringify(aiPlan.weeklyPlans || aiPlan.workouts || []),
+          JSON.stringify({ 
+            isAI: true, 
+            goal: aiPlan.goal, 
+            duration: aiPlan.duration,
+            tips: aiPlan.tips,
+            warnings: aiPlan.warnings,
+            preferences: preferences,
+            createdAt: new Date().toISOString()
+          }),
+          new Date().toISOString()
+        ]
+      );
+      
+      return res.json(savedPlan.rows[0]);
     }
 
     // Otherwise, use template-based generation
@@ -94,7 +115,11 @@ router.put('/workout/:workoutId', auth, async (req, res) => {
   try {
     const { workoutId } = req.params;
     
+    console.log('=== WORKOUT COMPLETION DEBUG ===');
     console.log('Completing workout:', workoutId, 'for user:', req.user.id);
+    console.log('Workout ID type:', typeof workoutId);
+    console.log('Workout ID contains underscore:', workoutId.includes('_'));
+    console.log('Workout ID contains dash:', workoutId.includes('-'));
     
     // Get current active plan - with fallback if is_active column doesn't exist
     let planResult;
@@ -125,17 +150,36 @@ router.put('/workout/:workoutId', auth, async (req, res) => {
     let updatedPlan;
     
     // Check if this is an AI-generated plan with weekly structure
-    const isAIPlan = plan.metadata && plan.metadata.isAI;
-    const hasWeeklyStructure = plan.workouts && Array.isArray(plan.workouts) && plan.workouts.length > 0 && plan.workouts[0].week;
+    // Multiple safety checks to prevent false positives
+    const isAIPlan = plan.metadata && 
+                     plan.metadata.isAI === true && 
+                     plan.plan_type === 'ai-generated';
+    
+    // More robust check for weekly structure
+    let hasWeeklyStructure = false;
+    if (plan.workouts && Array.isArray(plan.workouts) && plan.workouts.length > 0) {
+      const firstWeek = plan.workouts[0];
+      hasWeeklyStructure = firstWeek && 
+                          typeof firstWeek === 'object' && 
+                          firstWeek.week !== undefined && 
+                          Array.isArray(firstWeek.workouts);
+    }
     
     console.log('Plan analysis:', { 
       isAIPlan, 
       hasWeeklyStructure, 
       workoutId, 
       workoutIdType: typeof workoutId,
-      planId: plan.id 
+      planId: plan.id,
+      planType: plan.plan_type,
+      metadata: plan.metadata,
+      workoutsStructure: plan.workouts ? (Array.isArray(plan.workouts[0]?.workouts) ? 'weekly' : 'legacy') : 'none',
+      firstWorkoutItem: plan.workouts?.[0],
+      workoutsArray: plan.workouts,
+      metadataString: JSON.stringify(plan.metadata)
     });
     
+    // Only process as AI plan if it's explicitly marked as AI AND has proper weekly structure
     if (isAIPlan && hasWeeklyStructure) {
       // Handle AI-generated plan with weekly structure
       const metadata = plan.metadata || {};

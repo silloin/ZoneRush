@@ -5,13 +5,14 @@ import axios from 'axios';
 const getApiUrl = () => {
   // In production, use VITE_API_URL_PROD if set
   if (import.meta.env.PROD) {
-    // Use VITE_API_URL if set (for Vercel deployment)
-    const prodApiUrl = import.meta.env.VITE_API_URL;
+    const prodApiUrl = import.meta.env.VITE_API_URL_PROD;
     if (prodApiUrl) {
+      // Use the full production URL (e.g., https://your-app.onrender.com/api)
       return prodApiUrl;
     }
-    // Fallback to default Render URL
-    return 'https://zonerush-api.onrender.com';
+    // Fallback to relative URL if VITE_API_URL_PROD is not set
+    // This will work if you deploy frontend and backend on the same domain
+    return '/api';
   }
   
   // In development, use VITE_API_URL or default to /api (for Vite proxy)

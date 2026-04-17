@@ -23,7 +23,23 @@ const TrainingPlans = () => {
       const res = await axios.get('/training-plans/current', {
         headers: { 'x-auth-token': token }
       });
-      setPlan(res.data || null);
+      
+      const savedPlan = res.data;
+      if (savedPlan && savedPlan.metadata?.isAI) {
+        // Reconstruct AI plan structure from saved database data
+        const reconstructedPlan = {
+          ...savedPlan,
+          weeklyPlans: savedPlan.workouts || [],
+          goal: savedPlan.metadata?.goal,
+          duration: savedPlan.metadata?.duration,
+          tips: savedPlan.metadata?.tips,
+          warnings: savedPlan.metadata?.warnings,
+          isAI: true
+        };
+        setPlan(reconstructedPlan);
+      } else {
+        setPlan(savedPlan || null);
+      }
     } catch (err) {
       console.error('Failed to fetch plan:', err);
       setPlan(null);
@@ -84,7 +100,20 @@ const TrainingPlans = () => {
       }, {
         headers: { 'x-auth-token': token }
       });
-      setPlan(res.data || null);
+      
+      // Reconstruct plan structure from saved database data
+      const savedPlan = res.data;
+      const reconstructedPlan = {
+        ...savedPlan,
+        weeklyPlans: savedPlan.workouts || [],
+        goal: savedPlan.metadata?.goal,
+        duration: savedPlan.metadata?.duration,
+        tips: savedPlan.metadata?.tips,
+        warnings: savedPlan.metadata?.warnings,
+        isAI: true
+      };
+      
+      setPlan(reconstructedPlan || null);
       setShowAIGeneration(false);
     } catch (err) {
       console.error('Failed to generate AI plan:', err);

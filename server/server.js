@@ -152,43 +152,15 @@ app.get('/manifest.webmanifest', (req, res) => {
 // CSRF Protection Disabled - Not required for this application
 // app.use(csrfProtection);
 
-// Get allowed origins for CORS
-const getAllowedOrigins = () => {
-  const origins = [
-    'http://localhost:5173',
-    'https://localhost:5173',
-    'http://localhost:3000',
-    'https://localhost:3000'
-  ];
-  
-  // Add production frontend URL if available
-  if (process.env.FRONTEND_URL) {
-    origins.push(process.env.FRONTEND_URL);
-  }
-  
-  // Add common Vercel URLs (you should set your specific one)
-  if (process.env.NODE_ENV === 'production') {
-    origins.push('https://your-app-name.vercel.app'); // Replace with your actual Vercel URL
-  }
-  
-  return origins;
-};
-
-// Middleware
-app.use(cors({
-  origin: getAllowedOrigins(),
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
-}));
-
 // Create HTTP server and attach Socket.io
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: getAllowedOrigins(),
-    credentials: true,
-    methods: ['GET', 'POST', 'OPTIONS']
+    origin: process.env.NODE_ENV === 'production'
+      ? [process.env.FRONTEND_URL, process.env.RENDER_EXTERNAL_URL, /.render\.com$/, /.vercel\.app$/, 'http://localhost:5173', 'http://127.0.0.1:5173'].filter(Boolean)
+      : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
+    methods: ['GET', 'POST'],
+    credentials: true
   },
   transports: ['polling', 'websocket'],
 });
@@ -508,17 +480,6 @@ function setupWeeklyReset() {
     }, 7 * 24 * 60 * 60 * 1000); // 7 days in milliseconds
     
   }, msToWait);
-}
-
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  const path = require('path');
-  app.use(express.static(path.join(__dirname, 'public')));
-  
-  // Handle client-side routing
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-  });
 }
 
 // Start weekly reset scheduler

@@ -51,7 +51,7 @@ const ChatLayout = ({ onPrivateChatActiveChange }) => {
       case 'private':
         return <PrivateChat onChatStateChange={setIsChatting} />;
       case 'global':
-        return <GlobalChat />;
+        return <GlobalChat onChatStateChange={setIsChatting} />;
       case 'friends':
         return <FriendRequests onClose={() => setActiveTab('private')} />;
       case 'notifications':
