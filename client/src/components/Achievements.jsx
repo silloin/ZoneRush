@@ -6,11 +6,16 @@ const Achievements = () => {
   const { user } = useContext(AuthContext);
   const [achievements, setAchievements] = useState([]);
   const [profile, setProfile] = useState(null);
+  
+  // Daily status state
+  const [dailyStatus, setDailyStatus] = useState(null);
+  const [claimingMsg, setClaimingMsg] = useState("");
 
   useEffect(() => {
     fetchAchievements();
     if (user?.id) {
       fetchProfile();
+      fetchDailyStatus();
     }
   }, [user]);
 
@@ -30,6 +35,31 @@ const Achievements = () => {
       setProfile(res.data);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const fetchDailyStatus = async () => {
+    try {
+      if (!user?.id) return;
+      const res = await axios.get(`/achievements/daily-status/${user.id}`);
+      setDailyStatus(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const claimDaily = async () => {
+    try {
+      if (!user?.id) return;
+      setClaimingMsg("Claiming...");
+      const res = await axios.post(`/achievements/claim-daily/${user.id}`);
+      setClaimingMsg(`+${dailyStatus?.activeTask?.xp || 100} XP Earned!`);
+      setDailyStatus(prev => ({ ...prev, hasClaimedToday: true }));
+      // Optionally refresh profile to update the top XP badge
+      fetchProfile();
+    } catch (err) {
+      console.error(err);
+      setClaimingMsg("Failed to claim.");
     }
   };
 
@@ -56,6 +86,50 @@ const Achievements = () => {
               <p className="text-2xl sm:text-3xl font-black text-purple-400">{profile.totaltiles}</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {dailyStatus && (
+        <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 border border-blue-500/30 rounded-2xl p-6 sm:p-8 mb-8 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+            <span className="text-8xl">🏃</span>
+          </div>
+          <h3 className="text-xl sm:text-2xl font-black mb-2 flex items-center gap-2">
+            <span className="text-yellow-400">⚡</span> Daily Task: {dailyStatus.activeTask.title}
+          </h3>
+          <p className="text-gray-300 mb-4 sm:text-lg">{dailyStatus.activeTask.desc} to earn <span className="font-bold text-blue-400">+{dailyStatus.activeTask.xp} XP</span>!</p>
+          
+          <div className="mb-4">
+            <div className="flex justify-between text-xs sm:text-sm font-bold text-gray-400 mb-1">
+              <span>Progress</span>
+              <span>{Math.min(dailyStatus.metricValue, dailyStatus.activeTask.target).toFixed(2)} / {dailyStatus.activeTask.target.toFixed(2)} {dailyStatus.activeTask.unit}</span>
+            </div>
+            <div className="w-full bg-gray-800 rounded-full h-4 overflow-hidden border border-gray-700">
+              <div 
+                className={`h-4 transition-all duration-1000 ${dailyStatus.isCompleted ? 'bg-green-500' : 'bg-blue-500'}`}
+                style={{ width: `${Math.min((dailyStatus.metricValue / dailyStatus.activeTask.target) * 100, 100)}%` }}
+              ></div>
+            </div>
+          </div>
+
+          {dailyStatus.isCompleted ? (
+            dailyStatus.hasClaimedToday ? (
+              <button disabled className="w-full sm:w-auto bg-gray-700 text-gray-400 px-6 py-3 rounded-xl font-bold cursor-not-allowed">
+                ✅ Reward Claimed
+              </button>
+            ) : (
+              <button 
+                onClick={claimDaily}
+                className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-[0_0_15px_rgba(16,185,129,0.5)] transform hover:scale-105 transition-all"
+              >
+                {claimingMsg || `🎉 Claim ${dailyStatus.activeTask.xp} XP`}
+              </button>
+            )
+          ) : (
+            <button disabled className="w-full sm:w-auto bg-gray-800 text-gray-500 border border-gray-700 px-6 py-3 rounded-xl font-bold cursor-not-allowed">
+              Keep Running to Unlock
+            </button>
+          )}
         </div>
       )}
 

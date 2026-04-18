@@ -16,6 +16,7 @@ const Sidebar = ({ isOpen = true, onClose, isChatActive }) => {
     { name: 'Social Feed', icon: Users, path: '/social' },
     { name: 'Chat', icon: MessageCircle, path: '/chat' },
     { name: 'Achievements', icon: Award, path: '/achievements' },
+    { name: 'Challenges', icon: Flag, path: '/challenges' },
     { name: 'Training Plans', icon: Activity, path: '/training' },
     { name: 'Events', icon: Flag, path: '/events' },
     { name: 'Profile', icon: UserIcon, path: '/profile' },

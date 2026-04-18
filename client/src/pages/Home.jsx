@@ -8,7 +8,6 @@ import {
   Map as MapIcon, 
   Trophy, 
   Users, 
-  Shield, 
   History, 
   TrendingUp, 
   Award,
@@ -20,7 +19,8 @@ import {
   Snowflake,
   Wind,
   Droplets,
-  Thermometer
+  Thermometer,
+  Target
 } from 'lucide-react';
 import SOSButton from '../components/SOSButton';
 import Skeleton from '../components/Skeleton';
@@ -235,9 +235,9 @@ const Home = () => {
       >
         {[
           { label: 'Total Distance', value: `${Number(stats?.total_distance || 0).toFixed(2)} km`, icon: <TrendingUp className="text-orange-400" />, color: 'from-orange-500/10 to-red-500/10', border: 'border-orange-500/30' },
-          { label: 'Territories', value: stats?.territories_captured || 0, icon: <MapIcon className="text-red-400" />, color: 'from-red-500/10 to-orange-500/10', border: 'border-red-500/30' },
-          { label: 'Level', value: user?.level || 1, icon: <Award className="text-orange-400" />, color: 'from-orange-500/10 to-red-500/10', border: 'border-orange-500/30' },
-          { label: 'XP Points', value: user?.xp || 0, icon: <Zap className="text-red-400" />, color: 'from-red-500/10 to-orange-500/10', border: 'border-red-500/30' },
+          { label: 'Tiles Owned', value: stats?.total_tiles || 0, icon: <MapIcon className="text-red-400" />, color: 'from-red-500/10 to-orange-500/10', border: 'border-red-500/30' },
+          { label: 'Level', value: stats?.level || user?.level || 1, icon: <Award className="text-orange-400" />, color: 'from-orange-500/10 to-red-500/10', border: 'border-orange-500/30' },
+          { label: 'XP Points', value: stats?.xp || user?.xp || 0, icon: <Zap className="text-red-400" />, color: 'from-red-500/10 to-orange-500/10', border: 'border-red-500/30' },
         ].map((stat, idx) => (
           <motion.div 
             key={idx} 
@@ -448,6 +448,26 @@ const Home = () => {
                 <p className="text-gray-400 text-sm italic">Connect with others to see your ranking among friends.</p>
                 <Link to="/leaderboard" className="block w-full text-center py-3 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 rounded-xl font-bold transition shadow-lg hover:shadow-orange-500/30 hover:shadow-xl transform hover:scale-105">
                   Full Leaderboard
+                </Link>
+              </div>
+            </Card>
+          </motion.section>
+
+          {/* Elite Challenges Preview */}
+          <motion.section 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.45 }}
+          >
+            <Card className="p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <Target className="text-red-400" size={24} />
+                <h2 className="text-xl font-bold gradient-text">Challenge Modes</h2>
+              </div>
+              <div className="space-y-4">
+                <p className="text-gray-400 text-sm italic">Push yourself to the limit with extreme long-term quests.</p>
+                <Link to="/challenges" className="block w-full text-center py-3 bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-700 hover:to-purple-700 rounded-xl font-bold transition shadow-lg hover:shadow-red-500/30 hover:shadow-xl transform hover:scale-105">
+                  View Challenges
                 </Link>
               </div>
             </Card>

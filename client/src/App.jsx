@@ -14,6 +14,7 @@ import Profile from './pages/Profile';
 import RunHistory from './pages/RunHistory';
 import Sidebar from './components/Sidebar';
 import SocialFeed from './components/SocialFeed';
+import Challenges from './pages/Challenges';
 import Achievements from './components/Achievements/Achievements';
 import ChatLayout from './components/Chat/ChatLayout';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -87,6 +88,7 @@ const Layout = ({ children }) => {
                   { name: 'Social Feed', path: '/social' },
                   { name: 'Chat', path: '/chat' },
                   { name: 'Achievements', path: '/achievements' },
+                  { name: 'Challenges', path: '/challenges' },
                   { name: 'Training Plans', path: '/training' },
                   { name: 'Events', path: '/events' },
                   { name: 'Profile', path: '/profile' },
@@ -162,6 +164,7 @@ const Layout = ({ children }) => {
               { name: 'Social Feed', path: '/social' },
               { name: 'Chat', path: '/chat' },
               { name: 'Achievements', path: '/achievements' },
+              { name: 'Challenges', path: '/challenges' },
               { name: 'Training Plans', path: '/training' },
               { name: 'Events', path: '/events' },
               { name: 'Profile', path: '/profile' },
@@ -297,6 +300,16 @@ function App() {
                   <ProtectedRoute>
                     <Layout>
                       <AchievementsWrapper />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/challenges"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Challenges />
                     </Layout>
                   </ProtectedRoute>
                 }

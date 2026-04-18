@@ -56,7 +56,7 @@ const Leaderboard = () => {
                   <th className="px-3 sm:px-6 py-3 sm:py-4">Rank</th>
                   <th className="px-3 sm:px-6 py-3 sm:py-4">Runner</th>
                   <th className="px-3 sm:px-6 py-3 sm:py-4">Tiles</th>
-                  <th className="px-3 sm:px-6 py-3 sm:py-4 hidden sm:table-cell">Distance</th>
+                  <th className="px-3 sm:px-6 py-3 sm:py-4">Distance</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
@@ -88,7 +88,7 @@ const Leaderboard = () => {
                           {leader.totalTiles || leader.totaltiles}
                         </span>
                       </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-5 text-gray-400 text-xs sm:text-sm hidden sm:table-cell">{Number(leader.totalDistance || leader.totaldistance).toFixed(2)} km</td>
+                      <td className="px-3 sm:px-6 py-3 sm:py-5 text-gray-400 text-xs sm:text-sm">{Number(leader.totalDistance || leader.totaldistance).toFixed(2)} km</td>
                     </tr>
                   ))
                 ) : (
