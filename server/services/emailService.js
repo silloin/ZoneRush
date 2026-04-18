@@ -75,12 +75,29 @@ class EmailService {
     }
 
     try {
+      // RESEND FREE TIER WORKAROUND:
+      // If the user hasn't verified a custom domain on Resend, they can ONLY send emails to their own signup email.
+      // We will ALWAYS forward the email to the verifiedEmail, but note the original recipient inside the body so the alert isn't lost.
+      const originalTo = to;
+      const actualTo = this.verifiedEmail; // Force 'to' address to the verified testing sandbox
+      
+      const modifiedHtml = `
+        <div style="background-color: #ffebee; border: 1px solid #f44336; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
+          <h4 style="color: #d32f2f; margin: 0 0 5px 0;">⚠️ ZoneRush Development Notice</h4>
+          <p style="margin: 0; font-size: 14px; color: #b71c1c;">
+            This email was originally addressed to: <strong>${originalTo}</strong><br/>
+            It was redirected to your verified testing email (${actualTo}) because a custom domain has not yet been verified on Resend.
+          </p>
+        </div>
+        ${html}
+      `;
+
       const mailOptions = {
         from: `"${from}" <onboarding@resend.dev>`,
-        to: to,
-        subject: subject,
-        html: html,
-        text: text
+        to: actualTo,
+        subject: `[Dev Redirect: ${originalTo}] ${subject}`,
+        html: modifiedHtml,
+        text: `[Originally to: ${originalTo}]\n\n${text}`
       };
 
       const info = await this.transporter.sendMail(mailOptions);
