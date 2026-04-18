@@ -66,7 +66,7 @@ router.post('/private', auth, messageProtection, async (req, res) => {
 
     // Create notification for receiver
     await pool.query(
-      `INSERT INTO notifications (user_id, type, title, content, data)
+      `INSERT INTO notifications (user_id, type, title, message, data)
        VALUES ($1, 'message', 'New Message', $2, $3)`,
       [receiverId, `${senderUsername} sent you a message`, JSON.stringify({
         messageId: result.rows[0].id,

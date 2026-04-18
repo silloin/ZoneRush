@@ -134,9 +134,9 @@ const NotificationsBell = () => {
                   <span className="text-2xl">{getNotificationIcon(notification.type)}</span>
                   <div className="flex-1">
                     <div className="font-semibold">{notification.title}</div>
-                    {notification.content && (
+                    {(notification.message || notification.content) && (
                       <div className="text-sm text-gray-400 mt-1">
-                        {notification.content}
+                        {notification.message || notification.content}
                       </div>
                     )}
                     <div className="text-xs text-gray-500 mt-2">
